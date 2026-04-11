@@ -1,0 +1,6204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Month Cycle Table</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400;0,500;0,700;1,400&family=Alegreya+SC:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --felt: #18392f;
+  --felt-2: #102820;
+  --wood: #6d5032;
+  --gold: #d9bb7a;
+  --gold-soft: rgba(217, 187, 122, 0.24);
+  --ink: #f5efde;
+  --muted: rgba(245, 239, 222, 0.7);
+  --muted-2: rgba(245, 239, 222, 0.5);
+  --danger: #ef9175;
+  --good: #87cf9c;
+  --line: rgba(255, 246, 221, 0.1);
+  --shadow: 0 22px 60px rgba(0, 0, 0, 0.38);
+  --app-base-width: 1280;
+  --app-base-height: 920;
+  --app-scale: 1;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  font-family: "Alegreya", serif;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at top, rgba(217, 187, 122, 0.08), transparent 25%),
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.06), transparent 20%),
+    linear-gradient(180deg, #07110f 0%, #0d1b18 45%, #0f1d1a 100%);
+  overflow: hidden;
+}
+
+body.fluid-mode {
+  overflow: auto;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent 0, rgba(255, 255, 255, 0.015) 50%, transparent 100%),
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px);
+  background-size: 100% 100%, 18px 18px;
+  pointer-events: none;
+  opacity: 0.4;
+}
+
+button {
+  font: inherit;
+}
+
+.app {
+  width: calc(var(--app-base-width) * 1px);
+  height: calc(var(--app-base-height) * 1px);
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 62px minmax(0, 1fr) 226px;
+  gap: 10px;
+  padding: 10px;
+  overflow: hidden;
+}
+
+.board-shell {
+  min-height: 0;
+  display: block;
+}
+
+.viewport-shell {
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  display: grid;
+  place-items: start center;
+  padding: 0;
+}
+
+.viewport-shell .app {
+  transform: scale(var(--app-scale));
+  transform-origin: top center;
+}
+
+.viewport-shell.fluid {
+  width: auto;
+  height: auto;
+  overflow: visible;
+  display: block;
+}
+
+.viewport-shell.fluid .app {
+  width: auto;
+  height: auto;
+  transform: none;
+}
+
+.panel {
+  position: relative;
+  background: rgba(14, 28, 23, 0.88);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(16px);
+}
+
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(145deg, rgba(217, 187, 122, 0.08), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.05), transparent 32%);
+  pointer-events: none;
+}
+
+.header {
+  padding: 5px 14px;
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.eyebrow {
+  font-family: "Alegreya SC", serif;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.58rem;
+  color: var(--muted-2);
+}
+
+.header h1 {
+  margin: 0;
+  font-family: "Alegreya SC", serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+
+.title-lockup {
+  display: grid;
+  gap: 2px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(74px, 1fr));
+  gap: 6px;
+}
+
+.stat {
+  padding: 7px 9px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  text-align: center;
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+
+.stat-value {
+  display: block;
+  margin-top: 2px;
+  font-family: "Alegreya SC", serif;
+  font-size: 0.96rem;
+}
+
+.pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pill {
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: 0.75rem;
+  color: var(--ink);
+}
+
+.pill.good {
+  border-color: rgba(135, 207, 156, 0.28);
+  color: var(--good);
+}
+
+.pill.danger {
+  border-color: rgba(239, 145, 117, 0.28);
+  color: var(--danger);
+}
+
+.button-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.button-row.compact {
+  gap: 6px;
+}
+
+.utility-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 0;
+  flex-wrap: wrap;
+}
+
+.utility-button {
+  appearance: none;
+  min-width: 40px;
+  height: 36px;
+  border-radius: 12px;
+  border: 1px solid rgba(217, 187, 122, 0.2);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--ink);
+  cursor: pointer;
+  font-family: "Alegreya SC", serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  transition: border-color 140ms ease, opacity 140ms ease, color 140ms ease;
+}
+
+.utility-button:hover {
+  border-color: rgba(217, 187, 122, 0.42);
+}
+
+.utility-button[aria-pressed="true"] {
+  border-color: rgba(135, 207, 156, 0.5);
+  background: rgba(135, 207, 156, 0.12);
+  color: #dff8e5;
+}
+
+.utility-button:disabled {
+  opacity: 0.36;
+  color: var(--muted-2);
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  cursor: default;
+}
+
+.utility-button:disabled:hover {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.action {
+  appearance: none;
+  border: 1px solid rgba(217, 187, 122, 0.25);
+  background: linear-gradient(135deg, rgba(217, 187, 122, 0.18), rgba(217, 187, 122, 0.04));
+  color: var(--ink);
+  border-radius: 12px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: transform 140ms ease, border-color 140ms ease;
+  font-size: 0.8rem;
+}
+
+.action:hover {
+  transform: translateY(-1px);
+  border-color: rgba(217, 187, 122, 0.45);
+}
+
+.action.recommended {
+  border-color: rgba(255, 226, 156, 0.98);
+  background:
+    linear-gradient(135deg, rgba(255, 225, 150, 0.34), rgba(217, 187, 122, 0.14)),
+    linear-gradient(135deg, rgba(217, 187, 122, 0.18), rgba(217, 187, 122, 0.04));
+  color: #fff6df;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+    0 0 0 1px rgba(255, 226, 156, 0.5),
+    0 0 0 4px rgba(255, 226, 156, 0.12),
+    0 0 28px rgba(255, 214, 120, 0.45),
+    0 14px 30px rgba(0, 0, 0, 0.26);
+  transform: translateY(-1px);
+}
+
+.action.recommended:hover {
+  border-color: rgba(255, 234, 184, 1);
+}
+
+.action.secondary {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.action:disabled {
+  opacity: 0.4;
+  cursor: default;
+  transform: none;
+}
+
+#tsumoButton {
+  border-color: rgba(135, 207, 156, 0.45);
+  background: linear-gradient(135deg, rgba(135, 207, 156, 0.24), rgba(135, 207, 156, 0.06));
+}
+
+#tsumoButton:hover {
+  border-color: rgba(135, 207, 156, 0.72);
+}
+
+#ronButton {
+  border-color: rgba(239, 145, 117, 0.45);
+  background: linear-gradient(135deg, rgba(239, 145, 117, 0.24), rgba(239, 145, 117, 0.06));
+}
+
+#ronButton:hover {
+  border-color: rgba(239, 145, 117, 0.72);
+}
+
+#chiButton {
+  border-color: rgba(126, 196, 160, 0.45);
+  background: linear-gradient(135deg, rgba(126, 196, 160, 0.24), rgba(126, 196, 160, 0.06));
+}
+
+#chiButton:hover {
+  border-color: rgba(126, 196, 160, 0.72);
+}
+
+#ponButton {
+  border-color: rgba(104, 177, 221, 0.45);
+  background: linear-gradient(135deg, rgba(104, 177, 221, 0.24), rgba(104, 177, 221, 0.06));
+}
+
+#ponButton:hover {
+  border-color: rgba(104, 177, 221, 0.72);
+}
+
+#kanButton {
+  border-color: rgba(224, 162, 101, 0.45);
+  background: linear-gradient(135deg, rgba(224, 162, 101, 0.24), rgba(224, 162, 101, 0.06));
+}
+
+#kanButton:hover {
+  border-color: rgba(224, 162, 101, 0.72);
+}
+
+#passButton {
+  border-color: rgba(137, 178, 207, 0.3);
+  background: rgba(137, 178, 207, 0.08);
+}
+
+#passButton:hover {
+  border-color: rgba(137, 178, 207, 0.56);
+}
+
+#openWinButton {
+  border-color: rgba(200, 170, 108, 0.34);
+  background: rgba(200, 170, 108, 0.1);
+}
+
+#openLogButton {
+  border-color: rgba(125, 189, 205, 0.34);
+  background: rgba(125, 189, 205, 0.1);
+}
+
+#openDiscardsButton {
+  border-color: rgba(180, 154, 214, 0.34);
+  background: rgba(180, 154, 214, 0.1);
+}
+
+#openSetsButton {
+  border-color: rgba(126, 196, 160, 0.34);
+  background: rgba(126, 196, 160, 0.1);
+}
+
+#toggleAssistButton {
+  border-color: rgba(135, 207, 156, 0.34);
+  background: rgba(135, 207, 156, 0.1);
+}
+
+.table-wrap {
+  position: relative;
+  min-height: 0;
+  height: 100%;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.table {
+  position: relative;
+  width: min(100%, 1048px);
+  max-height: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 42px;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(36, 73, 126, 0.28), transparent 32%),
+    linear-gradient(180deg, #26406f 0%, #203763 22%, #1d3159 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.04),
+    inset 0 0 80px rgba(0, 0, 0, 0.18),
+    0 24px 60px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+}
+
+.table::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 16% 8%, rgba(255, 255, 255, 0.24), transparent 18%),
+    linear-gradient(115deg, rgba(255, 255, 255, 0.08), transparent 24%);
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.table::before {
+  content: "";
+  position: absolute;
+  inset: 74px 92px 92px;
+  border-radius: 18px;
+  border: 2px solid rgba(22, 40, 78, 0.55);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 0 0 1px rgba(13, 23, 45, 0.5);
+}
+
+.compass {
+  position: absolute;
+  inset: 50%;
+  width: 210px;
+  height: 210px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1px solid rgba(217, 187, 122, 0.24);
+  box-shadow: inset 0 0 0 1px rgba(217, 187, 122, 0.08);
+}
+
+.compass::before,
+.compass::after {
+  content: "";
+  position: absolute;
+  inset: 12%;
+  border-radius: 50%;
+  border: 1px dashed rgba(217, 187, 122, 0.14);
+}
+
+.compass::after {
+  inset: 50%;
+  width: 2px;
+  height: 78px;
+  border: 0;
+  background: linear-gradient(180deg, transparent, rgba(217, 187, 122, 0.35), transparent);
+  transform: translate(-50%, -50%);
+}
+
+.compass-label {
+  position: absolute;
+  font-family: "Alegreya SC", serif;
+  font-size: 0.74rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(245, 239, 222, 0.44);
+}
+
+.compass-label.north { top: 12px; left: 50%; transform: translateX(-50%); }
+.compass-label.south { bottom: 12px; left: 50%; transform: translateX(-50%); }
+.compass-label.west { left: 12px; top: 50%; transform: translateY(-50%); }
+.compass-label.east { right: 12px; top: 50%; transform: translateY(-50%); }
+
+.center-panel {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 210px;
+  transform: translate(-50%, -50%);
+  border-radius: 18px;
+  padding: 10px 12px;
+  text-align: center;
+  background: rgba(36, 41, 66, 0.86);
+  border: 1px solid rgba(217, 187, 122, 0.22);
+  box-shadow: 0 14px 26px rgba(0, 0, 0, 0.22);
+}
+
+.center-panel h2 {
+  margin: 2px 0 6px;
+  font-family: "Alegreya SC", serif;
+  font-size: 1.2rem;
+  letter-spacing: 0.08em;
+}
+
+.center-panel p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.35;
+  font-size: 0.74rem;
+}
+
+.center-card {
+  width: 118px;
+  margin: 10px auto 10px;
+}
+
+.center-card.claimable {
+  cursor: pointer;
+}
+
+.center-claim-target {
+  appearance: none;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.center-claim-target .card-face {
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+
+.center-claim-target:hover .card-face,
+.center-claim-target:focus-visible .card-face {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow:
+    0 0 0 1px rgba(217, 187, 122, 0.28),
+    0 0 22px var(--card-glow-soft, transparent),
+    0 18px 30px rgba(0, 0, 0, 0.4),
+    0 0 40px var(--card-glow-deep, transparent);
+  outline: none;
+}
+
+
+
+.center-card .card-face,
+.mini-card .card-face,
+.open-card .card-face,
+.hand-card .card-face,
+.discard-card .card-face,
+.inspect-popup-card .card-face,
+.discard-detail-card .card-face,
+.winning-card .card-face {
+  width: 100%;
+  display: block;
+  border-radius: 14px;
+  box-shadow:
+    0 0 0 1px var(--card-glow-ring, transparent),
+    0 0 0 3px var(--card-glow-halo, transparent),
+    0 0 24px var(--card-glow-soft, transparent),
+    0 16px 28px rgba(0, 0, 0, 0.35),
+    0 0 48px var(--card-glow-deep, transparent);
+}
+
+.card-face {
+  --card-glow-ring: transparent;
+  --card-glow-halo: transparent;
+  --card-glow-soft: transparent;
+  --card-glow-deep: transparent;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  padding: 8px 7px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 34%),
+    linear-gradient(135deg, var(--card-accent, #405066), #0e131b 72%);
+  color: var(--ink);
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  filter: saturate(1);
+}
+
+.card-face.card-back-face {
+  align-items: center;
+  justify-content: center;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 38%),
+    repeating-linear-gradient(135deg, rgba(217, 187, 122, 0.12) 0 6px, transparent 6px 12px),
+    linear-gradient(135deg, #1a2130, #0d1018 72%);
+}
+
+.tile-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  align-items: flex-start;
+  font-size: 0.55rem;
+  line-height: 1.1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #f3e4b8;
+}
+
+.tile-id {
+  font-weight: 700;
+}
+
+.tile-element {
+  color: rgba(245, 239, 222, 0.82);
+  text-align: right;
+}
+
+.tile-month {
+  align-self: stretch;
+  font-family: "Alegreya SC", serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  text-align: left;
+}
+
+.tile-triangle {
+  font-size: 0.5rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(245, 239, 222, 0.84);
+  text-align: left;
+}
+
+.tile-back-mark {
+  font-family: "Alegreya SC", serif;
+  font-size: 0.78rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.mini-card .card-face,
+.open-card .card-face,
+.winning-card .card-face,
+.discard-detail-card .card-face {
+  padding: 4px;
+}
+
+.mini-card .tile-head,
+.open-card .tile-head,
+.winning-card .tile-head,
+.discard-detail-card .tile-head {
+  font-size: 0.36rem;
+  gap: 2px;
+}
+
+.mini-card .tile-month,
+.open-card .tile-month,
+.winning-card .tile-month,
+.discard-detail-card .tile-month {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
+.mini-card .tile-triangle,
+.open-card .tile-triangle,
+.winning-card .tile-triangle,
+.discard-detail-card .tile-triangle {
+  font-size: 0.34rem;
+  letter-spacing: 0.08em;
+}
+
+.open-card.open-card-month .tile-head,
+.open-card.open-card-month .tile-triangle {
+  display: none;
+}
+
+.mini-card.mini-card-month .tile-head,
+.mini-card.mini-card-month .tile-triangle {
+  display: none;
+}
+
+.mini-card.mini-card-month .card-face {
+  display: grid;
+  place-items: center;
+  padding: 4px;
+}
+
+.mini-card.mini-card-month .tile-month {
+  align-self: center;
+  text-align: center;
+  font-size: 0.96rem;
+  letter-spacing: 0.06em;
+}
+
+.open-card.open-card-month .card-face {
+  display: grid;
+  place-items: center;
+  padding: 4px;
+}
+
+.open-card.open-card-month .tile-month {
+  align-self: center;
+  text-align: center;
+  font-size: 0.96rem;
+  letter-spacing: 0.06em;
+}
+
+.mini-card .tile-back-mark,
+.open-card .tile-back-mark,
+.winning-card .tile-back-mark,
+.discard-detail-card .tile-back-mark {
+  font-size: 0.48rem;
+  letter-spacing: 0.12em;
+}
+
+.center-card .card-face {
+  padding: 8px 7px;
+}
+
+.center-card .tile-head {
+  font-size: 0.55rem;
+  gap: 4px;
+}
+
+.center-card .tile-month {
+  font-size: 1.2rem;
+  letter-spacing: 0.08em;
+}
+
+.center-card .tile-triangle {
+  font-size: 0.5rem;
+  letter-spacing: 0.12em;
+}
+
+.center-card .tile-back-mark {
+  font-size: 0.78rem;
+  letter-spacing: 0.2em;
+}
+
+.inspect-popup-card .tile-head {
+  font-size: 0.62rem;
+}
+
+.inspect-popup-card .tile-month {
+  font-size: 1.45rem;
+}
+
+.inspect-popup-card .tile-triangle {
+  font-size: 0.56rem;
+}
+
+.seat {
+  position: absolute;
+  width: 188px;
+  min-height: 72px;
+  padding: 8px 9px;
+  border-radius: 16px;
+  background: rgba(12, 20, 35, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.seat.active {
+  box-shadow: 0 0 0 1px rgba(217, 187, 122, 0.32), 0 0 26px rgba(217, 187, 122, 0.12);
+}
+
+.seat.east { right: 12px; top: 50%; transform: translateY(-50%); }
+.seat.west { left: 12px; top: 50%; transform: translateY(-50%); }
+.seat.north { top: 12px; left: 50%; transform: translateX(-50%); width: 232px; }
+.seat.south { bottom: 12px; left: 50%; transform: translateX(-50%); width: 250px; }
+.seat.south-call {
+  width: 882px;
+  min-height: 114px;
+}
+
+.seat.south-call .seat-head {
+  margin-bottom: 6px;
+}
+
+.seat-panel-copy {
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+
+.seat-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: 6px;
+}
+
+.seat-actions .action,
+.seat-actions .utility-button {
+  min-height: 34px;
+  padding: 7px 11px;
+}
+
+.seat-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.seat-name {
+  font-family: "Alegreya SC", serif;
+  font-size: 0.84rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.seat-role {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.seat-status {
+  display: none;
+}
+
+.mini-hand {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.mini-card {
+  width: 24px;
+}
+
+.open-strip {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.open-card {
+  width: 24px;
+  flex: 0 0 24px;
+}
+
+.mini-card,
+.open-card {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  line-height: 0;
+}
+
+button.mini-card,
+button.open-card {
+  appearance: none;
+  cursor: pointer;
+}
+
+.discard-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.discard-card {
+  width: 24px;
+}
+
+.human-panel {
+  grid-column: 1 / -1;
+  padding: 12px 16px 14px;
+  position: relative;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  z-index: auto;
+  max-height: none;
+  overflow: hidden;
+  border-color: rgba(217, 187, 122, 0.18);
+  background: rgba(8, 18, 16, 0.96);
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, 0.34),
+    0 0 0 1px rgba(217, 187, 122, 0.08);
+}
+
+.human-head {
+  display: none;
+}
+
+.hand {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  justify-content: stretch;
+  align-content: start;
+}
+
+.hand-card {
+  appearance: none;
+  position: relative;
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-height: 134px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 9px;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.hand-card.arrived {
+  border-color: rgba(255, 226, 156, 0.78);
+  box-shadow:
+    0 0 0 1px rgba(255, 226, 156, 0.28),
+    0 0 22px rgba(255, 226, 156, 0.16),
+    0 12px 24px rgba(0, 0, 0, 0.28);
+}
+
+.hand-card.arrived .hand-code {
+  color: #fff1bf;
+}
+
+.hand-card .card-face {
+  border-radius: 0;
+  box-shadow:
+    0 0 0 1px var(--card-glow-ring, transparent),
+    0 0 0 3px var(--card-glow-halo, transparent),
+    0 0 24px var(--card-glow-soft, transparent),
+    0 12px 22px rgba(0, 0, 0, 0.28),
+    0 0 48px var(--card-glow-deep, transparent);
+}
+
+.hand-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.hand-code {
+  color: var(--gold);
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.hand-title {
+  font-family: "Alegreya SC", serif;
+  font-size: 1rem;
+  line-height: 1.05;
+}
+
+.hand-subtitle {
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.15;
+}
+
+.hand-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.hand-tag {
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  color: var(--muted);
+  font-size: 0.62rem;
+  line-height: 1;
+}
+
+.hand-card:hover,
+.hand-card:focus-visible {
+  transform: translateY(-4px);
+  border-color: rgba(217, 187, 122, 0.45);
+  box-shadow: 0 20px 30px rgba(0, 0, 0, 0.28);
+  outline: none;
+}
+
+.hand-card.locked {
+  cursor: default;
+  opacity: 0.82;
+}
+
+.hand-card.locked:hover,
+.hand-card.locked:focus-visible {
+  transform: none;
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+}
+
+.hand-card.open-claimed {
+  border-color: rgba(217, 187, 122, 0.72);
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      rgba(217, 187, 122, 0.16) 0 10px,
+      rgba(255, 255, 255, 0.03) 10px 20px
+    ),
+    linear-gradient(180deg, rgba(217, 187, 122, 0.14), rgba(255, 255, 255, 0.03)),
+    rgba(255, 255, 255, 0.03);
+  box-shadow:
+    inset 0 0 0 1px rgba(217, 187, 122, 0.28),
+    0 14px 24px rgba(0, 0, 0, 0.24);
+}
+
+.hand-card.open-claimed .hand-code {
+  color: #f2d79b;
+}
+
+.hand-card.open-claimed .hand-title,
+.hand-card.open-claimed .hand-subtitle {
+  color: #f7e4b0;
+}
+
+.hand-card.open-claimed .hand-tag {
+  border-color: rgba(217, 187, 122, 0.32);
+  color: #efe0b8;
+}
+
+.hand-card.open-claimed.locked {
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.hand-card.open-claimed.locked:hover,
+.hand-card.open-claimed.locked:focus-visible {
+  transform: none;
+  border-color: rgba(217, 187, 122, 0.72);
+  box-shadow:
+    inset 0 0 0 1px rgba(217, 187, 122, 0.28),
+    0 14px 24px rgba(0, 0, 0, 0.24);
+}
+
+.hand-claim-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  padding: 3px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(217, 187, 122, 0.26);
+  background: rgba(17, 13, 6, 0.88);
+  color: #f2d79b;
+  font-size: 0.52rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.hand-arrival-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  padding: 3px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 226, 156, 0.42);
+  background: rgba(42, 30, 4, 0.92);
+  color: #fff1bf;
+  font-size: 0.52rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.hand-claim-note {
+  position: absolute;
+  left: 9px;
+  bottom: 8px;
+  color: #f2d79b;
+  font-size: 0.54rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  padding: 3px 5px;
+  border-radius: 8px;
+  background: rgba(17, 13, 6, 0.78);
+  border: 1px solid rgba(217, 187, 122, 0.18);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.hand-card.selected {
+  border-color: rgba(217, 187, 122, 0.5);
+  box-shadow: 0 0 0 1px rgba(217, 187, 122, 0.28), 0 12px 22px rgba(0, 0, 0, 0.26);
+}
+
+.hand-card.suggested {
+  border-color: rgba(135, 207, 156, 0.72);
+  box-shadow:
+    0 0 0 1px rgba(135, 207, 156, 0.36),
+    0 0 24px rgba(135, 207, 156, 0.24),
+    0 12px 24px rgba(0, 0, 0, 0.28);
+  animation: suggestionPulse 1.7s ease-in-out infinite;
+}
+
+.hand-card.suggested .hand-code {
+  color: #b8f0c5;
+}
+
+@keyframes suggestionPulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px rgba(135, 207, 156, 0.3),
+      0 0 18px rgba(135, 207, 156, 0.18),
+      0 12px 24px rgba(0, 0, 0, 0.28);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(135, 207, 156, 0.52),
+      0 0 32px rgba(135, 207, 156, 0.34),
+      0 16px 28px rgba(0, 0, 0, 0.32);
+  }
+}
+
+.log-list {
+  display: grid;
+  gap: 8px;
+  max-height: 360px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.log-item {
+  padding: 9px 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--muted);
+  line-height: 1.3;
+  font-size: 0.74rem;
+}
+
+.log-item strong {
+  color: var(--ink);
+}
+
+.winning-list {
+  display: grid;
+  gap: 8px;
+  max-height: 100%;
+  overflow: auto;
+  padding-right: 2px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.winning-list::-webkit-scrollbar {
+  display: none;
+}
+
+.inspect-popup {
+  position: fixed;
+  z-index: 120;
+  width: 248px;
+  padding: 12px;
+  border-radius: 20px;
+  background: rgba(10, 18, 26, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(14px);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(8px) scale(0.98);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.inspect-popup.open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.inspect-popup-card {
+  width: 152px;
+  margin: 0 auto;
+}
+
+.inspect-popup-card .card-face {
+  width: 100%;
+  display: block;
+  box-shadow:
+    0 0 0 1px var(--card-glow-ring, transparent),
+    0 0 0 3px var(--card-glow-halo, transparent),
+    0 0 24px var(--card-glow-soft, transparent),
+    0 18px 30px rgba(0, 0, 0, 0.34),
+    0 0 48px var(--card-glow-deep, transparent);
+}
+
+.inspect-popup-title {
+  margin-top: 12px;
+  font-family: "Alegreya SC", serif;
+  font-size: 1.3rem;
+  text-align: center;
+}
+
+.inspect-popup .pill-row {
+  margin-top: 10px;
+  justify-content: center;
+}
+
+.discard-list {
+  display: grid;
+  gap: 10px;
+  max-height: 100%;
+  overflow: auto;
+  padding-right: 2px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.discard-list::-webkit-scrollbar {
+  display: none;
+}
+
+.discard-group {
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.discard-group strong {
+  display: block;
+  font-family: "Alegreya SC", serif;
+  margin-bottom: 8px;
+  font-size: 0.82rem;
+}
+
+.discard-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.discard-detail-card {
+  width: 56px;
+  flex: 0 0 56px;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.discard-detail-card .card-face {
+  width: 100%;
+  display: block;
+  box-shadow:
+    0 0 0 1px var(--card-glow-ring, transparent),
+    0 0 0 3px var(--card-glow-halo, transparent),
+    0 0 18px var(--card-glow-soft, transparent),
+    0 14px 24px rgba(0, 0, 0, 0.3),
+    0 0 36px var(--card-glow-deep, transparent);
+}
+
+.discard-empty {
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.set-list {
+  display: grid;
+  gap: 8px;
+  max-height: 100%;
+  overflow: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.set-list::-webkit-scrollbar {
+  display: none;
+}
+
+.set-item {
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.set-item strong {
+  display: block;
+  font-family: "Alegreya SC", serif;
+  margin-bottom: 5px;
+  font-size: 0.82rem;
+}
+
+.set-item span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+.winning-layout {
+  padding: 9px 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.winning-layout strong {
+  display: block;
+  font-family: "Alegreya SC", serif;
+  margin-bottom: 4px;
+  font-size: 0.8rem;
+}
+
+.winning-layout span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+.winning-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.winning-card {
+  width: 42px;
+  flex: 0 0 42px;
+}
+
+.winning-card .card-face {
+  width: 100%;
+  display: block;
+  box-shadow:
+    0 0 0 1px var(--card-glow-ring, transparent),
+    0 0 0 3px var(--card-glow-halo, transparent),
+    0 0 18px var(--card-glow-soft, transparent),
+    0 10px 18px rgba(0, 0, 0, 0.24),
+    0 0 36px var(--card-glow-deep, transparent);
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 10, 18, 0.58);
+  backdrop-filter: blur(10px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.overlay.open {
+  display: flex;
+}
+
+.overlay-panel {
+  width: min(520px, calc(100vw - 48px));
+  max-height: min(72vh, 680px);
+  padding: 14px;
+  border-radius: 22px;
+  background: rgba(10, 18, 26, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.42);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 10px;
+}
+
+.overlay-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.overlay-title {
+  font-family: "Alegreya SC", serif;
+  font-size: 0.9rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+@media (max-width: 1100px) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .board-shell {
+    display: contents;
+  }
+
+  body {
+    overflow: auto;
+  }
+
+  .header,
+  .table-wrap,
+  .human-panel,
+  .inspect-popup {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
+
+@media (max-width: 980px) {
+  .table-wrap {
+    min-height: 640px;
+  }
+
+  .seat {
+    width: 210px;
+  }
+
+  .seat.north {
+    width: 280px;
+  }
+
+  .seat.south {
+    width: 340px;
+  }
+
+  .hand {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+
+  .human-panel {
+    position: static;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    max-height: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .app {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .header,
+  .human-panel,
+  .table-wrap {
+    padding: 18px;
+  }
+
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .table {
+    aspect-ratio: auto;
+    min-height: 860px;
+  }
+
+  .seat {
+    position: static;
+    transform: none !important;
+    width: auto !important;
+    margin: 12px;
+  }
+
+  .center-panel,
+  .compass,
+  .compass-label {
+    position: static;
+    transform: none;
+    width: auto;
+    margin: 18px;
+  }
+}
+</style>
+</head>
+<body>
+  <div class="viewport-shell" id="viewportShell">
+  <div class="app" id="gameApp">
+    <header class="panel header">
+      <div class="title-lockup">
+        <div class="eyebrow">Table</div>
+        <h1>Month Cycle Table</h1>
+      </div>
+      <div class="stats">
+        <div class="stat">
+          <span class="stat-label">Turn</span>
+          <span class="stat-value" id="turnStat">East</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Wall</span>
+          <span class="stat-value" id="wallStat">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Phase</span>
+          <span class="stat-value" id="phaseStat">Deal</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Last Call</span>
+          <span class="stat-value" id="callStat">None</span>
+        </div>
+      </div>
+    </header>
+
+    <section class="board-shell">
+    <main class="table-wrap">
+      <div class="table">
+        <div class="compass">
+          <div class="compass-label north" id="compassNorth">North</div>
+          <div class="compass-label south" id="compassSouth">South</div>
+          <div class="compass-label west" id="compassWest">West</div>
+          <div class="compass-label east" id="compassEast">East</div>
+        </div>
+
+        <section class="seat north" id="seatNorth"></section>
+        <section class="seat west" id="seatWest"></section>
+        <section class="seat east" id="seatEast"></section>
+        <section class="seat south south-call" id="seatSouth">
+          <div class="seat-head">
+            <div>
+              <div class="seat-name" id="southSeatName">South</div>
+              <div class="seat-role" id="southSeatPoints">15 pt</div>
+            </div>
+            <div class="seat-role" id="southSeatState">-</div>
+          </div>
+          <div class="seat-panel-copy" id="actionHint">Wait</div>
+          <div class="open-strip" id="southOpenCards"></div>
+          <div class="seat-actions">
+            <button class="action" id="tsumoButton" type="button" disabled>Tsumo</button>
+            <button class="action" id="ronButton" type="button" disabled>Ron</button>
+            <button class="action" id="kanButton" type="button" disabled>Kan</button>
+            <button class="action" id="ponButton" type="button" disabled>Pon</button>
+            <button class="action" id="chiButton" type="button" disabled>Chi</button>
+            <button class="action secondary" id="passButton" type="button" disabled>Pass</button>
+            <button class="utility-button" id="openWinButton" type="button" disabled>Win</button>
+            <button class="utility-button" id="openLogButton" type="button">Log</button>
+            <button class="utility-button" id="openDiscardsButton" type="button">Discards</button>
+            <button class="utility-button" id="openRulesButton" type="button">Rules</button>
+            <button class="utility-button" id="openSetsButton" type="button">Sets</button>
+            <button class="utility-button" id="toggleAssistButton" type="button" aria-pressed="false">Hint</button>
+          </div>
+        </section>
+
+        <section class="center-panel">
+          <h2 id="centerTitle">Opening Wall</h2>
+          <div class="center-card" id="centerCard"></div>
+          <div class="pill-row" id="dangerPills" style="justify-content:center;"></div>
+        </section>
+      </div>
+    </main>
+    </section>
+
+    <section class="panel human-panel">
+      <div class="hand" id="humanHand"></div>
+    </section>
+  </div>
+  </div>
+
+  <div class="inspect-popup" id="inspectPopup" aria-hidden="true">
+    <div class="inspect-popup-card" id="inspectCard"></div>
+    <div class="inspect-popup-title" id="inspectTitle">No card</div>
+    <div class="pill-row" id="inspectPills"></div>
+  </div>
+
+  <div class="overlay" id="logOverlay" aria-hidden="true">
+    <div class="overlay-panel">
+      <div class="overlay-head">
+        <div class="overlay-title">Table Log</div>
+        <button class="utility-button" id="closeLogButton" type="button">Close</button>
+      </div>
+      <div class="log-list" id="logList"></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="winOverlay" aria-hidden="true">
+    <div class="overlay-panel">
+      <div class="overlay-head">
+        <div class="overlay-title">Winning Hand</div>
+        <button class="utility-button" id="closeWinButton" type="button">Close</button>
+      </div>
+      <div class="winning-list" id="winningLayouts"></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="discardOverlay" aria-hidden="true">
+    <div class="overlay-panel">
+      <div class="overlay-head">
+        <div class="overlay-title">Discarded Cards</div>
+        <button class="utility-button" id="closeDiscardButton" type="button">Close</button>
+      </div>
+      <div class="discard-list" id="discardList"></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="setsOverlay" aria-hidden="true">
+    <div class="overlay-panel">
+      <div class="overlay-head">
+        <div class="overlay-title">Winning Sets</div>
+        <button class="utility-button" id="closeSetsButton" type="button">Close</button>
+      </div>
+      <div class="set-list" id="setList"></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="rulesOverlay" aria-hidden="true">
+    <div class="overlay-panel">
+      <div class="overlay-head">
+        <div class="overlay-title">Important Rules</div>
+        <button class="utility-button" id="closeRulesButton" type="button">Close</button>
+      </div>
+      <div class="set-list" id="rulesList"></div>
+    </div>
+  </div>
+
+<script>
+const stems = [
+  { cn: "G", element: "G" },
+  { cn: "G", element: "G" },
+  { cn: "R", element: "R" },
+  { cn: "R", element: "R" },
+  { cn: "Y", element: "Y" },
+  { cn: "Y", element: "Y" },
+  { cn: "K", element: "K" },
+  { cn: "K", element: "K" },
+  { cn: "B", element: "B" },
+  { cn: "B", element: "B" },
+];
+
+const ELEMENTS = Array.from(new Set(stems.map((stem) => stem.element)));
+
+const branches = [
+  { cn: "1", animal: "1" },
+  { cn: "2", animal: "2" },
+  { cn: "3", animal: "3" },
+  { cn: "4", animal: "4" },
+  { cn: "5", animal: "5" },
+  { cn: "6", animal: "6" },
+  { cn: "7", animal: "7" },
+  { cn: "8", animal: "8" },
+  { cn: "9", animal: "9" },
+  { cn: "10", animal: "10" },
+  { cn: "11", animal: "11" },
+  { cn: "12", animal: "12" },
+];
+
+const ZODIAC_ORDER = branches.map((branch) => branch.animal);
+const CODE_LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"];
+const ELEMENT_COLORS = {
+  G: "#2f6a3d",
+  R: "#8a2f2f",
+  Y: "#9a842d",
+  K: "#2a2a30",
+  B: "#2d5f8a",
+};
+
+const GAME_CONFIG = {
+  startingHandSize: 5,
+  winningHandSize: 6,
+  startingPoints: 15,
+  matchRounds: 12,
+  roundBonusPoints: 3,
+  wallDrawDelayMs: 250,
+  nextTurnDelayMs: 180,
+  aiThinkDelayMs: 220,
+  ronCheckDelayMs: 80,
+  logLimit: 6,
+};
+
+const AI_CONFIG = {
+  discardWeights: {
+    winningDraw: 108,
+    winningPoint: 14,
+    bestWinningPoint: 11,
+    nearReadyDraw: 22,
+    distanceGainDraw: 10,
+    focusImproveDraw: 7,
+    shapeSupport: 8,
+    nearRule: 15,
+    distancePenalty: 40,
+    focusPrimary: 20,
+    focusSecondary: 7,
+    focusGap: 4,
+    readyBonus: 120,
+    oneAwayBonus: 56,
+    openPressureBonus: 18,
+    publicDangerPenalty: 9,
+    maxOpponentDangerPenalty: 5,
+    claimPressurePenalty: 1.2,
+    maxClaimPressurePenalty: 0.7,
+  },
+  chiThreshold: 152,
+  ponThreshold: 128,
+  kanThreshold: 146,
+  lookaheadCandidateBeam: 0,
+  lookaheadRecursiveBeam: 0,
+  lookaheadDrawSample: 0,
+  lookaheadRecursiveDrawSample: 0,
+  lookaheadExactPoolMax: 26,
+  lookaheadExactDistance: 3,
+  lookaheadImmediateWinBase: 840,
+  lookaheadImmediateWinPoint: 68,
+  strategy: {
+    dealerAggression: 0.12,
+    openCardAggression: 0.06,
+    exposedOpponentPressure: 0.05,
+    trailingAggressionPerPoint: 0.035,
+    maxTrailingAggression: 0.4,
+    leadingDefensePerPoint: 0.022,
+    maxLeadingDefense: 0.24,
+    claimBiasPerPoint: 0.03,
+    maxClaimBias: 0.5,
+    leadRiskBrakePerPoint: 0.012,
+    maxLeadRiskBrake: 0.12,
+  },
+  opponentSignals: {
+    minSignal: 0.42,
+    maxSignal: 2.4,
+    openCardPressure: 0.1,
+    openAnimalBonus: 0.24,
+    openElementBonus: 0.15,
+    openPolarityBonus: 0.08,
+    sideAnimalBonus: 0.12,
+    discardAnimalRelief: 0.16,
+    discardElementRelief: 0.1,
+    discardPolarityRelief: 0.06,
+    maxDiscardRelief: 0.65,
+    dealerPressure: 0.08,
+    trailingPointFactor: 0.015,
+    maxTrailingPressure: 0.18,
+  },
+  claimSignals: {
+    nextChiBase: 18,
+    nextChiInterest: 5,
+    nextChiAnimalBonus: 4,
+    ponBase: 14,
+    kanBase: 20,
+    claimInterest: 4,
+    openAnimalBonus: 5,
+    sameAnimalDepthBonus: 1.5,
+    dealerThreatBonus: 0.08,
+    leaderThreatBonus: 0.1,
+    discardAnimalRelief: 0.16,
+    maxDiscardRelief: 0.58,
+    hiddenNeedFactors: [1.18, 0.92, 0.58, 0.28, 0.12],
+  },
+  claimJudgement: {
+    chi: {
+      scoreThresholdMultiplier: 0.95,
+      floorScoreMultiplier: 0.56,
+      minDistanceGain: 1,
+      minRuleValueGain: 4,
+      highValueRuleGain: 12,
+      minWinningDrawGain: 1,
+      minTotalPointGain: 6,
+      minBestPointGain: 6,
+      minFocusGain: 4,
+      maxComfortDistance: 2,
+      sameRuleFocusGain: 2,
+      sameRulePointGain: 6,
+    },
+    pon: {
+      scoreThresholdMultiplier: 1,
+      floorScoreMultiplier: 0.7,
+      minDistanceGain: 1,
+      minRuleValueGain: 6,
+      highValueRuleGain: 9,
+      minWinningDrawGain: 1,
+      minTotalPointGain: 9,
+      minBestPointGain: 6,
+      minFocusGain: 6,
+      maxComfortDistance: 1,
+    },
+    kan: {
+      scoreThresholdMultiplier: 0.95,
+      floorScoreMultiplier: 0.68,
+      minDistanceGain: 1,
+      minRuleValueGain: 9,
+      highValueRuleGain: 12,
+      minWinningDrawGain: 1,
+      minTotalPointGain: 12,
+      minBestPointGain: 9,
+      minFocusGain: 6,
+      maxComfortDistance: 1,
+    },
+  },
+  continuity: {
+    primaryDistancePenalty: 4.2,
+    secondaryDistancePenalty: 2.6,
+    tertiaryDistancePenalty: 1.5,
+    primaryDistanceBonus: 2.1,
+    secondaryDistanceBonus: 1.3,
+    tertiaryDistanceBonus: 0.8,
+    committedSwitchPenalty: 48,
+    committedPreserveBonus: 16,
+    readyBreakPenalty: 84,
+    oneAwayBreakPenalty: 42,
+  },
+  tactical: {
+    exactRonPenaltyBase: 42000,
+    exactRonPointPenalty: 2400,
+    exactChiPenalty: 260,
+    exactPonPenalty: 720,
+    exactKanPenalty: 980,
+    claimScoreGainPenalty: 1.45,
+    claimWaitPenalty: 44,
+    claimPointPenalty: 34,
+    claimFocusPenalty: 2.4,
+  },
+};
+
+const PUBLIC_AI_CONTEXT = Object.freeze({
+  useHiddenIntel: false,
+  lookaheadDepth: 0,
+  exactResponseDepth: 0,
+});
+
+const BRUTAL_AI_CONTEXT = Object.freeze({
+  useHiddenIntel: false,
+  lookaheadDepth: 0,
+  exactResponseDepth: 0,
+});
+
+const TABLE_CONFIG = {
+  players: [
+    { key: "east", name: "Jack AI", isHuman: false, renderSlot: "east" },
+    { key: "south", name: "You", isHuman: true, renderSlot: "south" },
+    { key: "west", name: "Lisa AI", isHuman: false, renderSlot: "west" },
+    { key: "north", name: "George AI", isHuman: false, renderSlot: "north" },
+  ],
+  renderOrder: ["north", "west", "east", "south"],
+};
+
+const VIEWPORT_FIT = {
+  minFluidWidth: 1100,
+  minFluidHeight: 760,
+  chromePaddingX: 24,
+  chromePaddingY: 24,
+};
+
+const SOUND_CONFIG = {
+  masterVolume: 1,
+  uiClickVolume: 0.24,
+  drawVolume: 0.36,
+  discardVolume: 0.44,
+  alertVolume: 0.36,
+  winVolume: 0.56,
+};
+
+const allCards = Array.from({ length: 60 }, (_, index) => {
+  const stem = stems[index % 10];
+  const branch = branches[index % 12];
+  const id = index + 1;
+  const code = String(id).padStart(2, "0");
+  return {
+    id,
+    code,
+    chinese: branch.cn,
+    label: `${stem.element} ${branch.animal}`,
+    element: stem.element,
+    animal: branch.animal,
+  };
+});
+
+const WIND_ORDER = ["East", "South", "West", "North"];
+const HUMAN_PLAYER_INDEX = TABLE_CONFIG.players.findIndex((player) => player.isHuman);
+const INITIAL_DEALER_INDEX = TABLE_CONFIG.players.findIndex((player) => player.renderSlot === "east");
+const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+const ANIMAL_ORDER_INDEX = Object.fromEntries(ZODIAC_ORDER.map((animal, index) => [animal, index]));
+
+const soundState = {
+  context: null,
+  master: null,
+};
+
+function getAudioContext() {
+  if (!AudioContextClass) return null;
+  if (soundState.context) return soundState.context;
+
+  const context = new AudioContextClass();
+  const master = context.createGain();
+  master.gain.value = SOUND_CONFIG.masterVolume;
+  master.connect(context.destination);
+
+  soundState.context = context;
+  soundState.master = master;
+  return context;
+}
+
+function unlockAudio() {
+  const context = getAudioContext();
+  if (!context || context.state !== "suspended") return;
+  context.resume().catch(() => {});
+}
+
+function scheduleTone(options) {
+  const context = getAudioContext();
+  if (!context || !soundState.master || context.state !== "running") return;
+
+  const {
+    at = context.currentTime,
+    frequency = 440,
+    duration = 0.12,
+    type = "sine",
+    volume = 0.04,
+    attack = 0.004,
+    release = 0.09,
+    endFrequency = frequency,
+    detune = 0,
+  } = options;
+
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(frequency, at);
+  oscillator.frequency.linearRampToValueAtTime(endFrequency, at + duration);
+  oscillator.detune.setValueAtTime(detune, at);
+
+  gain.gain.setValueAtTime(0.0001, at);
+  gain.gain.linearRampToValueAtTime(volume, at + attack);
+  gain.gain.exponentialRampToValueAtTime(0.0001, at + duration + release);
+
+  oscillator.connect(gain);
+  gain.connect(soundState.master);
+  oscillator.start(at);
+  oscillator.stop(at + duration + release + 0.02);
+}
+
+function scheduleNoise(options) {
+  const context = getAudioContext();
+  if (!context || !soundState.master || context.state !== "running") return;
+
+  const {
+    at = context.currentTime,
+    duration = 0.08,
+    volume = 0.028,
+    attack = 0.002,
+    release = 0.05,
+    filterFrequency = 1400,
+    filterQ = 0.8,
+  } = options;
+
+  const frameCount = Math.max(1, Math.floor(context.sampleRate * duration));
+  const buffer = context.createBuffer(1, frameCount, context.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let index = 0; index < frameCount; index += 1) {
+    data[index] = (Math.random() * 2 - 1) * (1 - index / frameCount);
+  }
+
+  const source = context.createBufferSource();
+  source.buffer = buffer;
+
+  const filter = context.createBiquadFilter();
+  filter.type = "bandpass";
+  filter.frequency.setValueAtTime(filterFrequency, at);
+  filter.Q.setValueAtTime(filterQ, at);
+
+  const gain = context.createGain();
+  gain.gain.setValueAtTime(0.0001, at);
+  gain.gain.linearRampToValueAtTime(volume, at + attack);
+  gain.gain.exponentialRampToValueAtTime(0.0001, at + duration + release);
+
+  source.connect(filter);
+  filter.connect(gain);
+  gain.connect(soundState.master);
+  source.start(at);
+  source.stop(at + duration + release + 0.02);
+}
+
+const sound = {
+  uiClick() {
+    const context = getAudioContext();
+    if (!context || context.state !== "running") return;
+    const at = context.currentTime;
+    scheduleTone({
+      at,
+      frequency: 560,
+      endFrequency: 660,
+      duration: 0.035,
+      type: "triangle",
+      volume: SOUND_CONFIG.uiClickVolume,
+      attack: 0.002,
+      release: 0.03,
+    });
+    scheduleNoise({
+      at,
+      duration: 0.018,
+      volume: SOUND_CONFIG.uiClickVolume * 0.55,
+      release: 0.02,
+      filterFrequency: 2800,
+      filterQ: 1.2,
+    });
+  },
+  draw() {
+    const context = getAudioContext();
+    if (!context || context.state !== "running") return;
+    const at = context.currentTime;
+    scheduleTone({
+      at,
+      frequency: 360,
+      endFrequency: 470,
+      duration: 0.08,
+      type: "triangle",
+      volume: SOUND_CONFIG.drawVolume,
+      release: 0.06,
+    });
+    scheduleTone({
+      at: at + 0.045,
+      frequency: 520,
+      endFrequency: 620,
+      duration: 0.06,
+      type: "sine",
+      volume: SOUND_CONFIG.drawVolume * 0.8,
+      release: 0.05,
+    });
+  },
+  discard() {
+    const context = getAudioContext();
+    if (!context || context.state !== "running") return;
+    const at = context.currentTime;
+    scheduleNoise({
+      at,
+      duration: 0.042,
+      volume: SOUND_CONFIG.discardVolume,
+      release: 0.04,
+      filterFrequency: 900,
+      filterQ: 0.7,
+    });
+    scheduleTone({
+      at,
+      frequency: 150,
+      endFrequency: 98,
+      duration: 0.07,
+      type: "triangle",
+      volume: SOUND_CONFIG.discardVolume * 0.8,
+      attack: 0.001,
+      release: 0.08,
+    });
+  },
+  pass() {
+    const context = getAudioContext();
+    if (!context || context.state !== "running") return;
+    const at = context.currentTime;
+    scheduleTone({
+      at,
+      frequency: 420,
+      endFrequency: 320,
+      duration: 0.06,
+      type: "triangle",
+      volume: SOUND_CONFIG.alertVolume * 0.9,
+      release: 0.05,
+    });
+  },
+  prompt() {
+    const context = getAudioContext();
+    if (!context || context.state !== "running") return;
+    const at = context.currentTime;
+    [640, 820].forEach((frequency, index) => {
+      scheduleTone({
+        at: at + index * 0.06,
+        frequency,
+        endFrequency: frequency * 1.03,
+        duration: 0.07,
+        type: "sine",
+        volume: SOUND_CONFIG.alertVolume,
+        release: 0.08,
+      });
+    });
+  },
+  tsumo() {
+    const context = getAudioContext();
+    if (!context || context.state !== "running") return;
+    const at = context.currentTime;
+    [392, 523.25, 659.25, 783.99].forEach((frequency, index) => {
+      scheduleTone({
+        at: at + index * 0.085,
+        frequency,
+        endFrequency: frequency * 1.01,
+        duration: 0.2,
+        type: "triangle",
+        volume: SOUND_CONFIG.winVolume,
+        release: 0.16,
+      });
+    });
+  },
+  ron() {
+    const context = getAudioContext();
+    if (!context || context.state !== "running") return;
+    const at = context.currentTime;
+    [523.25, 466.16, 698.46].forEach((frequency, index) => {
+      scheduleTone({
+        at: at + index * 0.07,
+        frequency,
+        endFrequency: frequency * (index === 2 ? 1.06 : 0.98),
+        duration: 0.13,
+        type: "sawtooth",
+        volume: SOUND_CONFIG.winVolume * 0.82,
+        release: 0.12,
+      });
+    });
+  },
+  deal() {
+    const context = getAudioContext();
+    if (!context || context.state !== "running") return;
+    const at = context.currentTime;
+    for (let index = 0; index < 4; index += 1) {
+      scheduleNoise({
+        at: at + index * 0.045,
+        duration: 0.025,
+        volume: SOUND_CONFIG.uiClickVolume * 0.75,
+        release: 0.025,
+        filterFrequency: 1800,
+        filterQ: 1,
+      });
+    }
+  },
+  overlay(open) {
+    const context = getAudioContext();
+    if (!context || context.state !== "running") return;
+    const at = context.currentTime;
+    scheduleTone({
+      at,
+      frequency: open ? 480 : 420,
+      endFrequency: open ? 620 : 300,
+      duration: 0.08,
+      type: "sine",
+      volume: SOUND_CONFIG.uiClickVolume * 1.1,
+      release: 0.08,
+    });
+  },
+};
+
+function sortCardsByNumber(cards) {
+  return cards.slice().sort((a, b) => a.id - b.id);
+}
+
+function displayCodeForId(id) {
+  const zeroBased = Math.max(0, id - 1);
+  const first = CODE_LETTERS[Math.floor(zeroBased / CODE_LETTERS.length)] || CODE_LETTERS[0];
+  const second = CODE_LETTERS[zeroBased % CODE_LETTERS.length];
+  return `${first}${second}`;
+}
+
+function sortCardsForDisplay(cards) {
+  return cards.slice().sort((a, b) => {
+    const animalDiff = ANIMAL_ORDER_INDEX[a.animal] - ANIMAL_ORDER_INDEX[b.animal];
+    if (animalDiff !== 0) return animalDiff;
+    return a.id - b.id;
+  });
+}
+
+function shuffle(cards) {
+  const copy = cards.slice();
+  for (let index = copy.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [copy[index], copy[swapIndex]] = [copy[swapIndex], copy[index]];
+  }
+  return copy;
+}
+
+function combinations(cards, size, start = 0, prefix = [], out = []) {
+  if (prefix.length === size) {
+    out.push(prefix.slice());
+    return out;
+  }
+  for (let index = start; index <= cards.length - (size - prefix.length); index += 1) {
+    prefix.push(cards[index]);
+    combinations(cards, size, index + 1, prefix, out);
+    prefix.pop();
+  }
+  return out;
+}
+
+function previousAnimal(animal) {
+  const index = ZODIAC_ORDER.indexOf(animal);
+  return ZODIAC_ORDER[(index - 1 + ZODIAC_ORDER.length) % ZODIAC_ORDER.length];
+}
+
+function nextAnimal(animal) {
+  const index = ZODIAC_ORDER.indexOf(animal);
+  return ZODIAC_ORDER[(index + 1) % ZODIAC_ORDER.length];
+}
+
+function animalsFormRun(animals, runLength) {
+  const uniqueAnimals = Array.from(new Set(animals));
+  if (uniqueAnimals.length !== runLength) return false;
+  return ZODIAC_ORDER.some((_, start) => (
+    Array.from({ length: runLength }, (_, index) => ZODIAC_ORDER[(start + index) % ZODIAC_ORDER.length])
+      .every((animal) => uniqueAnimals.includes(animal))
+  ));
+}
+
+function bestAnimalRunProgress(cards, runLength, capPerAnimal) {
+  let best = 0;
+  for (let start = 0; start < ZODIAC_ORDER.length; start += 1) {
+    const targetAnimals = Array.from(
+      { length: runLength },
+      (_, index) => ZODIAC_ORDER[(start + index) % ZODIAC_ORDER.length]
+    );
+    const progress = targetAnimals.reduce((sum, animal) => (
+      sum + Math.min(capPerAnimal, cards.filter((card) => card.animal === animal).length)
+    ), 0);
+    best = Math.max(best, progress);
+  }
+  return best;
+}
+
+function allFiveColorsPresent(cards) {
+  return new Set(cards.map((card) => card.element)).size === ELEMENTS.length;
+}
+
+function parityOfCard(card) {
+  return card.id % 2 === 0 ? "even" : "odd";
+}
+
+function allSameParity(cards) {
+  return new Set(cards.map((card) => parityOfCard(card))).size === 1;
+}
+
+function alternatingMonthTargets(start) {
+  return Array.from(
+    { length: GAME_CONFIG.winningHandSize },
+    (_, index) => ZODIAC_ORDER[(start + index * 2) % ZODIAC_ORDER.length]
+  );
+}
+
+function matchingAlternatingMonthSequence(months) {
+  const uniqueMonths = Array.from(new Set(months));
+  if (uniqueMonths.length !== GAME_CONFIG.winningHandSize) return null;
+  for (let start = 0; start < ZODIAC_ORDER.length; start += 1) {
+    const targets = alternatingMonthTargets(start);
+    if (targets.every((month) => uniqueMonths.includes(month))) {
+      return targets;
+    }
+  }
+  return null;
+}
+
+function bestAlternatingMonthProgress(cards, capPerMonth = 1) {
+  let best = 0;
+  for (let start = 0; start < ZODIAC_ORDER.length; start += 1) {
+    const targets = alternatingMonthTargets(start);
+    const progress = targets.reduce((sum, month) => (
+      sum + Math.min(capPerMonth, cards.filter((card) => card.animal === month).length)
+    ), 0);
+    best = Math.max(best, progress);
+  }
+  return best;
+}
+
+function seatForPlayer(playerIndex, dealerIndex) {
+  return WIND_ORDER[(playerIndex - dealerIndex + WIND_ORDER.length) % WIND_ORDER.length];
+}
+
+function renderCardMarkup(card, { back = false } = {}) {
+  if (back) {
+    return `
+      <div class="card-face card-back-face" aria-hidden="true">
+        <div class="tile-back-mark">M</div>
+      </div>
+    `;
+  }
+
+  const accent = ELEMENT_COLORS[card.element] || "#405066";
+  return `
+    <div class="card-face" style="--card-accent: ${accent};" aria-hidden="true">
+      <div class="tile-head">
+        <span class="tile-id">${displayCodeForId(card.id)}</span>
+        <span class="tile-element">${card.element}</span>
+      </div>
+      <div class="tile-month">${card.animal}</div>
+    </div>
+  `;
+}
+
+function nextDealerIndex() {
+  if (state.phase !== "finished") return state.dealerIndex ?? INITIAL_DEALER_INDEX;
+  if (state.winners?.includes(state.dealerIndex)) return state.dealerIndex;
+  return ((state.dealerIndex ?? INITIAL_DEALER_INDEX) + 1) % TABLE_CONFIG.players.length;
+}
+
+function dealerIndexForNextHand() {
+  if (!state.players.length) {
+    return Math.floor(Math.random() * TABLE_CONFIG.players.length);
+  }
+  return nextDealerIndex();
+}
+
+// Add new win patterns here. The resolver below supports mixed set sizes later.
+const SET_RULES = [
+  // The Ascending River: six adjacent cards in deck order.
+  {
+    id: "six-run",
+    label: "Straight Run",
+    points: 15,
+    size: GAME_CONFIG.winningHandSize,
+    matches(cards) {
+      const sorted = sortCardsByNumber(cards);
+      return sorted.every((card, index) => index === 0 || card.id === sorted[0].id + index);
+    },
+    describe(cards) {
+      const sorted = sortCardsByNumber(cards);
+      return `Six adjacent codes in order, from ${displayCodeForId(sorted[0].id)} to ${displayCodeForId(sorted[sorted.length - 1].id)}.`;
+    },
+    distance(cards) {
+      let best = GAME_CONFIG.winningHandSize;
+      for (let start = 1; start <= allCards.length - GAME_CONFIG.winningHandSize + 1; start += 1) {
+        const count = cards.filter((card) => card.id >= start && card.id <= start + GAME_CONFIG.winningHandSize - 1).length;
+        best = Math.min(best, GAME_CONFIG.winningHandSize - count);
+      }
+      return best;
+    },
+  },
+  // The Elemental Court: all six cards swear to one element.
+  {
+    id: "same-element",
+    label: "One Color",
+    points: 3,
+    size: GAME_CONFIG.winningHandSize,
+    matches(cards) {
+      return new Set(cards.map((card) => card.element)).size === 1;
+    },
+    describe(cards) {
+      return `All ${GAME_CONFIG.winningHandSize} cards share the color ${cards[0].element}.`;
+    },
+    distance(cards) {
+      const counts = {};
+      cards.forEach((card) => {
+        counts[card.element] = (counts[card.element] || 0) + 1;
+      });
+      return GAME_CONFIG.winningHandSize - Math.max(0, ...Object.values(counts));
+    },
+  },
+  // The Fivefold Banner: all five colors displayed across six different months.
+  {
+    id: "polarity-five-elements",
+    label: "Odd or Even, Five Colors",
+    points: 3,
+    size: GAME_CONFIG.winningHandSize,
+    matches(cards) {
+      return allSameParity(cards)
+        && allFiveColorsPresent(cards)
+        && new Set(cards.map((card) => card.animal)).size === GAME_CONFIG.winningHandSize;
+    },
+    describe(cards) {
+      return `All ${parityOfCard(cards[0])} cards, all five colors present, and all ${GAME_CONFIG.winningHandSize} months different.`;
+    },
+    distance(cards) {
+      const parityCounts = cards.reduce((counts, card) => {
+        const parity = parityOfCard(card);
+        counts[parity] = (counts[parity] || 0) + 1;
+        return counts;
+      }, {});
+      const missingParity = GAME_CONFIG.winningHandSize - Math.max(0, ...Object.values(parityCounts));
+      const missingElements = Math.max(0, ELEMENTS.length - new Set(cards.map((card) => card.element)).size);
+      const missingMonths = GAME_CONFIG.winningHandSize - Math.min(
+        new Set(cards.map((card) => card.animal)).size,
+        GAME_CONFIG.winningHandSize
+      );
+      return Math.max(missingParity, missingElements, missingMonths);
+    },
+  },
+  // The Zodiac Procession: six neighboring animals marching in order.
+  {
+    id: "zodiac-run",
+    label: "Consecutive Months",
+    points: 3,
+    size: GAME_CONFIG.winningHandSize,
+    matches(cards) {
+      if (new Set(cards.map((card) => card.animal)).size !== GAME_CONFIG.winningHandSize) return false;
+      return animalsFormRun(cards.map((card) => card.animal), GAME_CONFIG.winningHandSize);
+    },
+    describe(cards) {
+      const sortedAnimals = cards
+        .map((card) => ({
+          animal: card.animal,
+          index: ZODIAC_ORDER.indexOf(card.animal),
+        }))
+        .sort((a, b) => a.index - b.index)
+        .map((entry) => entry.animal);
+      return `Six months in order: ${sortedAnimals.join(", ")}.`;
+    },
+    distance(cards) {
+      return GAME_CONFIG.winningHandSize - bestAnimalRunProgress(cards, GAME_CONFIG.winningHandSize, 1);
+    },
+  },
+  // The Elemental Procession: six neighboring animals bound to one element.
+  {
+    id: "zodiac-run-element",
+    label: "Consecutive Months, One Color",
+    points: 15,
+    size: GAME_CONFIG.winningHandSize,
+    matches(cards) {
+      if (new Set(cards.map((card) => card.animal)).size !== GAME_CONFIG.winningHandSize) return false;
+      return new Set(cards.map((card) => card.element)).size === 1
+        && animalsFormRun(cards.map((card) => card.animal), GAME_CONFIG.winningHandSize);
+    },
+    describe(cards) {
+      const sortedAnimals = cards
+        .map((card) => ({
+          animal: card.animal,
+          index: ZODIAC_ORDER.indexOf(card.animal),
+        }))
+        .sort((a, b) => a.index - b.index)
+        .map((entry) => entry.animal);
+      return `Six ${cards[0].element} months in order: ${sortedAnimals.join(", ")}.`;
+    },
+    distance(cards) {
+      return Math.min(...ELEMENTS.map((element) => (
+        GAME_CONFIG.winningHandSize - bestAnimalRunProgress(
+          cards.filter((card) => card.element === element),
+          GAME_CONFIG.winningHandSize,
+          1
+        )
+      )));
+    },
+  },
+  // The Beast and Its Shadow: five of one animal with one neighboring sign.
+  {
+    id: "four-with-neighbors",
+    label: "Five With Side Month",
+    points: 12,
+    size: GAME_CONFIG.winningHandSize,
+    matches(cards) {
+      if (new Set(cards.map((card) => card.element)).size !== 5) return false;
+      const animalCounts = {};
+      cards.forEach((card) => {
+        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+      });
+
+      return Object.entries(animalCounts).some(([animal, count]) => {
+        if (count !== 5) return false;
+        const sideAnimals = new Set([previousAnimal(animal), nextAnimal(animal)]);
+        const remainders = cards.filter((card) => card.animal !== animal);
+        return remainders.length === 1 && sideAnimals.has(remainders[0].animal);
+      });
+    },
+    describe(cards) {
+      const animalCounts = {};
+      cards.forEach((card) => {
+        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+      });
+
+      const coreAnimal = Object.entries(animalCounts).find(([, count]) => count === 5)?.[0];
+      const left = previousAnimal(coreAnimal);
+      const right = nextAnimal(coreAnimal);
+      return `Five ${coreAnimal} cards plus one side month from ${left} or ${right}, with all five colors present.`;
+    },
+    distance(cards) {
+      let best = GAME_CONFIG.winningHandSize;
+      const missingColors = Math.max(0, 5 - new Set(cards.map((card) => card.element)).size);
+      ZODIAC_ORDER.forEach((animal) => {
+        const sameCount = cards.filter((card) => card.animal === animal).length;
+        const sideAnimals = new Set([previousAnimal(animal), nextAnimal(animal)]);
+        const sideCount = cards.filter((card) => sideAnimals.has(card.animal)).length;
+        const progress = Math.min(5, sameCount) + Math.min(1, sideCount);
+        best = Math.min(best, GAME_CONFIG.winningHandSize - progress);
+      });
+      return Math.max(best, missingColors);
+    },
+  },
+  // The Twin Flanks: four of a beast guarded by a matching neighboring pair.
+  {
+    id: "four-plus-two-side",
+    label: "Four With Double Side Month",
+    points: 12,
+    size: GAME_CONFIG.winningHandSize,
+    matches(cards) {
+      if (new Set(cards.map((card) => card.element)).size !== 5) return false;
+      const animalCounts = {};
+      cards.forEach((card) => {
+        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+      });
+
+      return Object.entries(animalCounts).some(([animal, count]) => {
+        if (count !== 4) return false;
+        const remainders = cards.filter((card) => card.animal !== animal);
+        if (remainders.length !== 2) return false;
+        return remainders[0].animal === remainders[1].animal
+          && [previousAnimal(animal), nextAnimal(animal)].includes(remainders[0].animal);
+      });
+    },
+    describe(cards) {
+      const animalCounts = {};
+      cards.forEach((card) => {
+        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+      });
+      const coreAnimal = Object.entries(animalCounts).find(([, count]) => count === 4)?.[0];
+      const sideAnimal = cards.find((card) => card.animal !== coreAnimal)?.animal;
+      return `Four ${coreAnimal} cards plus two ${sideAnimal} cards from one neighboring month, with all five colors present.`;
+    },
+    distance(cards) {
+      let best = GAME_CONFIG.winningHandSize;
+      const missingColors = Math.max(0, 5 - new Set(cards.map((card) => card.element)).size);
+      ZODIAC_ORDER.forEach((animal) => {
+        const sameCount = cards.filter((card) => card.animal === animal).length;
+        [previousAnimal(animal), nextAnimal(animal)].forEach((sideAnimal) => {
+          const sideCount = cards.filter((card) => card.animal === sideAnimal).length;
+          const progress = Math.min(4, sameCount) + Math.min(2, sideCount);
+          best = Math.min(best, GAME_CONFIG.winningHandSize - progress);
+        });
+      });
+      return Math.max(best, missingColors);
+    },
+  },
+  // The Open Flanks: four of one beast with both neighboring guardians.
+  {
+    id: "four-plus-split-sides",
+    label: "Four With Split Side Months",
+    points: 12,
+    size: GAME_CONFIG.winningHandSize,
+    matches(cards) {
+      if (new Set(cards.map((card) => card.element)).size !== 5) return false;
+      const animalCounts = {};
+      cards.forEach((card) => {
+        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+      });
+
+      return Object.entries(animalCounts).some(([animal, count]) => {
+        if (count !== 4) return false;
+        const remainders = cards.filter((card) => card.animal !== animal);
+        if (remainders.length !== 2) return false;
+        const remainderAnimals = new Set(remainders.map((card) => card.animal));
+        return remainderAnimals.size === 2
+          && remainderAnimals.has(previousAnimal(animal))
+          && remainderAnimals.has(nextAnimal(animal));
+      });
+    },
+    describe(cards) {
+      const animalCounts = {};
+      cards.forEach((card) => {
+        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+      });
+      const coreAnimal = Object.entries(animalCounts).find(([, count]) => count === 4)?.[0];
+      return `Four ${coreAnimal} cards plus one ${previousAnimal(coreAnimal)} and one ${nextAnimal(coreAnimal)}, with all five colors present.`;
+    },
+    distance(cards) {
+      let best = GAME_CONFIG.winningHandSize;
+      const missingColors = Math.max(0, 5 - new Set(cards.map((card) => card.element)).size);
+      ZODIAC_ORDER.forEach((animal) => {
+        const sameCount = cards.filter((card) => card.animal === animal).length;
+        const prevCount = cards.filter((card) => card.animal === previousAnimal(animal)).length;
+        const nextCount = cards.filter((card) => card.animal === nextAnimal(animal)).length;
+        const progress = Math.min(4, sameCount) + Math.min(1, prevCount) + Math.min(1, nextCount);
+        best = Math.min(best, GAME_CONFIG.winningHandSize - progress);
+      });
+      return Math.max(best, missingColors);
+    },
+  },
+  // The Three Gates: three distinct animal pairs in balance.
+  {
+    id: "three-animal-pairs",
+    label: "Three Month Pairs",
+    points: 6,
+    size: GAME_CONFIG.winningHandSize,
+    matches(cards) {
+      const animalCounts = {};
+      cards.forEach((card) => {
+        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+      });
+
+      const counts = Object.values(animalCounts).sort((a, b) => b - a);
+      return counts.length === 3
+        && counts.every((count) => count === 2)
+        && animalsFormRun(Object.keys(animalCounts), 3);
+    },
+    describe(cards) {
+      const animalCounts = {};
+      cards.forEach((card) => {
+        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+      });
+      const animals = Object.keys(animalCounts)
+        .sort((a, b) => ANIMAL_ORDER_INDEX[a] - ANIMAL_ORDER_INDEX[b])
+        .map((animal) => animal);
+      return `Three consecutive month pairs: ${animals.join(", ")}.`;
+    },
+    distance(cards) {
+      return GAME_CONFIG.winningHandSize - bestAnimalRunProgress(cards, 3, 2);
+    },
+  },
+  // The Three Courts: any three animal pairs restrained to two elements.
+  {
+    id: "three-animal-pairs-three-elements",
+    label: "Three Month Pairs, Two Colors",
+    points: 6,
+    priority: 1,
+    size: GAME_CONFIG.winningHandSize,
+    matches(cards) {
+      const animalCounts = {};
+      cards.forEach((card) => {
+        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+      });
+      const counts = Object.values(animalCounts).sort((a, b) => b - a);
+      return counts.length === 3
+        && counts.every((count) => count === 2)
+        && new Set(cards.map((card) => card.element)).size <= 2;
+    },
+    describe(cards) {
+      const animals = Array.from(new Set(cards.map((card) => card.animal)))
+        .sort((a, b) => ANIMAL_ORDER_INDEX[a] - ANIMAL_ORDER_INDEX[b])
+        .map((animal) => animal);
+      return `Three month pairs within at most two colors: ${animals.join(", ")}.`;
+    },
+    distance(cards) {
+      const animalCounts = {};
+      cards.forEach((card) => {
+        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+      });
+      const pairProgress = Object.values(animalCounts)
+        .sort((a, b) => b - a)
+        .slice(0, 3)
+        .reduce((sum, count) => sum + Math.min(2, count), 0);
+      return Math.max(
+        GAME_CONFIG.winningHandSize - pairProgress,
+        Math.max(0, new Set(cards.map((card) => card.element)).size - 2)
+      );
+    },
+  },
+  // The Banner Gates: any three animal pairs spanning all five colors.
+  {
+    id: "three-animal-pairs-balance",
+    label: "Three Month Pairs, Odd or Even",
+    points: 6,
+    priority: 1,
+    size: GAME_CONFIG.winningHandSize,
+    matches(cards) {
+      const animalCounts = {};
+      cards.forEach((card) => {
+        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+      });
+      const counts = Object.values(animalCounts).sort((a, b) => b - a);
+      return counts.length === 3
+        && counts.every((count) => count === 2)
+        && allSameParity(cards);
+    },
+    describe(cards) {
+      const animals = Array.from(new Set(cards.map((card) => card.animal)))
+        .sort((a, b) => ANIMAL_ORDER_INDEX[a] - ANIMAL_ORDER_INDEX[b])
+        .map((animal) => animal);
+      return `Three month pairs, all ${parityOfCard(cards[0])}: ${animals.join(", ")}.`;
+    },
+    distance(cards) {
+      const animalCounts = {};
+      cards.forEach((card) => {
+        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+      });
+      const pairProgress = Object.values(animalCounts)
+        .sort((a, b) => b - a)
+        .slice(0, 3)
+        .reduce((sum, count) => sum + Math.min(2, count), 0);
+      const parityCounts = cards.reduce((counts, card) => {
+        const parity = parityOfCard(card);
+        counts[parity] = (counts[parity] || 0) + 1;
+        return counts;
+      }, {});
+      return Math.max(
+        GAME_CONFIG.winningHandSize - pairProgress,
+        GAME_CONFIG.winningHandSize - Math.max(0, ...Object.values(parityCounts))
+      );
+    },
+  },
+  // The Twin Standards: two animal clans standing three cards strong each.
+  {
+    id: "two-animal-threes",
+    label: "Two Month Threes",
+    points: 9,
+    size: GAME_CONFIG.winningHandSize,
+    matches(cards) {
+      const animalCounts = {};
+      cards.forEach((card) => {
+        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+      });
+
+      const counts = Object.values(animalCounts).sort((a, b) => b - a);
+      return counts.length === 2
+        && counts.every((count) => count === 3)
+        && animalsFormRun(Object.keys(animalCounts), 2);
+    },
+    describe(cards) {
+      const animalCounts = {};
+      cards.forEach((card) => {
+        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+      });
+      const animals = Object.keys(animalCounts)
+        .sort((a, b) => ANIMAL_ORDER_INDEX[a] - ANIMAL_ORDER_INDEX[b])
+        .map((animal) => animal);
+      return `Three ${animals[0]} cards and three ${animals[1]} cards from consecutive months.`;
+    },
+    distance(cards) {
+      const progress = bestAnimalRunProgress(cards, 2, 3);
+      return GAME_CONFIG.winningHandSize - progress;
+    },
+  },
+  // The Twin Courts: two triads held within three elements.
+  {
+    id: "two-animal-threes-two-elements",
+    label: "Two Month Threes, Three Colors",
+    points: 9,
+    priority: 1,
+    size: GAME_CONFIG.winningHandSize,
+    matches(cards) {
+      const animalCounts = {};
+      cards.forEach((card) => {
+        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+      });
+
+      const counts = Object.values(animalCounts).sort((a, b) => b - a);
+      return counts.length === 2
+        && counts.every((count) => count === 3)
+        && new Set(cards.map((card) => card.element)).size <= 3;
+    },
+    describe(cards) {
+      const animals = Array.from(new Set(cards.map((card) => card.animal)))
+        .sort((a, b) => ANIMAL_ORDER_INDEX[a] - ANIMAL_ORDER_INDEX[b])
+        .map((animal) => animal);
+      return `Three ${animals[0]} cards and three ${animals[1]} cards within at most three colors.`;
+    },
+    distance(cards) {
+      const animalCounts = {};
+      cards.forEach((card) => {
+        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+      });
+      const tripleProgress = Object.values(animalCounts)
+        .sort((a, b) => b - a)
+        .slice(0, 2)
+        .reduce((sum, count) => sum + Math.min(3, count), 0);
+      return Math.max(
+        GAME_CONFIG.winningHandSize - tripleProgress,
+        Math.max(0, new Set(cards.map((card) => card.element)).size - 3)
+      );
+    },
+  },
+  // The Twin Banner: two triads spanning all five colors.
+  {
+    id: "two-animal-threes-polarity",
+    label: "Two Month Threes, Odd or Even",
+    points: 9,
+    priority: 1,
+    size: GAME_CONFIG.winningHandSize,
+    matches(cards) {
+      const animalCounts = {};
+      cards.forEach((card) => {
+        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+      });
+
+      const counts = Object.values(animalCounts).sort((a, b) => b - a);
+      return counts.length === 2
+        && counts.every((count) => count === 3)
+        && allSameParity(cards);
+    },
+    describe(cards) {
+      const animals = Array.from(new Set(cards.map((card) => card.animal)))
+        .sort((a, b) => ANIMAL_ORDER_INDEX[a] - ANIMAL_ORDER_INDEX[b])
+        .map((animal) => animal);
+      return `Three ${animals[0]} cards and three ${animals[1]} cards, all ${parityOfCard(cards[0])}.`;
+    },
+    distance(cards) {
+      const animalCounts = {};
+      cards.forEach((card) => {
+        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+      });
+      const tripleProgress = Object.values(animalCounts)
+        .sort((a, b) => b - a)
+        .slice(0, 2)
+        .reduce((sum, count) => sum + Math.min(3, count), 0);
+      const parityCounts = cards.reduce((counts, card) => {
+        const parity = parityOfCard(card);
+        counts[parity] = (counts[parity] || 0) + 1;
+        return counts;
+      }, {});
+      return Math.max(
+        GAME_CONFIG.winningHandSize - tripleProgress,
+        GAME_CONFIG.winningHandSize - Math.max(0, ...Object.values(parityCounts))
+      );
+    },
+  },
+  // The Pillar Ladder: one color carried across alternating months.
+  {
+    id: "ending-digit-ladder",
+    label: "Alternating Months, One Color",
+    points: 15,
+    size: GAME_CONFIG.winningHandSize,
+    matches(cards) {
+      return new Set(cards.map((card) => card.element)).size === 1
+        && Boolean(matchingAlternatingMonthSequence(cards.map((card) => card.animal)));
+    },
+    describe(cards) {
+      const sequence = matchingAlternatingMonthSequence(cards.map((card) => card.animal))
+        || Array.from(new Set(cards.map((card) => card.animal)));
+      return `Six ${cards[0].element} cards across alternating months: ${sequence.join(", ")}.`;
+    },
+    distance(cards) {
+      let best = GAME_CONFIG.winningHandSize;
+      ELEMENTS.forEach((element) => {
+        for (let start = 0; start < ZODIAC_ORDER.length; start += 1) {
+          const targetMonths = new Set(alternatingMonthTargets(start));
+          const matched = cards.filter((card) => (
+            card.element === element && targetMonths.has(card.animal)
+          )).length;
+          best = Math.min(best, GAME_CONFIG.winningHandSize - matched);
+        }
+      });
+      return best;
+    },
+  },
+];
+
+const analysisCache = {
+  winningLayouts: new Map(),
+  handShape: new Map(),
+  publicPotential: new Map(),
+};
+
+function requiredOpenCardsForPoints(points) {
+  if (points === 3) return 3;
+  if (points === 6) return 2;
+  if (points === 9) return 1;
+  return null;
+}
+
+function gearRequirementText(points) {
+  const required = requiredOpenCardsForPoints(points);
+  if (required === null) return "No gear requirement";
+  return `Requires at least ${required} open card${required === 1 ? "" : "s"}`;
+}
+
+function gearMatches(points, openCardCount) {
+  const required = requiredOpenCardsForPoints(points);
+  if (required === null) return true;
+  return openCardCount >= required;
+}
+
+function gearGapForPoints(points, openCardCount) {
+  const required = requiredOpenCardsForPoints(points);
+  if (required === null) return 0;
+  return Math.max(0, required - openCardCount);
+}
+
+function filterLayoutsByGear(layouts, openCardCount) {
+  return layouts.filter((layout) => gearMatches(scoreLayout(layout), openCardCount));
+}
+
+function cardsAnalysisKey(cards) {
+  return cards
+    .map((card) => card.id)
+    .slice()
+    .sort((a, b) => a - b)
+    .join("-");
+}
+
+function findWinningLayouts(cards) {
+  const cacheKey = cardsAnalysisKey(cards);
+  const cached = analysisCache.winningLayouts.get(cacheKey);
+  if (cached) return cached;
+
+  const sortedCards = sortCardsByNumber(cards);
+  const layouts = [];
+  const seen = new Set();
+
+  function walk(remaining, groups) {
+    if (remaining.length === 0) {
+      const signature = groups
+        .map((group) => `${group.ruleId}:${group.cards.map((card) => card.id).join("-")}`)
+        .sort()
+        .join("|");
+      if (!seen.has(signature)) {
+        seen.add(signature);
+        layouts.push(groups);
+      }
+      return;
+    }
+
+    for (const rule of SET_RULES) {
+      if (rule.size > remaining.length) continue;
+      const options = combinations(remaining, rule.size);
+      for (const option of options) {
+        if (!rule.matches(option)) continue;
+        const idSet = new Set(option.map((card) => card.id));
+        const nextRemaining = remaining.filter((card) => !idSet.has(card.id));
+        walk(nextRemaining, groups.concat({
+          ruleId: rule.id,
+          label: rule.label,
+          detail: rule.describe(option),
+          cards: sortCardsForDisplay(option),
+        }));
+      }
+    }
+  }
+
+  walk(sortedCards, []);
+  analysisCache.winningLayouts.set(cacheKey, layouts);
+  return layouts;
+}
+
+function findValidWinningLayouts(cards, openCardCount) {
+  return filterLayoutsByGear(findWinningLayouts(cards), openCardCount);
+}
+
+function removeCardById(cards, cardId) {
+  const index = cards.findIndex((card) => card.id === cardId);
+  if (index === -1) return { removed: null, next: cards.slice() };
+  const next = cards.slice();
+  const [removed] = next.splice(index, 1);
+  return { removed, next };
+}
+
+function removeLastCardById(cards, cardId) {
+  const index = cards.map((card) => card.id).lastIndexOf(cardId);
+  if (index === -1) return { removed: null, next: cards.slice() };
+  const next = cards.slice();
+  const [removed] = next.splice(index, 1);
+  return { removed, next };
+}
+
+const state = {
+  players: [],
+  points: Array(TABLE_CONFIG.players.length).fill(GAME_CONFIG.startingPoints),
+  roundNumber: 1,
+  wall: [],
+  currentTurn: 0,
+  dealerIndex: INITIAL_DEALER_INDEX,
+  phase: "idle",
+  call: "None",
+  pendingClaim: null,
+  lastDiscard: null,
+  lastDrawnCardId: null,
+  openCardClaims: {},
+  selectedCardId: null,
+  inspectCardId: null,
+  logs: [],
+  winner: null,
+  winners: [],
+  matchFinished: false,
+  matchSummary: null,
+  timer: null,
+  assistEnabled: false,
+};
+
+function getRoundMonthTarget() {
+  if (state.roundNumber < 1 || state.roundNumber > GAME_CONFIG.matchRounds) return null;
+  return String(state.roundNumber);
+}
+
+function getRoundLabel() {
+  if (state.roundNumber <= GAME_CONFIG.matchRounds) return String(state.roundNumber);
+  return `SD ${state.roundNumber - GAME_CONFIG.matchRounds}`;
+}
+
+function getLayoutCards(layout) {
+  const seen = new Set();
+  return (layout || []).flatMap((group) => group.cards).filter((card) => {
+    if (seen.has(card.id)) return false;
+    seen.add(card.id);
+    return true;
+  });
+}
+
+function roundBonusForLayout(layout) {
+  const roundMonth = getRoundMonthTarget();
+  if (!roundMonth) return 0;
+  return getLayoutCards(layout).some((card) => card.animal === roundMonth)
+    ? GAME_CONFIG.roundBonusPoints
+    : 0;
+}
+
+function roundBonusForCard(card) {
+  const roundMonth = getRoundMonthTarget();
+  if (!roundMonth || !card) return 0;
+  return card.animal === roundMonth ? GAME_CONFIG.roundBonusPoints : 0;
+}
+
+function totalLayoutPoints(layout) {
+  return scoreLayout(layout) + roundBonusForLayout(layout);
+}
+
+function getLayoutPointBreakdown(layout) {
+  const basePoints = scoreLayout(layout || []);
+  const bonusPoints = roundBonusForLayout(layout || []);
+  return {
+    basePoints,
+    bonusPoints,
+    points: basePoints + bonusPoints,
+  };
+}
+
+function getMatchLeaders() {
+  const best = Math.max(...state.points);
+  return state.points
+    .map((points, index) => ({ points, index }))
+    .filter((entry) => entry.points === best)
+    .map((entry) => entry.index);
+}
+
+function updateMatchSummary() {
+  const leaders = getMatchLeaders();
+  const busted = state.points.some((value) => value <= 0);
+  const atOrPastLimit = state.roundNumber >= GAME_CONFIG.matchRounds;
+
+  if (busted || (atOrPastLimit && leaders.length === 1)) {
+    state.matchFinished = true;
+    state.matchSummary = {
+      leaders,
+      reason: busted ? "bust" : state.roundNumber > GAME_CONFIG.matchRounds ? "sudden-death" : "round-limit",
+    };
+    return true;
+  }
+
+  state.matchFinished = false;
+  state.matchSummary = atOrPastLimit ? { leaders, reason: "tie" } : null;
+  return false;
+}
+
+function formatRoundBonusText(bonusPoints) {
+  return bonusPoints ? ` + ${bonusPoints} round bonus` : "";
+}
+
+function formatPointSummary(points, bonusPoints) {
+  if (!bonusPoints) return `${points} points`;
+  return `${points} points (${points - bonusPoints} + ${bonusPoints} round bonus)`;
+}
+
+function formatPlayerTag(playerIndex) {
+  const player = getPlayer(playerIndex);
+  return player ? `${player.seat} (${player.name})` : `P${playerIndex + 1}`;
+}
+
+function formatCardShort(card) {
+  return card ? `${card.chinese} ${card.element}` : "unknown card";
+}
+
+function formatCardSource(card, playerIndex) {
+  if (playerIndex === null || playerIndex === undefined) return formatCardShort(card);
+  return `${formatPlayerTag(playerIndex)}'s ${formatCardShort(card)}`;
+}
+
+function formatMatchSummaryText() {
+  if (!state.matchSummary) return "";
+  const leaderNames = state.matchSummary.leaders.map((index) => formatPlayerTag(index));
+  if (state.matchFinished) {
+    if (leaderNames.length === 1) {
+      return `${leaderNames[0]} wins the match in round ${getRoundLabel()}.`;
+    }
+    return `Match ends tied between ${leaderNames.join(" and ")} in round ${getRoundLabel()}.`;
+  }
+  return `Round ${GAME_CONFIG.matchRounds} ends tied between ${leaderNames.join(" and ")}. Sudden death continues.`;
+}
+
+function makePlayers() {
+  return TABLE_CONFIG.players.map((player, index) => ({
+    ...player,
+    seat: seatForPlayer(index, state.dealerIndex),
+    points: state.points[index],
+    hand: [],
+    openCards: [],
+    discards: [],
+    status: player.isHuman ? "Awaiting opening draw." : "Brutal AI ready.",
+  }));
+}
+
+function logEvent(text) {
+  state.logs.unshift({ text, id: `${Date.now()}-${Math.random()}` });
+  state.logs = state.logs.slice(0, GAME_CONFIG.logLimit);
+}
+
+function getPlayer(index) {
+  return state.players[index];
+}
+
+function getHumanPlayer() {
+  return getPlayer(HUMAN_PLAYER_INDEX);
+}
+
+function getOpenClaimType(card) {
+  return state.openCardClaims[card.id] || "open";
+}
+
+function setOpenClaimType(cards, type) {
+  cards.forEach((card) => {
+    state.openCardClaims[card.id] = type;
+  });
+}
+
+function isHumanIndex(playerIndex) {
+  return playerIndex === HUMAN_PLAYER_INDEX;
+}
+
+function formatSeatHandSize(count) {
+  return String(count);
+}
+
+function formatPoints(value) {
+  return `${value} pt`;
+}
+
+function formatOrdinal(value) {
+  const mod100 = value % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${value}th`;
+  const mod10 = value % 10;
+  if (mod10 === 1) return `${value}st`;
+  if (mod10 === 2) return `${value}nd`;
+  if (mod10 === 3) return `${value}rd`;
+  return `${value}th`;
+}
+
+function analyzeWinningDraws(hand, wall, openCardCount = 0) {
+  return wall.reduce((summary, card) => {
+    const layouts = findValidWinningLayouts(hand.concat(card), openCardCount);
+    if (!layouts.length) return summary;
+    const points = totalLayoutPoints(chooseBestLayout(layouts) || []);
+    return {
+      winningDraws: summary.winningDraws + 1,
+      totalWinningPoints: summary.totalWinningPoints + points,
+      bestWinningPoints: Math.max(summary.bestWinningPoints, points),
+    };
+  }, {
+    winningDraws: 0,
+    totalWinningPoints: 0,
+    bestWinningPoints: 0,
+  });
+}
+
+function getFullHand(playerIndex, concealedHand = getPlayer(playerIndex).hand, openCards = getPlayer(playerIndex).openCards) {
+  return sortCardsForDisplay(concealedHand.concat(openCards));
+}
+
+function getPublicKnownCardIds(playerIndex, ownHand = getPlayer(playerIndex).hand, extraKnownCards = []) {
+  const known = new Set();
+  ownHand.forEach((card) => known.add(card.id));
+  getPlayer(playerIndex).openCards.forEach((card) => known.add(card.id));
+  state.players.forEach((player) => {
+    player.discards.forEach((card) => known.add(card.id));
+    player.openCards.forEach((card) => known.add(card.id));
+  });
+  extraKnownCards.forEach((card) => {
+    if (card) known.add(card.id);
+  });
+  return known;
+}
+
+function publicRemainingCardsFor(playerIndex, ownHand = getPlayer(playerIndex).hand, ownOpenCards = getPlayer(playerIndex).openCards, extraKnownCards = []) {
+  const knownIds = getPublicKnownCardIds(playerIndex, ownHand.concat(ownOpenCards), extraKnownCards);
+  return allCards.filter((card) => !knownIds.has(card.id));
+}
+
+function publicPotentialCacheKey(playerIndex, concealedHand, openCards, extraKnownCards = []) {
+  const visibleHandKey = cardsAnalysisKey(concealedHand.concat(openCards));
+  const extraKey = extraKnownCards
+    .filter(Boolean)
+    .map((card) => card.id)
+    .sort((a, b) => a - b)
+    .join("-");
+  return `${playerIndex}|${visibleHandKey}|${openCards.length}|${extraKey}`;
+}
+
+function analyzePublicPotential(
+  playerIndex,
+  concealedHand = getPlayer(playerIndex).hand,
+  openCards = getPlayer(playerIndex).openCards,
+  extraKnownCards = [],
+  currentShape = null,
+  currentFocus = null
+) {
+  const cacheKey = publicPotentialCacheKey(playerIndex, concealedHand, openCards, extraKnownCards);
+  const cached = analysisCache.publicPotential.get(cacheKey);
+  if (cached) return cached;
+
+  const fullHand = getFullHand(playerIndex, concealedHand, openCards);
+  const shape = currentShape || evaluateHandShape(fullHand, openCards.length);
+  const focus = currentFocus || evaluateRuleFocus(shape);
+  const drawPool = publicRemainingCardsFor(playerIndex, concealedHand, openCards, extraKnownCards);
+
+  const result = {
+    winningDraws: 0,
+    totalWinningPoints: 0,
+    bestWinningPoints: 0,
+    nearReadyDraws: 0,
+    distanceGainDraws: 0,
+    focusImproveDraws: 0,
+    poolSize: drawPool.length,
+  };
+
+  const shouldCheckWins = shape.bestDistance <= 2;
+
+  drawPool.forEach((drawCard) => {
+    const futureFullHand = getFullHand(playerIndex, concealedHand.concat(drawCard), openCards);
+    const futureShape = evaluateHandShape(futureFullHand, openCards.length);
+    const futureFocus = evaluateRuleFocus(futureShape);
+
+    if (futureShape.bestDistance < shape.bestDistance) {
+      result.distanceGainDraws += 1;
+    }
+
+    if (futureShape.bestDistance <= 1) {
+      result.nearReadyDraws += 1;
+    }
+
+    if (futureFocus.primary > focus.primary) {
+      result.focusImproveDraws += 1;
+    }
+
+    if (!shouldCheckWins || futureShape.bestDistance !== 0) return;
+
+    const winningLayouts = findValidWinningLayouts(futureFullHand, openCards.length);
+    if (!winningLayouts.length) return;
+    const points = totalLayoutPoints(chooseBestLayout(winningLayouts) || []);
+    result.winningDraws += 1;
+    result.totalWinningPoints += points;
+    result.bestWinningPoints = Math.max(result.bestWinningPoints, points);
+  });
+
+  analysisCache.publicPotential.set(cacheKey, result);
+  return result;
+}
+
+function actualWallDrawPool(extraKnownCards = []) {
+  const excludedIds = new Set(extraKnownCards.filter(Boolean).map((card) => card.id));
+  return state.wall.filter((card) => !excludedIds.has(card.id));
+}
+
+function getDrawPoolForDecision(
+  playerIndex,
+  concealedHand = getPlayer(playerIndex).hand,
+  openCards = getPlayer(playerIndex).openCards,
+  extraKnownCards = [],
+  context = PUBLIC_AI_CONTEXT
+) {
+  if (context?.useHiddenIntel) {
+    return actualWallDrawPool(extraKnownCards);
+  }
+  return publicRemainingCardsFor(playerIndex, concealedHand, openCards, extraKnownCards);
+}
+
+function descendDecisionContext(context = PUBLIC_AI_CONTEXT, overrides = {}) {
+  return {
+    ...context,
+    lookaheadDepth: Math.max(0, (context?.lookaheadDepth ?? 0) - 1),
+    exactResponseDepth: Math.max(0, (context?.exactResponseDepth ?? 0) - 1),
+    ...overrides,
+  };
+}
+
+function decisionContextForPlayer(playerIndex, context = BRUTAL_AI_CONTEXT) {
+  return isHumanIndex(playerIndex) ? PUBLIC_AI_CONTEXT : context;
+}
+
+function getRuleById(ruleId) {
+  return SET_RULES.find((rule) => rule.id === ruleId) || null;
+}
+
+function ruleFamilyId(ruleId) {
+  if (ruleId.startsWith("same-element")) return "same-element";
+  if (ruleId === "polarity-five-elements") return "polarity-five-elements";
+  if (ruleId.startsWith("zodiac-run")) return "zodiac-run";
+  if (
+    ruleId === "four-with-neighbors" ||
+    ruleId === "four-plus-two-side" ||
+    ruleId === "four-plus-split-sides"
+  ) {
+    return "neighbor-animals";
+  }
+  if (ruleId.startsWith("three-animal-pairs")) return "three-animal-pairs";
+  if (ruleId.startsWith("two-animal-threes")) return "two-animal-threes";
+  if (ruleId === "six-run") return "six-run";
+  if (ruleId === "ending-digit-ladder") return "ending-digit-ladder";
+  return ruleId;
+}
+
+function scoreLayout(layout) {
+  return layout.reduce((sum, group) => sum + (getRuleById(group.ruleId)?.points || 0), 0);
+}
+
+function layoutPriority(layout) {
+  return layout.reduce((sum, group) => sum + (getRuleById(group.ruleId)?.priority || 0), 0);
+}
+
+function chooseBestLayout(layouts) {
+  return layouts.slice().sort((a, b) => {
+    const pointDiff = totalLayoutPoints(b) - totalLayoutPoints(a);
+    if (pointDiff !== 0) return pointDiff;
+    const priorityDiff = layoutPriority(b) - layoutPriority(a);
+    if (priorityDiff !== 0) return priorityDiff;
+    return b.length - a.length;
+  })[0] || null;
+}
+
+function syncPlayerPoints() {
+  state.players.forEach((player, index) => {
+    player.points = state.points[index];
+  });
+}
+
+function settleWin(playerIndex, type, points, discarderIndex = null) {
+  const changes = Array(state.players.length).fill(0);
+
+  if (type === "tsumo") {
+    const share = points / 3;
+    state.players.forEach((_, index) => {
+      if (index === playerIndex) return;
+      changes[index] -= share;
+      changes[playerIndex] += share;
+    });
+  } else if (discarderIndex !== null) {
+    changes[playerIndex] += points;
+    changes[discarderIndex] -= points;
+  }
+
+  state.points = state.points.map((value, index) => value + changes[index]);
+  syncPlayerPoints();
+  return changes;
+}
+
+function settleRonThreats(threats, discarderIndex) {
+  const changes = Array(state.players.length).fill(0);
+  const results = threats.map((threat) => {
+    const scoringLayout = threat.scoringLayout || chooseBestLayout(threat.layouts);
+    const basePoints = threat.basePoints ?? scoreLayout(scoringLayout || []);
+    const bonusPoints = threat.bonusPoints ?? roundBonusForLayout(scoringLayout || []);
+    const points = basePoints + bonusPoints;
+    changes[threat.playerIndex] += points;
+    changes[discarderIndex] -= points;
+    return {
+      playerIndex: threat.playerIndex,
+      layouts: threat.layouts,
+      scoringLayout,
+      basePoints,
+      bonusPoints,
+      points,
+    };
+  });
+
+  state.points = state.points.map((value, index) => value + changes[index]);
+  syncPlayerPoints();
+  return { results, settlement: changes };
+}
+
+function formatSettlement(changes) {
+  return changes
+    .map((delta, index) => ({ delta, index }))
+    .filter((entry) => entry.delta !== 0)
+    .map((entry) => `${formatPlayerTag(entry.index)} ${entry.delta > 0 ? "+" : ""}${entry.delta}`)
+    .join(" · ");
+}
+
+function evaluateHandShape(hand, openCardCount = 0) {
+  const cacheKey = `${cardsAnalysisKey(hand)}|${openCardCount}`;
+  const cached = analysisCache.handShape.get(cacheKey);
+  if (cached) return cached;
+
+  const distances = SET_RULES.map((rule) => {
+    const rawDistance = rule.distance(hand);
+    const gearGap = gearGapForPoints(rule.points, openCardCount);
+    return {
+      ruleId: rule.id,
+      label: rule.label,
+      points: rule.points,
+      rawDistance,
+      gearGap,
+      distance: rawDistance + gearGap,
+    };
+  }).sort((a, b) => {
+    if (a.distance !== b.distance) return a.distance - b.distance;
+    if (a.rawDistance !== b.rawDistance) return a.rawDistance - b.rawDistance;
+    return b.points - a.points;
+  });
+
+  const familyBest = new Map();
+  distances.forEach((item) => {
+    const progress = Math.max(0, GAME_CONFIG.winningHandSize - item.distance);
+    const candidate = {
+      support: progress * item.points,
+      near: item.distance <= 2 ? item.points : 0,
+    };
+    const familyId = ruleFamilyId(item.ruleId);
+    const existing = familyBest.get(familyId);
+    if (
+      !existing ||
+      candidate.support > existing.support ||
+      (candidate.support === existing.support && candidate.near > existing.near)
+    ) {
+      familyBest.set(familyId, candidate);
+    }
+  });
+
+  const result = {
+    bestDistance: distances[0]?.distance ?? GAME_CONFIG.winningHandSize,
+    support: Array.from(familyBest.values()).reduce((sum, item) => sum + item.support, 0),
+    nearRules: Array.from(familyBest.values()).reduce((sum, item) => sum + item.near, 0),
+    distances,
+  };
+
+  analysisCache.handShape.set(cacheKey, result);
+  return result;
+}
+
+function evaluateRuleFocus(shape) {
+  const ranked = shape.distances
+    .map((item) => {
+      const progress = Math.max(0, GAME_CONFIG.winningHandSize - item.distance);
+      return {
+        ...item,
+        progress,
+        focusScore: progress === 0 ? 0 : (item.points * progress) / Math.max(1, item.distance),
+      };
+    })
+    .sort((a, b) => {
+      if (b.focusScore !== a.focusScore) return b.focusScore - a.focusScore;
+      if (b.points !== a.points) return b.points - a.points;
+      return a.distance - b.distance;
+    });
+
+  const primary = ranked[0]?.focusScore || 0;
+  const secondary = ranked[1]?.focusScore || 0;
+  return {
+    primary,
+    secondary,
+    primaryRuleId: ranked[0]?.ruleId || null,
+    primaryDistance: ranked[0]?.distance ?? GAME_CONFIG.winningHandSize,
+    primaryPoints: ranked[0]?.points || 0,
+    gap: primary - secondary,
+    ranked: ranked.slice(0, 3).map((item) => ({
+      ruleId: item.ruleId,
+      label: item.label,
+      points: item.points,
+      distance: item.distance,
+      focusScore: item.focusScore,
+      progress: item.progress,
+    })),
+  };
+}
+
+function evaluateDiscardContinuity(beforeShape, beforeFocus, afterShape, afterFocus) {
+  const weights = AI_CONFIG.continuity;
+  const afterByRule = new Map(afterShape.distances.map((item) => [item.ruleId, item]));
+  let score = 0;
+
+  (beforeFocus.ranked || []).forEach((entry, index) => {
+    const after = afterByRule.get(entry.ruleId);
+    if (!after) return;
+
+    const distanceShift = after.distance - entry.distance;
+    const penaltyWeight = index === 0
+      ? weights.primaryDistancePenalty
+      : index === 1
+        ? weights.secondaryDistancePenalty
+        : weights.tertiaryDistancePenalty;
+    const bonusWeight = index === 0
+      ? weights.primaryDistanceBonus
+      : index === 1
+        ? weights.secondaryDistanceBonus
+        : weights.tertiaryDistanceBonus;
+
+    if (distanceShift > 0) {
+      score -= distanceShift * entry.points * penaltyWeight;
+      if (entry.distance === 0) {
+        score -= weights.readyBreakPenalty * Math.max(1, entry.points / 3);
+      } else if (entry.distance === 1) {
+        score -= weights.oneAwayBreakPenalty * Math.max(1, entry.points / 4);
+      }
+    } else if (distanceShift < 0) {
+      score += (-distanceShift) * entry.points * bonusWeight;
+    }
+  });
+
+  const committedLine = beforeFocus.primaryRuleId && beforeFocus.primaryDistance <= 2 && beforeFocus.gap >= 6;
+  const commitmentScale = Math.max(1, beforeFocus.primaryPoints / 6);
+  if (committedLine) {
+    if (beforeFocus.primaryRuleId === afterFocus.primaryRuleId) {
+      score += weights.committedPreserveBonus * commitmentScale;
+    } else {
+      score -= weights.committedSwitchPenalty * commitmentScale;
+    }
+  }
+
+  if (beforeShape.bestDistance <= 1 && afterShape.bestDistance > beforeShape.bestDistance) {
+    score -= weights.readyBreakPenalty * Math.max(1, beforeFocus.primaryPoints / 4);
+  }
+
+  return score;
+}
+
+function evaluateStrategyProfile(playerIndex) {
+  const player = getPlayer(playerIndex);
+  const others = state.players
+    .filter((_, index) => index !== playerIndex)
+    .map((entry) => entry);
+  const leaderOtherPoints = others.length ? Math.max(...others.map((entry) => entry.points)) : player.points;
+  const gapBehind = Math.max(0, leaderOtherPoints - player.points);
+  const leadOverTable = Math.max(0, player.points - leaderOtherPoints);
+  const strategy = AI_CONFIG.strategy;
+  const hottestOpponent = others.reduce((best, opponent) => (
+    Math.max(best, opponent.openCards.length + (opponent.points >= player.points ? 0.5 : 0))
+  ), 0);
+
+  let offense = 1
+    + Math.min(strategy.maxTrailingAggression, gapBehind * strategy.trailingAggressionPerPoint)
+    + player.openCards.length * strategy.openCardAggression
+    + hottestOpponent * strategy.exposedOpponentPressure;
+  if (player.seat === "East") {
+    offense += strategy.dealerAggression;
+  }
+
+  const defense = 0.68 + Math.min(strategy.maxLeadingDefense, leadOverTable * strategy.leadingDefensePerPoint);
+  let claimBias = 1
+    + Math.min(strategy.maxClaimBias, gapBehind * strategy.claimBiasPerPoint)
+    + player.openCards.length * strategy.openCardAggression
+    + hottestOpponent * strategy.exposedOpponentPressure;
+  let risk = 1.06
+    + Math.min(strategy.maxTrailingAggression * 0.6, gapBehind * strategy.trailingAggressionPerPoint)
+    + player.openCards.length * 0.03;
+  risk -= Math.min(strategy.maxLeadRiskBrake, leadOverTable * strategy.leadRiskBrakePerPoint);
+
+  return {
+    offense: Math.max(1, offense),
+    defense: Math.min(0.96, Math.max(0.56, defense)),
+    claimBias: Math.max(1, claimBias),
+    risk: Math.max(0.92, risk),
+  };
+}
+
+function opponentsInRonOrder(discarderIndex) {
+  const order = [];
+  for (let step = 1; step < state.players.length; step += 1) {
+    order.push((discarderIndex + step) % state.players.length);
+  }
+  return order;
+}
+
+function exactRonThreats(discarderIndex, card) {
+  return opponentsInRonOrder(discarderIndex)
+    .map((playerIndex) => {
+      const layouts = findValidWinningLayouts(
+        getFullHand(playerIndex).concat(card),
+        getPlayer(playerIndex).openCards.length
+      );
+      if (!layouts.length) return null;
+      const bestLayout = chooseBestLayout(layouts);
+      const { basePoints, bonusPoints, points } = getLayoutPointBreakdown(bestLayout || []);
+      return {
+        playerIndex,
+        layouts,
+        scoringLayout: bestLayout,
+        basePoints,
+        bonusPoints,
+        points,
+      };
+    })
+    .filter(Boolean);
+}
+
+function buildAnimalClaimState(
+  playerIndex,
+  card,
+  type,
+  concealedHand = getPlayer(playerIndex).hand,
+  openCards = getPlayer(playerIndex).openCards
+) {
+  const neededCount = type === "kan" ? 4 : 3;
+  const matchingConcealed = concealedHand.filter((item) => item.animal === card.animal);
+  const matchingOpen = openCards.filter((item) => item.animal === card.animal);
+  const totalMatching = matchingConcealed.length + matchingOpen.length;
+  if (totalMatching !== neededCount) return null;
+
+  const remainingHand = sortCardsForDisplay(concealedHand.filter((item) => item.animal !== card.animal));
+  if (!remainingHand.length) return null;
+
+  const otherOpenCards = openCards.filter((item) => item.animal !== card.animal);
+  const claimGroup = sortCardsForDisplay(matchingOpen.concat(matchingConcealed, card));
+  return {
+    playerIndex,
+    type,
+    animal: card.animal,
+    card,
+    matchingConcealed,
+    matchingOpen,
+    remainingHand,
+    claimGroup,
+    nextOpenCards: otherOpenCards.concat(claimGroup),
+  };
+}
+
+function buildSelfKanState(
+  playerIndex,
+  concealedHand = getPlayer(playerIndex).hand,
+  openCards = getPlayer(playerIndex).openCards
+) {
+  const countsByAnimal = concealedHand.reduce((counts, card) => {
+    counts[card.animal] = (counts[card.animal] || 0) + 1;
+    return counts;
+  }, {});
+  const targetAnimal = Object.keys(countsByAnimal).find((animal) => countsByAnimal[animal] === 5);
+  if (!targetAnimal) return null;
+
+  const claimGroup = sortCardsForDisplay(concealedHand.filter((card) => card.animal === targetAnimal));
+  const remainingHand = sortCardsForDisplay(concealedHand.filter((card) => card.animal !== targetAnimal));
+  if (!remainingHand.length) return null;
+
+  return {
+    playerIndex,
+    type: "self-kan",
+    animal: targetAnimal,
+    claimGroup,
+    remainingHand,
+    nextOpenCards: openCards.concat(claimGroup),
+  };
+}
+
+function exactKanThreats(discarderIndex, card) {
+  return opponentsInRonOrder(discarderIndex)
+    .map((playerIndex) => buildAnimalClaimState(playerIndex, card, "kan"))
+    .filter(Boolean);
+}
+
+function exactPonThreats(discarderIndex, card) {
+  return opponentsInRonOrder(discarderIndex)
+    .map((playerIndex) => buildAnimalClaimState(playerIndex, card, "pon"))
+    .filter(Boolean);
+}
+
+function evaluateClaimThreatPenalty(type, choice) {
+  const tactical = AI_CONFIG.tactical;
+  const basePenalty = type === "kan"
+    ? tactical.exactKanPenalty
+    : type === "pon"
+      ? tactical.exactPonPenalty
+      : tactical.exactChiPenalty;
+
+  return (
+    basePenalty +
+    Math.max(0, choice.scoreGain || 0) * tactical.claimScoreGainPenalty +
+    (choice.drawStats?.winningDraws || 0) * tactical.claimWaitPenalty +
+    (choice.drawStats?.bestWinningPoints || 0) * tactical.claimPointPenalty +
+    (choice.focus?.primary || 0) * tactical.claimFocusPenalty
+  );
+}
+
+function evaluateImmediateResponseProfile(discarderIndex, card, context = BRUTAL_AI_CONTEXT) {
+  const tactical = AI_CONFIG.tactical;
+  const ronThreats = exactRonThreats(discarderIndex, card);
+  if (ronThreats.length) {
+    const totalPoints = ronThreats.reduce((sum, threat) => sum + threat.points, 0);
+    return {
+      type: "ron",
+      claimerIndex: ronThreats[0]?.playerIndex ?? null,
+      ronThreats,
+      claimChoice: null,
+      totalPenalty: tactical.exactRonPenaltyBase * ronThreats.length + totalPoints * tactical.exactRonPointPenalty,
+    };
+  }
+
+  const responseContext = descendDecisionContext(context, {
+    lookaheadDepth: 0,
+    exactResponseDepth: 0,
+  });
+
+  for (const threat of exactKanThreats(discarderIndex, card)) {
+    const claimChoice = chooseAIKanWithContext(
+      threat.playerIndex,
+      card,
+      decisionContextForPlayer(threat.playerIndex, responseContext)
+    );
+    if (claimChoice) {
+      return {
+        type: "kan",
+        claimerIndex: threat.playerIndex,
+        ronThreats: [],
+        claimChoice,
+        totalPenalty: evaluateClaimThreatPenalty("kan", claimChoice),
+      };
+    }
+  }
+
+  for (const threat of exactPonThreats(discarderIndex, card)) {
+    const claimChoice = chooseAIPonWithContext(
+      threat.playerIndex,
+      card,
+      decisionContextForPlayer(threat.playerIndex, responseContext)
+    );
+    if (claimChoice) {
+      return {
+        type: "pon",
+        claimerIndex: threat.playerIndex,
+        ronThreats: [],
+        claimChoice,
+        totalPenalty: evaluateClaimThreatPenalty("pon", claimChoice),
+      };
+    }
+  }
+
+  const chiPlayerIndex = chiPlayerIndexFor(discarderIndex);
+  if (canPlayerChi(chiPlayerIndex)) {
+    const claimChoice = chooseAIChiWithContext(
+      chiPlayerIndex,
+      card,
+      decisionContextForPlayer(chiPlayerIndex, responseContext)
+    );
+    if (claimChoice) {
+      return {
+        type: "chi",
+        claimerIndex: chiPlayerIndex,
+        ronThreats: [],
+        claimChoice,
+        totalPenalty: evaluateClaimThreatPenalty("chi", claimChoice),
+      };
+    }
+  }
+
+  return {
+    type: null,
+    claimerIndex: null,
+    ronThreats: [],
+    claimChoice: null,
+    totalPenalty: 0,
+  };
+}
+
+function threatPointsForRule(ruleId, openCardCount, card) {
+  const rule = getRuleById(ruleId);
+  if (!rule) return 0;
+  if (!gearMatches(rule.points, openCardCount)) return 0;
+  return rule.points + roundBonusForCard(card);
+}
+
+function estimatePublicDiscardDanger(card, publicPool, openCardCount = 0) {
+  const poolIds = new Set(publicPool.map((item) => item.id));
+  const sameAnimalCount = publicPool.filter((item) => item.animal === card.animal).length;
+  const sameElementCount = publicPool.filter((item) => item.element === card.element).length;
+  const sideAnimalSet = new Set([previousAnimal(card.animal), nextAnimal(card.animal)]);
+  const sideAnimalCount = publicPool.filter((item) => sideAnimalSet.has(item.animal)).length;
+
+  let danger = 0;
+
+  for (let start = Math.max(1, card.id - 5); start <= Math.min(card.id, allCards.length - 5); start += 1) {
+    let complete = true;
+    for (let id = start; id < start + GAME_CONFIG.winningHandSize; id += 1) {
+      if (id === card.id) continue;
+      if (!poolIds.has(id)) {
+        complete = false;
+        break;
+      }
+    }
+    if (complete) {
+      danger += threatPointsForRule("six-run", openCardCount, card);
+    }
+  }
+
+  let elementFamilyDanger = 0;
+  if (sameElementCount >= 5) {
+    elementFamilyDanger = Math.max(
+      elementFamilyDanger,
+      threatPointsForRule("same-element", openCardCount, card) * (1 + (sameElementCount - 5) * 0.35)
+    );
+  }
+  danger += elementFamilyDanger;
+
+  if (sameElementCount >= 1) {
+    const parityPool = publicPool.filter((item) => parityOfCard(item) === parityOfCard(card));
+    const colorsWithCard = new Set(parityPool.map((item) => item.element));
+    colorsWithCard.add(card.element);
+    const monthsWithCard = new Set(parityPool.map((item) => item.animal));
+    monthsWithCard.add(card.animal);
+    if (colorsWithCard.size >= 5 && monthsWithCard.size >= GAME_CONFIG.winningHandSize) {
+      danger += threatPointsForRule("polarity-five-elements", openCardCount, card) * 2;
+    }
+  }
+
+  for (let start = 0; start < ZODIAC_ORDER.length; start += 1) {
+    const windowAnimals = Array.from(
+      { length: GAME_CONFIG.winningHandSize },
+      (_, index) => ZODIAC_ORDER[(start + index) % ZODIAC_ORDER.length]
+    );
+    if (!windowAnimals.includes(card.animal)) continue;
+    const monthComplete = windowAnimals.every((animal) => (
+      animal === card.animal || publicPool.some((item) => item.animal === animal)
+    ));
+    if (monthComplete) {
+      danger += threatPointsForRule("zodiac-run", openCardCount, card);
+    }
+    const elementComplete = windowAnimals.every((animal) => (
+      animal === card.animal || publicPool.some((item) => item.animal === animal && item.element === card.element)
+    ));
+    if (elementComplete) {
+      danger += threatPointsForRule("zodiac-run-element", openCardCount, card);
+    }
+  }
+
+  const colorsWithCard = new Set(publicPool.map((item) => item.element));
+  colorsWithCard.add(card.element);
+
+  if (sameAnimalCount >= 4 && sideAnimalCount >= 1 && colorsWithCard.size >= 5) {
+    danger += threatPointsForRule("four-with-neighbors", openCardCount, card) * 1.5;
+  }
+
+  const previousCount = publicPool.filter((item) => item.animal === previousAnimal(card.animal)).length;
+  const nextCount = publicPool.filter((item) => item.animal === nextAnimal(card.animal)).length;
+  if (sameAnimalCount >= 3 && (previousCount >= 2 || nextCount >= 2) && colorsWithCard.size >= 5) {
+    danger += threatPointsForRule("four-plus-two-side", openCardCount, card) * 1.3;
+  }
+  if (sameAnimalCount >= 3 && previousCount >= 1 && nextCount >= 1 && colorsWithCard.size >= 5) {
+    danger += threatPointsForRule("four-plus-split-sides", openCardCount, card) * 1.2;
+  }
+
+  [previousAnimal(card.animal), nextAnimal(card.animal)].forEach((coreAnimal) => {
+    const coreCount = publicPool.filter((item) => item.animal === coreAnimal).length;
+    if (coreCount >= 5 && colorsWithCard.size >= 5) {
+      danger += threatPointsForRule("four-with-neighbors", openCardCount, card) * 0.75;
+    }
+    if (coreCount >= 4 && sameAnimalCount >= 1 && colorsWithCard.size >= 5) {
+      danger += threatPointsForRule("four-plus-two-side", openCardCount, card);
+    }
+    const oppositeSideAnimal = coreAnimal === previousAnimal(card.animal)
+      ? previousAnimal(coreAnimal)
+      : nextAnimal(coreAnimal);
+    const oppositeSideCount = publicPool.filter((item) => item.animal === oppositeSideAnimal).length;
+    if (coreCount >= 4 && oppositeSideCount >= 1 && sameAnimalCount >= 1 && colorsWithCard.size >= 5) {
+      danger += threatPointsForRule("four-plus-split-sides", openCardCount, card);
+    }
+  });
+
+  if (sameAnimalCount >= 1) {
+    let consecutivePairRuns = 0;
+    for (let start = 0; start < ZODIAC_ORDER.length; start += 1) {
+      const windowAnimals = Array.from(
+        { length: 3 },
+        (_, index) => ZODIAC_ORDER[(start + index) % ZODIAC_ORDER.length]
+      );
+      if (!windowAnimals.includes(card.animal)) continue;
+      const otherAnimals = windowAnimals.filter((animal) => animal !== card.animal);
+      if (otherAnimals.every((animal) => publicPool.filter((item) => item.animal === animal).length >= 2)) {
+        consecutivePairRuns += 1;
+      }
+    }
+    if (consecutivePairRuns >= 1) {
+      danger += threatPointsForRule("three-animal-pairs", openCardCount, card) * Math.min(2, consecutivePairRuns);
+    }
+  }
+
+  const consecutiveTripleAnimals = [previousAnimal(card.animal), nextAnimal(card.animal)]
+    .filter((animal) => publicPool.filter((item) => item.animal === animal).length >= 3)
+    .length;
+  if (sameAnimalCount >= 2 && consecutiveTripleAnimals >= 1) {
+    danger += threatPointsForRule("two-animal-threes", openCardCount, card) * Math.min(2, consecutiveTripleAnimals);
+  }
+
+  const remainder = card.id % 10 || 10;
+  for (let start = 0; start < ZODIAC_ORDER.length; start += 1) {
+    const targetMonths = alternatingMonthTargets(start);
+    if (!targetMonths.includes(card.animal)) continue;
+    const alternatingComplete = targetMonths.every((month) => (
+      month === card.animal || publicPool.some((item) => item.element === card.element && item.animal === month)
+    ));
+    if (alternatingComplete) {
+      danger += threatPointsForRule("ending-digit-ladder", openCardCount, card) * 2;
+    }
+  }
+
+  return danger;
+}
+
+function calculateHandValue(drawStats, shape) {
+  const weights = AI_CONFIG.discardWeights;
+  return (
+    drawStats.winningDraws * weights.winningDraw +
+    drawStats.totalWinningPoints * weights.winningPoint +
+    drawStats.bestWinningPoints * weights.bestWinningPoint +
+    (drawStats.nearReadyDraws || 0) * weights.nearReadyDraw +
+    (drawStats.distanceGainDraws || 0) * weights.distanceGainDraw +
+    (drawStats.focusImproveDraws || 0) * weights.focusImproveDraw +
+    shape.support * weights.shapeSupport +
+    shape.nearRules * weights.nearRule -
+    shape.bestDistance * weights.distancePenalty
+  );
+}
+
+function estimateOpponentCardInterest(playerIndex, card) {
+  const player = getPlayer(playerIndex);
+  const signals = AI_CONFIG.opponentSignals;
+  const openCards = player.openCards;
+  const discards = player.discards;
+
+  const openAnimalMatches = openCards.filter((item) => item.animal === card.animal).length;
+  const openElementMatches = openCards.filter((item) => item.element === card.element).length;
+  const openNeighborMatches = openCards.filter((item) => (
+    previousAnimal(item.animal) === card.animal || nextAnimal(item.animal) === card.animal
+  )).length;
+
+  const discardAnimalMatches = discards.filter((item) => item.animal === card.animal).length;
+  const discardElementMatches = discards.filter((item) => item.element === card.element).length;
+
+  let signal = 1;
+  signal += openCards.length * signals.openCardPressure;
+  signal += openAnimalMatches * signals.openAnimalBonus;
+  signal += openElementMatches * signals.openElementBonus;
+  signal += openNeighborMatches * signals.sideAnimalBonus;
+
+  signal -= Math.min(
+    signals.maxDiscardRelief,
+    discardAnimalMatches * signals.discardAnimalRelief +
+      discardElementMatches * signals.discardElementRelief
+  );
+
+  if (player.seat === "East") {
+    signal += signals.dealerPressure;
+  }
+
+  const visibleLeaderPoints = Math.max(...state.players.map((entry) => entry.points));
+  const trailingGap = Math.max(0, visibleLeaderPoints - player.points);
+  signal += Math.min(signals.maxTrailingPressure, trailingGap * signals.trailingPointFactor);
+
+  return Math.max(signals.minSignal, Math.min(signal, signals.maxSignal));
+}
+
+function estimateOpponentDiscardDanger(playerIndex, card, publicPool) {
+  const baseDanger = estimatePublicDiscardDanger(card, publicPool, getPlayer(playerIndex).openCards.length);
+  const interest = estimateOpponentCardInterest(playerIndex, card);
+  return {
+    playerIndex,
+    baseDanger,
+    interest,
+    danger: baseDanger * interest,
+  };
+}
+
+function estimateDiscardDangerProfile(discarderIndex, card, publicPool) {
+  const detail = opponentsInRonOrder(discarderIndex)
+    .map((playerIndex) => estimateOpponentDiscardDanger(playerIndex, card, publicPool));
+  const total = detail.reduce((sum, entry) => sum + entry.danger, 0);
+  return {
+    detail,
+    total,
+    average: detail.length ? total / detail.length : 0,
+    max: detail.reduce((best, entry) => Math.max(best, entry.danger), 0),
+  };
+}
+
+function estimateOpponentClaimPressure(playerIndex, discarderIndex, card, publicPool) {
+  const player = getPlayer(playerIndex);
+  const claimSignals = AI_CONFIG.claimSignals;
+  if (!player.hand.length) {
+    return {
+      playerIndex,
+      chi: 0,
+      pon: 0,
+      kan: 0,
+      total: 0,
+    };
+  }
+
+  const interest = estimateOpponentCardInterest(playerIndex, card);
+  const sameAnimalOpen = player.openCards.filter((item) => item.animal === card.animal).length;
+  const sameAnimalDiscards = player.discards.filter((item) => item.animal === card.animal).length;
+  const unseenSameAnimal = publicPool.filter((item) => item.animal === card.animal).length;
+  const visibleLeaderPoints = Math.max(...state.players.map((entry) => entry.points));
+  const isLeader = player.points === visibleLeaderPoints;
+  const isDealer = player.seat === "East";
+  const discardRelief = Math.min(
+    claimSignals.maxDiscardRelief,
+    sameAnimalDiscards * claimSignals.discardAnimalRelief
+  );
+  const threatBoost = 1
+    + (isDealer ? claimSignals.dealerThreatBonus : 0)
+    + (isLeader ? claimSignals.leaderThreatBonus : 0);
+
+  let chi = 0;
+  if (playerIndex === chiPlayerIndexFor(discarderIndex)) {
+    chi = (
+      claimSignals.nextChiBase +
+      interest * claimSignals.nextChiInterest +
+      sameAnimalOpen * claimSignals.nextChiAnimalBonus
+    ) * threatBoost * (1 - discardRelief * 0.5);
+  }
+
+  function estimateSetClaimPressure(type, neededTotal) {
+    const hiddenNeed = Math.max(0, neededTotal - sameAnimalOpen);
+    if (hiddenNeed >= claimSignals.hiddenNeedFactors.length) return 0;
+    if (unseenSameAnimal < hiddenNeed) return 0;
+    const base = type === "kan" ? claimSignals.kanBase : claimSignals.ponBase;
+    const availability = unseenSameAnimal * claimSignals.sameAnimalDepthBonus;
+    return (
+      base +
+      interest * claimSignals.claimInterest +
+      sameAnimalOpen * claimSignals.openAnimalBonus +
+      availability
+    ) * claimSignals.hiddenNeedFactors[hiddenNeed] * threatBoost * (1 - discardRelief);
+  }
+
+  const pon = estimateSetClaimPressure("pon", 3);
+  const kan = estimateSetClaimPressure("kan", 4);
+  return {
+    playerIndex,
+    chi,
+    pon,
+    kan,
+    total: chi + pon + kan,
+  };
+}
+
+function estimateClaimPressureProfile(discarderIndex, card, publicPool) {
+  const detail = opponentsInRonOrder(discarderIndex)
+    .map((playerIndex) => estimateOpponentClaimPressure(playerIndex, discarderIndex, card, publicPool));
+  const total = detail.reduce((sum, entry) => sum + entry.total, 0);
+  return {
+    detail,
+    total,
+    average: detail.length ? total / detail.length : 0,
+    max: detail.reduce((best, entry) => Math.max(best, entry.total), 0),
+  };
+}
+
+function rankLookaheadDraws(playerIndex, concealedHand, openCards, publicDrawPool) {
+  return publicDrawPool
+    .map((drawCard) => {
+      const fullHand = getFullHand(playerIndex, concealedHand.concat(drawCard), openCards);
+      const winningLayouts = findValidWinningLayouts(fullHand, openCards.length);
+      if (winningLayouts.length) {
+        return {
+          drawCard,
+          priority: 100000 + totalLayoutPoints(chooseBestLayout(winningLayouts) || []),
+        };
+      }
+
+      const shape = evaluateHandShape(fullHand, openCards.length);
+      const focus = evaluateRuleFocus(shape);
+      return {
+        drawCard,
+        priority:
+          shape.support * 2 +
+          shape.nearRules * 6 +
+          focus.primary * 14 +
+          focus.gap * 8 -
+          shape.bestDistance * 52,
+      };
+    })
+    .sort((a, b) => {
+      if (b.priority !== a.priority) return b.priority - a.priority;
+      return b.drawCard.id - a.drawCard.id;
+    });
+}
+
+function selectLookaheadDraws(playerIndex, concealedHand, openCards, publicDrawPool) {
+  const shape = evaluateHandShape(getFullHand(playerIndex, concealedHand, openCards), openCards.length);
+  if (
+    publicDrawPool.length <= AI_CONFIG.lookaheadExactPoolMax ||
+    shape.bestDistance <= AI_CONFIG.lookaheadExactDistance
+  ) {
+    return publicDrawPool.slice();
+  }
+
+  return rankLookaheadDraws(playerIndex, concealedHand, openCards, publicDrawPool)
+    .slice(0, Math.min(AI_CONFIG.lookaheadDrawSample, publicDrawPool.length))
+    .map((entry) => entry.drawCard);
+}
+
+function evaluateLookaheadContinuation(
+  playerIndex,
+  concealedHand,
+  openCards,
+  extraKnownCards = [],
+  context = PUBLIC_AI_CONTEXT
+) {
+  const drawPool = getDrawPoolForDecision(playerIndex, concealedHand, openCards, extraKnownCards, context);
+  if (!drawPool.length) {
+    return {
+      averageScore: 0,
+      peakScore: 0,
+      sampleCount: 0,
+    };
+  }
+
+  const sampledDraws = selectLookaheadDraws(playerIndex, concealedHand, openCards, drawPool);
+  const maxSampleCount = context.lookaheadDepth > 1
+    ? AI_CONFIG.lookaheadDrawSample
+    : AI_CONFIG.lookaheadRecursiveDrawSample;
+  const trimmedDraws = sampledDraws.slice(0, Math.min(maxSampleCount, sampledDraws.length));
+  let totalScore = 0;
+  let peakScore = 0;
+  const nextContext = descendDecisionContext(context);
+
+  trimmedDraws.forEach((drawCard) => {
+    const simulatedConcealed = sortCardsForDisplay(concealedHand.concat(drawCard));
+    const winningLayouts = findValidWinningLayouts(
+      getFullHand(playerIndex, simulatedConcealed, openCards),
+      openCards.length
+    );
+    let futureScore = 0;
+
+    if (winningLayouts.length) {
+      const points = totalLayoutPoints(chooseBestLayout(winningLayouts) || []);
+      futureScore = AI_CONFIG.lookaheadImmediateWinBase + points * AI_CONFIG.lookaheadImmediateWinPoint;
+    } else {
+      const futureChoice = chooseAIDiscardWithContext(
+        playerIndex,
+        simulatedConcealed,
+        openCards,
+        extraKnownCards.concat(drawCard),
+        nextContext.lookaheadDepth > 0,
+        nextContext
+      );
+      futureScore = futureChoice?.score || 0;
+    }
+
+    totalScore += futureScore;
+    peakScore = Math.max(peakScore, futureScore);
+  });
+
+  return {
+    averageScore: totalScore / trimmedDraws.length,
+    peakScore,
+    sampleCount: trimmedDraws.length,
+  };
+}
+
+function evaluateFutureHand(
+  playerIndex,
+  concealedHand,
+  openCards,
+  extraKnownCards = [],
+  context = PUBLIC_AI_CONTEXT
+) {
+  const fullHand = getFullHand(playerIndex, concealedHand, openCards);
+  const shape = evaluateHandShape(fullHand, openCards.length);
+  const focus = evaluateRuleFocus(shape);
+  const strategy = evaluateStrategyProfile(playerIndex);
+  const weights = AI_CONFIG.discardWeights;
+  const drawStats = analyzePublicPotential(
+    playerIndex,
+    concealedHand,
+    openCards,
+    extraKnownCards,
+    shape,
+    focus
+  );
+  let score =
+    calculateHandValue(drawStats, shape) +
+    focus.primary * weights.focusPrimary +
+    focus.secondary * weights.focusSecondary +
+    focus.gap * weights.focusGap +
+    openCards.length * weights.openPressureBonus;
+
+  if (shape.bestDistance === 0) {
+    score += weights.readyBonus;
+  } else if (shape.bestDistance === 1) {
+    score += weights.oneAwayBonus;
+  }
+
+  return {
+    drawStats,
+    shape,
+    focus,
+    strategy,
+    score: score * strategy.offense,
+  };
+}
+
+function analyzeClaimCandidate(baseline, candidate) {
+  const baselineByRule = new Map(baseline.shape.distances.map((item) => [item.ruleId, item]));
+  const improvedRules = candidate.shape.distances
+    .map((item) => {
+      const previous = baselineByRule.get(item.ruleId);
+      if (!previous) return null;
+      const distanceGain = previous.distance - item.distance;
+      if (distanceGain <= 0) return null;
+      return {
+        ruleId: item.ruleId,
+        label: item.label,
+        points: item.points,
+        beforeDistance: previous.distance,
+        afterDistance: item.distance,
+        distanceGain,
+        valueGain: distanceGain * item.points,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      if (b.valueGain !== a.valueGain) return b.valueGain - a.valueGain;
+      if (a.afterDistance !== b.afterDistance) return a.afterDistance - b.afterDistance;
+      if (b.points !== a.points) return b.points - a.points;
+      return a.label.localeCompare(b.label);
+    });
+
+  return {
+    scoreGain: candidate.score - baseline.score,
+    bestDistanceGain: baseline.shape.bestDistance - candidate.shape.bestDistance,
+    focusGain: candidate.focus.primary - baseline.focus.primary,
+    baselinePrimaryRuleId: baseline.focus.primaryRuleId,
+    candidatePrimaryRuleId: candidate.focus.primaryRuleId,
+    winningDrawGain: candidate.drawStats.winningDraws - baseline.drawStats.winningDraws,
+    totalWinningPointGain: candidate.drawStats.totalWinningPoints - baseline.drawStats.totalWinningPoints,
+    bestWinningPointGain: candidate.drawStats.bestWinningPoints - baseline.drawStats.bestWinningPoints,
+    improvedRules,
+    bestRuleImprovement: improvedRules[0] || null,
+    primaryRuleChanged: baseline.focus.primaryRuleId !== candidate.focus.primaryRuleId,
+  };
+}
+
+function shouldTakeClaim(type, analysis, scoreThreshold, strategy = { claimBias: 1 }) {
+  const adjustedThreshold = scoreThreshold / Math.max(1, strategy.claimBias || 1);
+  const bestRule = analysis.bestRuleImprovement;
+  const samePrimaryRule =
+    analysis.baselinePrimaryRuleId &&
+    analysis.baselinePrimaryRuleId === analysis.candidatePrimaryRuleId;
+  const speedGain = analysis.bestDistanceGain >= 1 || analysis.winningDrawGain >= 1;
+  const strongSpeedGain = analysis.bestDistanceGain >= 2 || analysis.winningDrawGain >= 2;
+  const pointGain =
+    analysis.totalWinningPointGain >= 4 ||
+    analysis.bestWinningPointGain >= 4;
+  const focusGain = analysis.focusGain >= 2;
+  const strongRuleJump = Boolean(bestRule && bestRule.valueGain >= 10);
+
+  if (strongSpeedGain || strongRuleJump) return true;
+  if (samePrimaryRule && speedGain) return true;
+  if ((type === "pon" || type === "kan") && speedGain && (pointGain || focusGain)) return true;
+  if (type === "chi" && analysis.bestDistanceGain >= 1 && (focusGain || pointGain)) return true;
+  if (!speedGain && !pointGain && !focusGain) return false;
+  return analysis.scoreGain >= adjustedThreshold;
+}
+
+function shouldTakeChiClaim(baseline, candidate, analysis, strategy) {
+  const adjustedThreshold = AI_CONFIG.chiThreshold / Math.max(1, strategy.claimBias || 1);
+  const samePrimaryRule =
+    analysis.baselinePrimaryRuleId &&
+    analysis.baselinePrimaryRuleId === analysis.candidatePrimaryRuleId;
+  const handIsAlreadyClose = baseline.shape.bestDistance <= 2;
+  const reachesReady = candidate.shape.bestDistance <= 1;
+  const strongSpeedGain = analysis.bestDistanceGain >= 2 || analysis.winningDrawGain >= 2;
+  const decentSpeedGain = analysis.bestDistanceGain >= 1 || analysis.winningDrawGain >= 1;
+  const strongFocusGain = analysis.focusGain >= 4;
+  const strongPointGain =
+    analysis.totalWinningPointGain >= 8 ||
+    analysis.bestWinningPointGain >= 6;
+  const linePreserveGain = samePrimaryRule && (decentSpeedGain || strongFocusGain);
+  const safeEnoughToOpen = candidate.publicDanger <= 140 || reachesReady || strongSpeedGain;
+
+  if (!safeEnoughToOpen) return false;
+  if (strongSpeedGain && (samePrimaryRule || strongFocusGain || strongPointGain)) return true;
+  if (handIsAlreadyClose && reachesReady && (decentSpeedGain || strongFocusGain)) return true;
+  if (linePreserveGain && candidate.score >= baseline.score + adjustedThreshold * 0.7) return true;
+  if (!decentSpeedGain && !strongFocusGain && !strongPointGain) return false;
+  if (!samePrimaryRule && baseline.shape.bestDistance >= 3 && !strongSpeedGain) return false;
+  return analysis.scoreGain >= adjustedThreshold;
+}
+
+function claimTargetLabel(candidate, analysis) {
+  if (analysis.bestRuleImprovement?.label) return analysis.bestRuleImprovement.label;
+  return getRuleById(candidate.focus.primaryRuleId)?.label || "";
+}
+
+function evaluateAIDiscardOptions(
+  playerIndex,
+  concealedHand = getPlayer(playerIndex).hand,
+  openCards = getPlayer(playerIndex).openCards,
+  extraKnownCards = [],
+  includeLookahead = true,
+  context = PUBLIC_AI_CONTEXT
+) {
+  const weights = AI_CONFIG.discardWeights;
+  const strategy = evaluateStrategyProfile(playerIndex);
+  const baselineFullHand = getFullHand(playerIndex, concealedHand, openCards);
+  const baselineShape = evaluateHandShape(baselineFullHand, openCards.length);
+  const baselineFocus = evaluateRuleFocus(baselineShape);
+
+  return concealedHand.map((card) => {
+    const nextHand = removeCardById(concealedHand, card.id).next;
+    const publicPool = publicRemainingCardsFor(playerIndex, nextHand, openCards, extraKnownCards.concat(card));
+    const dangerProfile = estimateDiscardDangerProfile(playerIndex, card, publicPool);
+    const claimPressure = estimateClaimPressureProfile(playerIndex, card, publicPool);
+    const future = evaluateFutureHand(playerIndex, nextHand, openCards, extraKnownCards.concat(card), PUBLIC_AI_CONTEXT);
+    const shape = future.shape;
+    const focus = future.focus;
+    const drawStats = future.drawStats;
+    const continuityScore = evaluateDiscardContinuity(baselineShape, baselineFocus, shape, focus);
+    const score =
+      future.score +
+      continuityScore -
+      (dangerProfile.average * weights.publicDangerPenalty +
+        dangerProfile.max * weights.maxOpponentDangerPenalty +
+        claimPressure.average * weights.claimPressurePenalty +
+        claimPressure.max * weights.maxClaimPressurePenalty) *
+        (strategy.defense / strategy.risk);
+
+    return {
+      card,
+      nextHand,
+      drawStats,
+      shape,
+      focus,
+      strategy,
+      continuityScore,
+      publicDanger: dangerProfile.average,
+      dangerProfile,
+      claimPressure,
+      score,
+    };
+  }).sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    if (b.focus.primary !== a.focus.primary) return b.focus.primary - a.focus.primary;
+    if (b.drawStats.nearReadyDraws !== a.drawStats.nearReadyDraws) {
+      return b.drawStats.nearReadyDraws - a.drawStats.nearReadyDraws;
+    }
+    if (b.drawStats.totalWinningPoints !== a.drawStats.totalWinningPoints) return b.drawStats.totalWinningPoints - a.drawStats.totalWinningPoints;
+    if (b.drawStats.winningDraws !== a.drawStats.winningDraws) return b.drawStats.winningDraws - a.drawStats.winningDraws;
+    if (a.publicDanger !== b.publicDanger) return a.publicDanger - b.publicDanger;
+    if (a.shape.bestDistance !== b.shape.bestDistance) return a.shape.bestDistance - b.shape.bestDistance;
+    return b.card.id - a.card.id;
+  });
+}
+
+function chooseAIDiscard(
+  playerIndex,
+  concealedHand = getPlayer(playerIndex).hand,
+  openCards = getPlayer(playerIndex).openCards,
+  extraKnownCards = [],
+  includeLookahead = true
+) {
+  return chooseAIDiscardWithContext(
+    playerIndex,
+    concealedHand,
+    openCards,
+    extraKnownCards,
+    includeLookahead,
+    PUBLIC_AI_CONTEXT
+  );
+}
+
+function chooseAIDiscardWithContext(
+  playerIndex,
+  concealedHand = getPlayer(playerIndex).hand,
+  openCards = getPlayer(playerIndex).openCards,
+  extraKnownCards = [],
+  includeLookahead = true,
+  context = PUBLIC_AI_CONTEXT
+) {
+  return evaluateAIDiscardOptions(
+    playerIndex,
+    concealedHand,
+    openCards,
+    extraKnownCards,
+    false,
+    PUBLIC_AI_CONTEXT
+  )[0];
+}
+
+function chooseHardAIDiscard(
+  playerIndex,
+  concealedHand = getPlayer(playerIndex).hand,
+  openCards = getPlayer(playerIndex).openCards,
+  extraKnownCards = [],
+  includeLookahead = true
+) {
+  return chooseAIDiscardWithContext(
+    playerIndex,
+    concealedHand,
+    openCards,
+    extraKnownCards,
+    includeLookahead,
+    BRUTAL_AI_CONTEXT
+  );
+}
+
+function chooseAISelfKanWithContext(playerIndex, context = PUBLIC_AI_CONTEXT) {
+  const player = getPlayer(playerIndex);
+  const claimState = buildSelfKanState(playerIndex, player.hand, player.openCards);
+  if (!claimState) return null;
+
+  const baseline = evaluateFutureHand(playerIndex, player.hand, player.openCards, [], context);
+  const bestDiscard = chooseAIDiscardWithContext(
+    playerIndex,
+    claimState.remainingHand,
+    claimState.nextOpenCards,
+    [],
+    true,
+    context
+  );
+  if (!bestDiscard) return null;
+
+  const claimAnalysis = analyzeClaimCandidate(baseline, bestDiscard);
+  const strategy = evaluateStrategyProfile(playerIndex);
+
+  if (!shouldTakeClaim("kan", claimAnalysis, AI_CONFIG.kanThreshold, strategy)) {
+    return null;
+  }
+
+  return {
+    ...claimState,
+    ...bestDiscard,
+    scoreGain: claimAnalysis.scoreGain,
+    claimAnalysis,
+    claimTargetLabel: claimTargetLabel(bestDiscard, claimAnalysis),
+  };
+}
+
+function chooseAISelfKan(playerIndex) {
+  return chooseAISelfKanWithContext(playerIndex, PUBLIC_AI_CONTEXT);
+}
+
+function chooseHardAISelfKan(playerIndex) {
+  return chooseAISelfKanWithContext(playerIndex, BRUTAL_AI_CONTEXT);
+}
+
+function chooseAIAnimalClaimWithContext(playerIndex, card, type, context = PUBLIC_AI_CONTEXT) {
+  const player = getPlayer(playerIndex);
+  const claimState = buildAnimalClaimState(playerIndex, card, type, player.hand, player.openCards);
+  if (!claimState) return null;
+
+  const baseline = evaluateFutureHand(playerIndex, player.hand, player.openCards, [card], context);
+  const bestDiscard = chooseAIDiscardWithContext(
+    playerIndex,
+    claimState.remainingHand,
+    claimState.nextOpenCards,
+    [card],
+    true,
+    context
+  );
+  if (!bestDiscard) return null;
+
+  const threshold = type === "kan" ? AI_CONFIG.kanThreshold : AI_CONFIG.ponThreshold;
+  const claimAnalysis = analyzeClaimCandidate(baseline, bestDiscard);
+  const strategy = evaluateStrategyProfile(playerIndex);
+
+  if (!shouldTakeClaim(type, claimAnalysis, threshold, strategy)) {
+    return null;
+  }
+
+  return {
+    ...claimState,
+    ...bestDiscard,
+    scoreGain: claimAnalysis.scoreGain,
+    claimAnalysis,
+    claimTargetLabel: claimTargetLabel(bestDiscard, claimAnalysis),
+  };
+}
+
+function chooseAIPon(playerIndex, card) {
+  return chooseAIPonWithContext(playerIndex, card, PUBLIC_AI_CONTEXT);
+}
+
+function chooseAIKan(playerIndex, card) {
+  return chooseAIKanWithContext(playerIndex, card, PUBLIC_AI_CONTEXT);
+}
+
+function chooseAIPonWithContext(playerIndex, card, context = PUBLIC_AI_CONTEXT) {
+  return chooseAIAnimalClaimWithContext(playerIndex, card, "pon", context);
+}
+
+function chooseAIKanWithContext(playerIndex, card, context = PUBLIC_AI_CONTEXT) {
+  return chooseAIAnimalClaimWithContext(playerIndex, card, "kan", context);
+}
+
+function chooseHardAIPon(playerIndex, card) {
+  return chooseAIPonWithContext(playerIndex, card, BRUTAL_AI_CONTEXT);
+}
+
+function chooseHardAIKan(playerIndex, card) {
+  return chooseAIKanWithContext(playerIndex, card, BRUTAL_AI_CONTEXT);
+}
+
+function chooseAIChi(playerIndex, card) {
+  return chooseAIChiWithContext(playerIndex, card, PUBLIC_AI_CONTEXT);
+}
+
+function chooseAIChiWithContext(playerIndex, card, context = PUBLIC_AI_CONTEXT) {
+  const player = getPlayer(playerIndex);
+  if (!player.hand.length) return null;
+
+  const baseline = evaluateFutureHand(playerIndex, player.hand, player.openCards, [card], context);
+  const claimedOpenCards = player.openCards.concat(card);
+  const bestDiscard = chooseAIDiscardWithContext(
+    playerIndex,
+    player.hand,
+    claimedOpenCards,
+    [card],
+    true,
+    context
+  );
+  if (!bestDiscard) return null;
+
+  const claimAnalysis = analyzeClaimCandidate(baseline, bestDiscard);
+  const strategy = evaluateStrategyProfile(playerIndex);
+  if (!shouldTakeChiClaim(baseline, bestDiscard, claimAnalysis, strategy)) {
+    return null;
+  }
+
+  return {
+    ...bestDiscard,
+    scoreGain: claimAnalysis.scoreGain,
+    claimAnalysis,
+    claimTargetLabel: claimTargetLabel(bestDiscard, claimAnalysis),
+  };
+}
+
+function chooseHardAIChi(playerIndex, card) {
+  return chooseAIChiWithContext(playerIndex, card, BRUTAL_AI_CONTEXT);
+}
+
+function applySelfKan(playerIndex, choice = buildSelfKanState(playerIndex)) {
+  const player = getPlayer(playerIndex);
+  if (!choice) return false;
+
+  player.hand = choice.remainingHand;
+  player.openCards = choice.nextOpenCards;
+  setOpenClaimType(choice.claimGroup, "kan");
+  state.currentTurn = playerIndex;
+  state.pendingClaim = null;
+  state.call = "Kan";
+  state.lastDiscard = null;
+  state.lastDrawnCardId = player.hand.some((card) => card.id === state.lastDrawnCardId) ? state.lastDrawnCardId : null;
+  state.selectedCardId = null;
+  logEvent(`${player.name} declares self-kan on ${choice.animal}.`);
+
+  if (player.isHuman) {
+    state.phase = "human-discard";
+    render();
+    return true;
+  }
+
+  state.phase = "ai-thinking";
+  render();
+  setTimeout(() => {
+    const discardChoice = chooseHardAIDiscard(playerIndex);
+    const dangerNote = discardChoice.publicDanger > 0
+      ? `Estimated discard danger ${Math.round(discardChoice.publicDanger)} after self-kan.`
+      : `Discard after self-kan keeps ${discardChoice.drawStats.winningDraws} live public draws.`;
+    discardCard(playerIndex, discardChoice.card.id, dangerNote);
+  }, GAME_CONFIG.aiThinkDelayMs);
+  return true;
+}
+
+function setInspect(card) {
+  state.inspectCardId = card ? card.id : null;
+}
+
+function positionInspectPopup(target, pointerX = null, pointerY = null) {
+  const popup = document.getElementById("inspectPopup");
+  const rect = target.getBoundingClientRect();
+  const popupRect = popup.getBoundingClientRect();
+  const margin = 18;
+  const anchorX = pointerX ?? rect.right;
+  const anchorY = pointerY ?? rect.top + rect.height / 2;
+
+  let left = anchorX + margin;
+  if (left + popupRect.width > window.innerWidth - margin) {
+    left = rect.left - popupRect.width - margin;
+  }
+  left = Math.max(margin, Math.min(left, window.innerWidth - popupRect.width - margin));
+
+  let top = anchorY - popupRect.height / 2;
+  top = Math.max(margin, Math.min(top, window.innerHeight - popupRect.height - margin));
+
+  popup.style.left = `${left}px`;
+  popup.style.top = `${top}px`;
+}
+
+function hideInspectPopup() {
+  const popup = document.getElementById("inspectPopup");
+  popup.classList.remove("open");
+  popup.setAttribute("aria-hidden", "true");
+}
+
+function showInspectPopup(card, target, pointerX = null, pointerY = null) {
+  setInspect(card);
+  renderInspector();
+  const popup = document.getElementById("inspectPopup");
+  positionInspectPopup(target, pointerX, pointerY);
+  popup.classList.add("open");
+  popup.setAttribute("aria-hidden", "false");
+}
+
+function attachInspectHandlers(target, card) {
+  if (!target || !card) return;
+  target.addEventListener("mouseenter", (event) => {
+    showInspectPopup(card, target, event.clientX, event.clientY);
+  });
+  target.addEventListener("mousemove", (event) => {
+    positionInspectPopup(target, event.clientX, event.clientY);
+  });
+  target.addEventListener("mouseleave", hideInspectPopup);
+  target.addEventListener("focus", () => {
+    showInspectPopup(card, target);
+  });
+  target.addEventListener("blur", hideInspectPopup);
+}
+
+function cardById(id) {
+  return allCards.find((card) => card.id === id) || null;
+}
+
+function claimWin(playerIndex, type, layouts, sourceCard = null, discarderIndex = null) {
+  if (state.phase === "finished") return;
+  const scoringLayout = chooseBestLayout(layouts);
+  const { basePoints, bonusPoints, points } = getLayoutPointBreakdown(scoringLayout || []);
+  const settlement = settleWin(playerIndex, type, points, discarderIndex);
+  clearTimeout(state.timer);
+  state.phase = "finished";
+  state.call = type.toUpperCase();
+  state.pendingClaim = {
+    playerIndex,
+    type,
+    layouts,
+    scoringLayout,
+    basePoints,
+    bonusPoints,
+    points,
+    settlement,
+    sourceCard,
+    discarderIndex,
+  };
+  state.winner = playerIndex;
+  state.winners = [playerIndex];
+  const winnerTag = formatPlayerTag(playerIndex);
+  const verb = type === "tsumo" ? "wins by tsumo" : `wins by ron on ${formatCardSource(sourceCard, discarderIndex)}`;
+  logEvent(`${winnerTag} ${verb} for ${formatPointSummary(points, bonusPoints)}. ${formatSettlement(settlement)}`);
+  updateMatchSummary();
+  if (state.matchSummary) logEvent(formatMatchSummaryText());
+  if (type === "tsumo") {
+    sound.tsumo();
+  } else {
+    sound.ron();
+  }
+  render();
+  setWinOverlay(true);
+}
+
+function claimMultiRon(threats, sourceCard, discarderIndex) {
+  if (state.phase === "finished" || !threats.length) return;
+  const { results, settlement } = settleRonThreats(threats, discarderIndex);
+  const totalPoints = results.reduce((sum, result) => sum + result.points, 0);
+  clearTimeout(state.timer);
+  state.phase = "finished";
+  state.call = "RON";
+  state.pendingClaim = {
+    type: "ron",
+    ronResults: results,
+    points: totalPoints,
+    settlement,
+    sourceCard,
+    discarderIndex,
+  };
+  state.winners = results.map((result) => result.playerIndex);
+  state.winner = state.winners[0] ?? null;
+  const winnerNames = results.map((result) => formatPlayerTag(result.playerIndex)).join(" + ");
+  const bonusText = results.some((result) => result.bonusPoints)
+    ? ` (${results.map((result) => `${getPlayer(result.playerIndex).seat}: ${formatPointSummary(result.points, result.bonusPoints)}`).join(" · ")})`
+    : "";
+  logEvent(`${winnerNames} win by ron on ${formatCardSource(sourceCard, discarderIndex)} for ${totalPoints} points${bonusText}. ${formatSettlement(settlement)}`);
+  updateMatchSummary();
+  if (state.matchSummary) logEvent(formatMatchSummaryText());
+  sound.ron();
+  render();
+  setWinOverlay(true);
+}
+
+function chiPlayerIndexFor(discarderIndex) {
+  return (discarderIndex + 1) % state.players.length;
+}
+
+function canPlayerChi(playerIndex) {
+  return getPlayer(playerIndex).hand.length > 0;
+}
+
+function applyAnimalClaim(type, playerIndex, card, discarderIndex) {
+  const player = getPlayer(playerIndex);
+  const discarder = getPlayer(discarderIndex);
+  const claimState = buildAnimalClaimState(playerIndex, card, type);
+  if (!claimState) return false;
+
+  const removedDiscard = removeLastCardById(discarder.discards, card.id);
+  discarder.discards = removedDiscard.next;
+  player.hand = claimState.remainingHand;
+  player.openCards = claimState.nextOpenCards;
+  setOpenClaimType(claimState.claimGroup, type);
+  state.currentTurn = playerIndex;
+  state.pendingClaim = null;
+  state.call = type[0].toUpperCase() + type.slice(1);
+  state.lastDiscard = null;
+  state.lastDrawnCardId = null;
+  state.selectedCardId = null;
+  logEvent(`${formatPlayerTag(playerIndex)} calls ${type} on ${formatCardSource(card, discarderIndex)}.`);
+
+  if (player.isHuman) {
+    state.phase = "human-discard";
+    render();
+    return true;
+  }
+
+  state.phase = "ai-thinking";
+  render();
+  setTimeout(() => {
+    const choice = chooseHardAIDiscard(playerIndex);
+    const dangerNote = choice.publicDanger > 0
+      ? `Estimated discard danger ${Math.round(choice.publicDanger)} after ${type}.`
+      : `Discard after ${type} keeps ${choice.drawStats.winningDraws} live public draws.`;
+    discardCard(playerIndex, choice.card.id, dangerNote);
+  }, GAME_CONFIG.aiThinkDelayMs);
+  return true;
+}
+
+function applyChi(playerIndex, card, discarderIndex) {
+  const player = getPlayer(playerIndex);
+  const discarder = getPlayer(discarderIndex);
+  const removedDiscard = removeLastCardById(discarder.discards, card.id);
+  discarder.discards = removedDiscard.next;
+  player.openCards = player.openCards.concat(card);
+  setOpenClaimType([card], "chi");
+  state.currentTurn = playerIndex;
+  state.pendingClaim = null;
+  state.call = "Chi";
+  state.lastDiscard = null;
+  state.lastDrawnCardId = null;
+  state.selectedCardId = null;
+  logEvent(`${formatPlayerTag(playerIndex)} calls chi on ${formatCardSource(card, discarderIndex)}.`);
+
+  if (player.isHuman) {
+    state.phase = "human-discard";
+    render();
+    return;
+  }
+
+  state.phase = "ai-thinking";
+  render();
+  setTimeout(() => {
+    const choice = chooseHardAIDiscard(playerIndex);
+    const dangerNote = choice.publicDanger > 0
+      ? `Estimated discard danger ${Math.round(choice.publicDanger)} after chi.`
+      : `Discard after chi keeps ${choice.drawStats.winningDraws} live public draws.`;
+    discardCard(playerIndex, choice.card.id, dangerNote);
+  }, GAME_CONFIG.aiThinkDelayMs);
+}
+
+function resolveKan(discarderIndex, card) {
+  const kanThreats = exactKanThreats(discarderIndex, card);
+  if (!kanThreats.length) {
+    resolvePon(discarderIndex, card);
+    return;
+  }
+
+  for (let index = 0; index < kanThreats.length; index += 1) {
+    const threat = kanThreats[index];
+    if (isHumanIndex(threat.playerIndex)) {
+      state.phase = "human-kan";
+      state.pendingClaim = {
+        playerIndex: threat.playerIndex,
+        type: "kan",
+        sourceCard: card,
+        discarderIndex,
+        claimers: kanThreats.slice(index),
+      };
+      sound.prompt();
+      render();
+      return;
+    }
+
+    if (chooseHardAIKan(threat.playerIndex, card)) {
+      applyAnimalClaim("kan", threat.playerIndex, card, discarderIndex);
+      return;
+    }
+  }
+
+  resolvePon(discarderIndex, card);
+}
+
+function resolvePon(discarderIndex, card) {
+  const ponThreats = exactPonThreats(discarderIndex, card);
+  if (!ponThreats.length) {
+    resolveChi(discarderIndex, card);
+    return;
+  }
+
+  for (let index = 0; index < ponThreats.length; index += 1) {
+    const threat = ponThreats[index];
+    if (isHumanIndex(threat.playerIndex)) {
+      state.phase = "human-pon";
+      state.pendingClaim = {
+        playerIndex: threat.playerIndex,
+        type: "pon",
+        sourceCard: card,
+        discarderIndex,
+        claimers: ponThreats.slice(index),
+      };
+      sound.prompt();
+      render();
+      return;
+    }
+
+    if (chooseHardAIPon(threat.playerIndex, card)) {
+      applyAnimalClaim("pon", threat.playerIndex, card, discarderIndex);
+      return;
+    }
+  }
+
+  resolveChi(discarderIndex, card);
+}
+
+function resolveChi(discarderIndex, card) {
+  const chiPlayerIndex = chiPlayerIndexFor(discarderIndex);
+  if (!canPlayerChi(chiPlayerIndex)) {
+    advanceTurn();
+    return;
+  }
+
+  const chiPlayer = getPlayer(chiPlayerIndex);
+  if (chiPlayer.isHuman) {
+    state.phase = "human-chi";
+    state.pendingClaim = {
+      playerIndex: chiPlayerIndex,
+      type: "chi",
+      sourceCard: card,
+      discarderIndex,
+    };
+    sound.prompt();
+    render();
+    return;
+  }
+
+  const chiChoice = chooseHardAIChi(chiPlayerIndex, card);
+  if (!chiChoice) {
+    advanceTurn();
+    return;
+  }
+
+  applyChi(chiPlayerIndex, card, discarderIndex);
+}
+
+function advanceTurn() {
+  state.currentTurn = (state.currentTurn + 1) % state.players.length;
+  state.lastDrawnCardId = null;
+  state.selectedCardId = null;
+  state.pendingClaim = null;
+  if (state.wall.length === 0) {
+    state.phase = "finished";
+    state.call = "Draw";
+    logEvent("The wall is exhausted. Hand ends in a draw.");
+    updateMatchSummary();
+    if (state.matchSummary) {
+      logEvent(formatMatchSummaryText());
+      setWinOverlay(true);
+    }
+    render();
+    return;
+  }
+  queueTurn(GAME_CONFIG.nextTurnDelayMs);
+}
+
+function resolveRon(discarderIndex, card) {
+  const ronThreats = exactRonThreats(discarderIndex, card);
+  if (!ronThreats.length) {
+    resolveKan(discarderIndex, card);
+    return;
+  }
+
+  const humanThreat = ronThreats.find((threat) => getPlayer(threat.playerIndex).isHuman);
+  if (humanThreat) {
+    state.phase = "human-ron";
+    state.pendingClaim = {
+      playerIndex: humanThreat.playerIndex,
+      type: "ron",
+      layouts: humanThreat.layouts,
+      sourceCard: card,
+      discarderIndex,
+      ronThreats,
+    };
+    sound.prompt();
+    render();
+    return;
+  }
+
+  claimMultiRon(ronThreats, card, discarderIndex);
+}
+
+function discardCard(playerIndex, cardId, note = "") {
+  const player = getPlayer(playerIndex);
+  const result = removeCardById(player.hand, cardId);
+  if (!result.removed) return;
+  player.hand = sortCardsForDisplay(result.next);
+  player.discards.push(result.removed);
+  state.lastDrawnCardId = null;
+  player.status = note || "Discarded.";
+  state.lastDiscard = {
+    playerIndex,
+    card: result.removed,
+    note,
+  };
+  state.call = "Discard";
+  logEvent(`${formatPlayerTag(playerIndex)} discards ${formatCardShort(result.removed)}.${note ? ` ${note}` : ""}`);
+  state.phase = "check-ron";
+  sound.discard();
+  render();
+  setTimeout(() => resolveRon(playerIndex, result.removed), GAME_CONFIG.ronCheckDelayMs);
+}
+
+function beginTurn() {
+  if (state.phase === "finished") return;
+  const player = getPlayer(state.currentTurn);
+  state.phase = "draw";
+  state.call = "Draw";
+  const drawn = state.wall.pop();
+  player.hand = sortCardsForDisplay(player.hand.concat(drawn));
+  state.lastDrawnCardId = drawn.id;
+  player.status = player.isHuman
+    ? `You drew to ${GAME_CONFIG.winningHandSize}. Discard or declare tsumo.`
+    : "Brutal AI evaluating draw.";
+  setInspect(drawn);
+  logEvent(`${formatPlayerTag(state.currentTurn)} draws from the wall.`);
+  sound.draw();
+
+  const winningLayouts = findValidWinningLayouts(getFullHand(state.currentTurn), player.openCards.length);
+  if (winningLayouts.length) {
+    if (player.isHuman) {
+      state.phase = "human-tsumo";
+      state.pendingClaim = {
+        playerIndex: state.currentTurn,
+        type: "tsumo",
+        layouts: winningLayouts,
+        sourceCard: drawn,
+      };
+      sound.prompt();
+      render();
+      return;
+    }
+    claimWin(state.currentTurn, "tsumo", winningLayouts, drawn, null);
+    return;
+  }
+
+  if (!player.isHuman) {
+    const selfKanChoice = chooseHardAISelfKan(state.currentTurn);
+    if (selfKanChoice) {
+      applySelfKan(state.currentTurn, selfKanChoice);
+      return;
+    }
+  }
+
+  if (player.isHuman) {
+    state.phase = "human-discard";
+    sound.prompt();
+    render();
+    return;
+  }
+
+  state.phase = "ai-thinking";
+  render();
+  setTimeout(() => {
+    const choice = chooseHardAIDiscard(state.currentTurn);
+    const dangerNote = choice.publicDanger > 0
+      ? `Estimated discard danger ${Math.round(choice.publicDanger)}.`
+      : `Kept ${choice.drawStats.winningDraws} live public draws for ${choice.drawStats.totalWinningPoints} total points.`;
+    discardCard(state.currentTurn, choice.card.id, dangerNote);
+  }, GAME_CONFIG.aiThinkDelayMs);
+}
+
+function queueTurn(delay) {
+  clearTimeout(state.timer);
+  state.timer = setTimeout(beginTurn, delay);
+}
+
+function declareHumanTsumo() {
+  if (state.phase === "finished") return;
+  if (!state.pendingClaim || state.pendingClaim.type !== "tsumo") return;
+  claimWin(state.pendingClaim.playerIndex, "tsumo", state.pendingClaim.layouts, state.pendingClaim.sourceCard, null);
+}
+
+function declareHumanRon() {
+  if (state.phase === "finished") return;
+  if (!state.pendingClaim || state.pendingClaim.type !== "ron") return;
+  claimMultiRon(
+    state.pendingClaim.ronThreats || [],
+    state.pendingClaim.sourceCard,
+    state.pendingClaim.discarderIndex
+  );
+}
+
+function declareHumanKan() {
+  if (state.phase === "finished") return;
+  if (state.pendingClaim?.type === "kan") {
+    applyAnimalClaim(
+      "kan",
+      state.pendingClaim.playerIndex,
+      state.pendingClaim.sourceCard,
+      state.pendingClaim.discarderIndex
+    );
+    return;
+  }
+  if (state.phase !== "human-discard" || state.currentTurn !== HUMAN_PLAYER_INDEX) return;
+  const selfKanChoice = buildSelfKanState(HUMAN_PLAYER_INDEX);
+  if (!selfKanChoice) return;
+  applySelfKan(HUMAN_PLAYER_INDEX, selfKanChoice);
+}
+
+function declareHumanPon() {
+  if (state.phase === "finished") return;
+  if (!state.pendingClaim || state.pendingClaim.type !== "pon") return;
+  applyAnimalClaim(
+    "pon",
+    state.pendingClaim.playerIndex,
+    state.pendingClaim.sourceCard,
+    state.pendingClaim.discarderIndex
+  );
+}
+
+function declareHumanChi() {
+  if (state.phase === "finished") return;
+  if (!state.pendingClaim || state.pendingClaim.type !== "chi") return;
+  applyChi(
+    state.pendingClaim.playerIndex,
+    state.pendingClaim.sourceCard,
+    state.pendingClaim.discarderIndex
+  );
+}
+
+function passHumanClaim() {
+  if (!state.pendingClaim) return;
+  if (state.pendingClaim.type === "tsumo") {
+    const player = getPlayer(state.pendingClaim.playerIndex);
+    state.pendingClaim = null;
+    state.phase = "human-discard";
+    state.call = "Pass";
+    player.status = `You pass tsumo and keep playing. Discard to continue.`;
+    logEvent("You pass on tsumo and keep the draw.");
+    sound.pass();
+    render();
+    return;
+  }
+
+  if (state.pendingClaim.type === "ron") {
+    const remainingThreats = (state.pendingClaim.ronThreats || [])
+      .filter((threat) => !getPlayer(threat.playerIndex).isHuman);
+    const sourceCard = state.pendingClaim.sourceCard;
+    const discarderIndex = state.pendingClaim.discarderIndex;
+    state.pendingClaim = null;
+    state.call = "Pass";
+    logEvent("You pass on ron.");
+    sound.pass();
+
+    if (remainingThreats.length) {
+      claimMultiRon(remainingThreats, sourceCard, discarderIndex);
+      return;
+    }
+
+    render();
+    resolveKan(discarderIndex, sourceCard);
+    return;
+  }
+
+  if (state.pendingClaim.type === "kan") {
+    const remainingClaimers = (state.pendingClaim.claimers || []).slice(1);
+    const sourceCard = state.pendingClaim.sourceCard;
+    const discarderIndex = state.pendingClaim.discarderIndex;
+    state.pendingClaim = null;
+    state.call = "Pass";
+    logEvent("You pass on kan.");
+    sound.pass();
+
+    for (const threat of remainingClaimers) {
+      if (chooseHardAIKan(threat.playerIndex, sourceCard)) {
+        applyAnimalClaim("kan", threat.playerIndex, sourceCard, discarderIndex);
+        return;
+      }
+    }
+
+    render();
+    resolvePon(discarderIndex, sourceCard);
+    return;
+  }
+
+  if (state.pendingClaim.type === "pon") {
+    const remainingClaimers = (state.pendingClaim.claimers || []).slice(1);
+    const sourceCard = state.pendingClaim.sourceCard;
+    const discarderIndex = state.pendingClaim.discarderIndex;
+    state.pendingClaim = null;
+    state.call = "Pass";
+    logEvent("You pass on pon.");
+    sound.pass();
+
+    for (const threat of remainingClaimers) {
+      if (chooseHardAIPon(threat.playerIndex, sourceCard)) {
+        applyAnimalClaim("pon", threat.playerIndex, sourceCard, discarderIndex);
+        return;
+      }
+    }
+
+    render();
+    resolveChi(discarderIndex, sourceCard);
+    return;
+  }
+
+  if (state.pendingClaim.type === "chi") {
+    state.pendingClaim = null;
+    state.call = "Pass";
+    logEvent("You pass on chi.");
+    sound.pass();
+    render();
+    advanceTurn();
+  }
+}
+
+function onHumanDiscard(cardId) {
+  if (state.phase !== "human-discard") return;
+  if (state.currentTurn !== HUMAN_PLAYER_INDEX) return;
+  if (state.pendingClaim?.type === "tsumo") return;
+  if (!getHumanPlayer().hand.some((card) => card.id === cardId)) return;
+  state.pendingClaim = null;
+  state.selectedCardId = cardId;
+  render();
+  discardCard(HUMAN_PLAYER_INDEX, cardId, `${getPlayer(HUMAN_PLAYER_INDEX).seat} chooses to press the table.`);
+}
+
+function dealOpeningHands(resetMatch = false) {
+  if (resetMatch) {
+    state.points = Array(TABLE_CONFIG.players.length).fill(GAME_CONFIG.startingPoints);
+    state.roundNumber = 1;
+    state.matchFinished = false;
+    state.matchSummary = null;
+    state.dealerIndex = Math.floor(Math.random() * TABLE_CONFIG.players.length);
+  } else {
+    state.dealerIndex = dealerIndexForNextHand();
+  }
+  state.players = makePlayers();
+  state.wall = shuffle(allCards);
+  state.currentTurn = state.dealerIndex;
+  state.phase = "dealing";
+  state.call = "Deal";
+  state.pendingClaim = null;
+  state.lastDiscard = null;
+  state.lastDrawnCardId = null;
+  state.openCardClaims = {};
+  state.selectedCardId = null;
+  state.inspectCardId = null;
+  state.logs = [];
+  state.winner = null;
+  state.winners = [];
+  if (!resetMatch) {
+    state.matchFinished = false;
+    state.matchSummary = null;
+  }
+  setWinOverlay(false);
+  setLogOverlay(false);
+  setDiscardOverlay(false);
+  setSetsOverlay(false);
+
+  for (let round = 0; round < GAME_CONFIG.startingHandSize; round += 1) {
+    state.players.forEach((player) => {
+      player.hand.push(state.wall.pop());
+      player.hand = sortCardsForDisplay(player.hand);
+    });
+  }
+
+  logEvent(`Round ${getRoundLabel()} opens. ${getPlayer(state.dealerIndex).name} takes East and opens.`);
+  sound.deal();
+  render();
+  queueTurn(GAME_CONFIG.wallDrawDelayMs);
+}
+
+function continueAfterFinishedHand() {
+  if (state.matchFinished) {
+    dealOpeningHands(true);
+    return;
+  }
+  state.roundNumber += 1;
+  dealOpeningHands(false);
+}
+
+function renderRulePills() {
+  const container = document.getElementById("rulePills");
+  if (!container) return;
+  container.innerHTML = "";
+  SET_RULES.forEach((rule) => {
+    const pill = document.createElement("span");
+    pill.className = "pill";
+    pill.textContent = `${rule.label} · ${rule.size}`;
+    container.appendChild(pill);
+  });
+}
+
+function describeSetRule(rule) {
+  const descriptions = {
+    "six-run": "6 adjacent card codes in deck order, like AA AB AC AD AE AF.",
+    "same-element": "All 6 cards share one color.",
+    "polarity-five-elements": "All 6 cards are all odd or all even, cover all 5 colors, and all 6 months are different.",
+    "zodiac-run": "Six different months in order.",
+    "zodiac-run-element": "Six different months in order, all sharing one color.",
+    "four-with-neighbors": "5 of one month plus 1 neighboring month, with all 5 colors present.",
+    "four-plus-two-side": "4 of one month plus 2 matching cards from either the previous or next month, with all 5 colors present.",
+    "four-plus-split-sides": "4 of one month plus 1 previous and 1 next month, with all 5 colors present.",
+    "three-animal-pairs": "3 pairs from 3 consecutive months.",
+    "three-animal-pairs-three-elements": "3 pairs from 3 different months, using at most 2 colors total.",
+    "three-animal-pairs-balance": "3 pairs from 3 different months, all odd or all even.",
+    "two-animal-threes": "3 cards of one month and 3 cards of a consecutive month.",
+    "two-animal-threes-two-elements": "3 cards of one month and 3 cards of another month, using at most 3 colors total.",
+    "two-animal-threes-polarity": "3 cards of one month and 3 cards of another month, all odd or all even.",
+    "ending-digit-ladder": "6 cards of one color across alternating months.",
+  };
+  return `${rule.points} points · ${descriptions[rule.id] || `${rule.size} cards following ${rule.label}.`} · ${gearRequirementText(rule.points)}`;
+}
+
+function renderSeat(seatKey, playerIndex) {
+  const player = getPlayer(playerIndex);
+  const revealHand = player.isHuman || (state.phase === "finished" && state.winners.includes(playerIndex));
+  const seatEl = document.getElementById(`seat${seatKey[0].toUpperCase()}${seatKey.slice(1)}`);
+  seatEl.classList.toggle("active", state.currentTurn === playerIndex && state.phase !== "finished");
+  seatEl.innerHTML = `
+    <div class="seat-head">
+      <div>
+        <div class="seat-name">${player.name}</div>
+        <div class="seat-role">${player.seat}</div>
+      </div>
+      <div class="seat-role">${formatPoints(player.points)}</div>
+    </div>
+    <div class="mini-hand">
+      ${revealHand
+        ? player.hand.map((card) => `
+          <button class="mini-card${player.isHuman ? "" : " mini-card-month"}" type="button" data-inspect="${card.id}" aria-label="${card.label}">
+            ${renderCardMarkup(card)}
+          </button>
+        `).join("")
+        : player.hand.map(() => `
+          <div class="mini-card">
+            ${renderCardMarkup(null, { back: true })}
+          </div>
+        `).join("")}
+    </div>
+    <div class="open-strip">
+      ${player.openCards.map((card) => `
+        <button class="open-card open-card-month" type="button" data-inspect="${card.id}" aria-label="${card.label}">
+          ${renderCardMarkup(card)}
+        </button>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderSouthCallPanel() {
+  const panel = document.getElementById("seatSouth");
+  const nameEl = document.getElementById("southSeatName");
+  const pointsEl = document.getElementById("southSeatPoints");
+  const stateEl = document.getElementById("southSeatState");
+  const openCardsEl = document.getElementById("southOpenCards");
+  const human = getPlayer(HUMAN_PLAYER_INDEX);
+  nameEl.textContent = human ? `${human.name} · ${human.seat}` : "You · South";
+  pointsEl.textContent = formatPoints(human?.points ?? GAME_CONFIG.startingPoints);
+  openCardsEl.innerHTML = "";
+  const humanTurn = state.currentTurn === HUMAN_PLAYER_INDEX && state.phase === "human-discard";
+  const callOpen = Boolean(state.pendingClaim && isHumanIndex(state.pendingClaim.playerIndex));
+  panel.classList.toggle("active", humanTurn || callOpen);
+
+  if (state.phase === "finished") {
+    if (state.matchFinished) {
+      stateEl.textContent = "MATCH";
+    } else {
+      stateEl.textContent = state.winners.includes(HUMAN_PLAYER_INDEX) ? "WIN" : "END";
+    }
+  } else if (callOpen) {
+    stateEl.textContent = state.pendingClaim.type.toUpperCase();
+  } else if (humanTurn) {
+    stateEl.textContent = "TURN";
+  } else {
+    stateEl.textContent = "WAIT";
+  }
+}
+
+function renderInspector() {
+  const popup = document.getElementById("inspectPopup");
+  const container = document.getElementById("inspectCard");
+  const title = document.getElementById("inspectTitle");
+  const pills = document.getElementById("inspectPills");
+  const card = cardById(state.inspectCardId);
+
+  pills.innerHTML = "";
+
+  if (!card) {
+    popup.classList.remove("open");
+    popup.setAttribute("aria-hidden", "true");
+    container.innerHTML = "";
+    title.textContent = "No card";
+    return;
+  }
+
+  container.innerHTML = renderCardMarkup(card);
+  title.textContent = `${card.animal}`;
+
+  [
+    displayCodeForId(card.id),
+    card.element,
+    card.animal,
+  ].forEach((value) => {
+    const pill = document.createElement("span");
+    pill.className = "pill";
+    pill.textContent = value;
+    pills.appendChild(pill);
+  });
+}
+
+function getHumanActionState() {
+  const handOpen = state.phase !== "finished";
+  const claim = state.pendingClaim;
+  const isHumanClaim = Boolean(claim && isHumanIndex(claim.playerIndex));
+  const selfKanState = (
+    handOpen &&
+    state.phase === "human-discard" &&
+    state.currentTurn === HUMAN_PLAYER_INDEX &&
+    !claim
+  ) ? buildSelfKanState(HUMAN_PLAYER_INDEX) : null;
+  const canTsumo = handOpen && isHumanClaim && claim.type === "tsumo";
+  const canRon = handOpen && isHumanClaim && claim.type === "ron";
+  const canKan = handOpen && isHumanClaim && claim.type === "kan";
+  const canSelfKan = Boolean(selfKanState);
+  const canPon = handOpen && isHumanClaim && claim.type === "pon";
+  const canChi = handOpen && isHumanClaim && claim.type === "chi";
+  const canPass = handOpen && (canTsumo || canRon || canKan || canPon || canChi);
+  return {
+    handOpen,
+    selfKanState,
+    canTsumo,
+    canRon,
+    canKan,
+    canSelfKan,
+    canPon,
+    canChi,
+    canPass,
+  };
+}
+
+function getHumanClaimHint() {
+  if (!state.assistEnabled) return null;
+  const claim = state.pendingClaim;
+
+  function describeChoice(choice) {
+    if (!choice) return "";
+    const target = choice.claimTargetLabel || "";
+    const discardCode = choice.card ? displayCodeForId(choice.card.id) : "";
+    return [target, discardCode].filter(Boolean).join(" · ");
+  }
+
+  if (state.phase === "human-discard" && state.currentTurn === HUMAN_PLAYER_INDEX && !claim) {
+    const choice = chooseAISelfKan(HUMAN_PLAYER_INDEX);
+    return choice
+      ? { action: "kan", label: "Self Kan", detail: describeChoice(choice) }
+      : null;
+  }
+
+  if (!claim || !isHumanIndex(claim.playerIndex) || state.phase === "finished") return null;
+
+  if (claim.type === "tsumo") {
+    return { action: "tsumo", label: "Tsumo" };
+  }
+  if (claim.type === "ron") {
+    return { action: "ron", label: "Ron" };
+  }
+  if (!claim.sourceCard) return null;
+
+  if (claim.type === "kan") {
+    const choice = chooseAIKan(HUMAN_PLAYER_INDEX, claim.sourceCard);
+    return choice
+      ? { action: "kan", label: "Kan", detail: describeChoice(choice) }
+      : { action: "pass", label: "Pass" };
+  }
+  if (claim.type === "pon") {
+    const choice = chooseAIPon(HUMAN_PLAYER_INDEX, claim.sourceCard);
+    return choice
+      ? { action: "pon", label: "Pon", detail: describeChoice(choice) }
+      : { action: "pass", label: "Pass" };
+  }
+  if (claim.type === "chi") {
+    const choice = chooseAIChi(HUMAN_PLAYER_INDEX, claim.sourceCard);
+    return choice
+      ? { action: "chi", label: "Chi", detail: describeChoice(choice) }
+      : { action: "pass", label: "Pass" };
+  }
+  return null;
+}
+
+function triggerPrimaryClaim() {
+  const actionState = getHumanActionState();
+  if (actionState.canTsumo) {
+    declareHumanTsumo();
+    return true;
+  }
+  if (actionState.canRon) {
+    declareHumanRon();
+    return true;
+  }
+  if (actionState.canKan) {
+    declareHumanKan();
+    return true;
+  }
+  if (actionState.canSelfKan) {
+    declareHumanKan();
+    return true;
+  }
+  if (actionState.canPon) {
+    declareHumanPon();
+    return true;
+  }
+  if (actionState.canChi) {
+    declareHumanChi();
+    return true;
+  }
+  return false;
+}
+
+function getHumanDiscardableCards() {
+  const human = getHumanPlayer();
+  if (!human) return [];
+  if (state.phase !== "human-discard") return [];
+  if (state.currentTurn !== HUMAN_PLAYER_INDEX) return [];
+  if (state.pendingClaim?.type === "tsumo") return [];
+  return human.hand.slice();
+}
+
+function getHumanFreshDrawCard() {
+  if (state.phase !== "human-discard") return null;
+  if (state.currentTurn !== HUMAN_PLAYER_INDEX) return null;
+  if (state.pendingClaim?.type === "tsumo") return null;
+  const cardId = state.lastDrawnCardId;
+  if (!cardId) return null;
+  return getHumanPlayer().hand.find((card) => card.id === cardId) || null;
+}
+
+function closeAllOverlays() {
+  setLogOverlay(false);
+  setWinOverlay(false);
+  setDiscardOverlay(false);
+  setSetsOverlay(false);
+  setRulesOverlay(false);
+}
+
+function anyOverlayOpen() {
+  return ["logOverlay", "winOverlay", "discardOverlay", "setsOverlay", "rulesOverlay"]
+    .some((id) => document.getElementById(id).classList.contains("open"));
+}
+
+function renderCenter() {
+  const centerTitle = document.getElementById("centerTitle");
+  const centerCard = document.getElementById("centerCard");
+  const dangerPills = document.getElementById("dangerPills");
+  const actionState = getHumanActionState();
+  const selfKanReady = actionState.canSelfKan;
+  let inspectTarget = null;
+
+  dangerPills.innerHTML = "";
+  centerCard.classList.remove("claimable");
+
+  if (state.lastDiscard) {
+    const canClaimDiscard = actionState.canRon || actionState.canKan || actionState.canPon || actionState.canChi;
+    const claimVerb = actionState.canRon
+      ? "ron"
+      : actionState.canKan
+        ? "kan"
+        : actionState.canPon
+          ? "pon"
+          : "chi";
+    centerCard.classList.toggle("claimable", canClaimDiscard);
+    centerCard.innerHTML = canClaimDiscard
+      ? `
+        <button class="center-claim-target" id="centerClaimTarget" type="button" aria-label="Claim ${claimVerb}">
+          ${renderCardMarkup(state.lastDiscard.card)}
+        </button>
+      `
+      : `${renderCardMarkup(state.lastDiscard.card)}`;
+    inspectTarget = centerCard.querySelector("#centerClaimTarget") || centerCard.querySelector(".card-face");
+  } else {
+    centerCard.innerHTML = renderCardMarkup(null, { back: true });
+  }
+
+  if (state.phase === "finished" && state.matchFinished && state.matchSummary?.leaders?.length === 1) {
+    centerTitle.textContent = `${getPlayer(state.matchSummary.leaders[0]).seat} Match`;
+  } else if (state.phase === "finished" && state.matchFinished && state.matchSummary?.leaders?.length > 1) {
+    centerTitle.textContent = "Match Tie";
+  } else if (state.phase === "finished" && state.winner !== null) {
+    if (state.pendingClaim?.type === "ron" && state.winners.length > 1) {
+      centerTitle.textContent = `${state.winners.length} Ron`;
+    } else {
+      const winner = getPlayer(state.winner);
+      centerTitle.textContent = `${winner.seat} Wins`;
+    }
+  } else if (state.phase === "finished" && state.matchSummary) {
+    centerTitle.textContent = "Sudden Death";
+  } else if (state.phase === "finished") {
+    centerTitle.textContent = "Draw";
+  } else if (state.pendingClaim?.type === "ron" && isHumanIndex(state.pendingClaim.playerIndex)) {
+    centerTitle.textContent = "Ron";
+  } else if (state.pendingClaim?.type === "kan" && isHumanIndex(state.pendingClaim.playerIndex)) {
+    centerTitle.textContent = "Kan";
+  } else if (selfKanReady) {
+    centerTitle.textContent = "Self Kan";
+  } else if (state.pendingClaim?.type === "pon" && isHumanIndex(state.pendingClaim.playerIndex)) {
+    centerTitle.textContent = "Pon";
+  } else if (state.pendingClaim?.type === "tsumo" && isHumanIndex(state.pendingClaim.playerIndex)) {
+    centerTitle.textContent = "Tsumo";
+  } else if (state.pendingClaim?.type === "chi" && isHumanIndex(state.pendingClaim.playerIndex)) {
+    centerTitle.textContent = "Chi";
+  } else {
+    centerTitle.textContent = `${getPlayer(state.currentTurn).seat} Turn`;
+  }
+
+  if (state.lastDiscard) {
+    const threats = exactRonThreats(state.lastDiscard.playerIndex, state.lastDiscard.card);
+    if (threats.length) {
+      const pill = document.createElement("span");
+      pill.className = "pill danger";
+      pill.textContent = `${threats.length} ron`;
+      dangerPills.appendChild(pill);
+    }
+  }
+
+  document.getElementById("centerClaimTarget")?.addEventListener("click", triggerPrimaryClaim);
+  attachInspectHandlers(inspectTarget, state.lastDiscard?.card || null);
+}
+
+function renderWinningLayouts() {
+  const container = document.getElementById("winningLayouts");
+  container.innerHTML = "";
+  const claim = state.pendingClaim;
+
+  if (state.matchSummary) {
+    const leaders = state.matchSummary.leaders.map((index) => getPlayer(index)?.name || `P${index + 1}`);
+    const summaryEl = document.createElement("div");
+    summaryEl.className = "winning-layout";
+    summaryEl.innerHTML = `
+      <strong>${state.matchFinished ? "Match Result" : "Match Status"}</strong>
+      <span>${formatMatchSummaryText()}</span><br>
+      <span>Leader${leaders.length === 1 ? "" : "s"}: ${leaders.join(" · ")}</span>
+    `;
+    container.appendChild(summaryEl);
+    if (state.matchFinished && (!claim || state.winner === null)) {
+      return;
+    }
+  }
+
+  if (state.phase === "finished" && claim && state.winner !== null) {
+    if (claim.type === "ron" && claim.ronResults?.length) {
+      claim.ronResults.forEach((result) => {
+        const winner = getPlayer(result.playerIndex);
+        const scoringRules = new Set((result.scoringLayout || []).map((group) => group.ruleId));
+        const wrapper = document.createElement("div");
+        wrapper.className = "winning-layout";
+        wrapper.innerHTML = `
+          <strong>${formatPlayerTag(result.playerIndex)} · RON</strong>
+          <span>Ron on ${formatCardSource(claim.sourceCard, claim.discarderIndex)} · ${formatPointSummary(result.points, result.bonusPoints)}</span>
+        `;
+        container.appendChild(wrapper);
+
+        result.layouts.forEach((layout) => {
+          const cardsEl = document.createElement("div");
+          cardsEl.className = "winning-layout";
+          cardsEl.innerHTML = `
+            <div class="winning-cards">
+              ${layout.flatMap((group) => group.cards).map((card) => `
+                <div class="winning-card">
+                  ${renderCardMarkup(card)}
+                </div>
+              `).join("")}
+            </div>
+          `;
+          container.appendChild(cardsEl);
+
+          layout.forEach((group) => {
+            const el = document.createElement("div");
+            el.className = "winning-layout";
+            el.innerHTML = `
+              <strong>${group.label}${scoringRules.has(group.ruleId) ? ` · ${getRuleById(group.ruleId)?.points || 0} pt` : ""}</strong>
+              <span>${group.cards.map((card) => `${card.chinese} ${displayCodeForId(card.id)}`).join(" · ")}</span><br>
+              <span>${group.detail}</span>
+            `;
+            container.appendChild(el);
+          });
+        });
+      });
+
+      const settlementEl = document.createElement("div");
+      settlementEl.className = "winning-layout";
+      settlementEl.innerHTML = `
+        <strong>Settlement</strong>
+        <span>${formatSettlement(claim.settlement || [])}</span>
+      `;
+      container.appendChild(settlementEl);
+      return;
+    }
+
+    const winner = getPlayer(state.winner);
+    const sourceText = claim.type === "ron"
+      ? `Ron on ${formatCardSource(claim.sourceCard, claim.discarderIndex)}`
+      : "Tsumo";
+    const settlementText = formatSettlement(claim.settlement || []);
+    const scoringRules = new Set((claim.scoringLayout || []).map((group) => group.ruleId));
+
+    claim.layouts.forEach((layout) => {
+      const wrapper = document.createElement("div");
+      wrapper.className = "winning-layout";
+      wrapper.innerHTML = `
+        <strong>${formatPlayerTag(state.winner)} · ${claim.type.toUpperCase()}</strong>
+        <span>${sourceText} · ${formatPointSummary(claim.points, claim.bonusPoints)}</span><br>
+        <span>${settlementText}</span>
+        <div class="winning-cards">
+          ${layout.flatMap((group) => group.cards).map((card) => `
+            <div class="winning-card">
+              ${renderCardMarkup(card)}
+            </div>
+          `).join("")}
+        </div>
+      `;
+      container.appendChild(wrapper);
+
+      layout.forEach((group) => {
+        const el = document.createElement("div");
+        el.className = "winning-layout";
+        el.innerHTML = `
+          <strong>${group.label}${scoringRules.has(group.ruleId) ? ` · ${getRuleById(group.ruleId)?.points || 0} pt` : ""}</strong>
+          <span>${group.cards.map((card) => `${card.chinese} ${displayCodeForId(card.id)}`).join(" · ")}</span><br>
+          <span>${group.detail}</span>
+        `;
+        container.appendChild(el);
+      });
+    });
+    return;
+  }
+
+  if (!claim || !isHumanIndex(claim.playerIndex)) {
+    container.innerHTML = `
+      <div class="winning-layout">
+        <strong>No current claim</strong>
+        <span>Waiting</span>
+      </div>
+    `;
+    return;
+  }
+
+  if (claim.type !== "tsumo" && claim.type !== "ron") {
+    container.innerHTML = `
+      <div class="winning-layout">
+        <strong>No winning claim</strong>
+        <span>${claim.type.toUpperCase()} is not a win.</span>
+      </div>
+    `;
+    return;
+  }
+
+  claim.layouts.forEach((layout) => {
+    layout.forEach((group) => {
+      const el = document.createElement("div");
+      el.className = "winning-layout";
+      el.innerHTML = `
+        <strong>${group.label}</strong>
+        <span>${group.cards.map((card) => `${card.chinese} ${displayCodeForId(card.id)}`).join(" · ")}</span><br>
+        <span>${group.detail}</span>
+      `;
+      container.appendChild(el);
+    });
+  });
+}
+
+function renderActions() {
+  const hint = document.getElementById("actionHint");
+  const tsumoButton = document.getElementById("tsumoButton");
+  const ronButton = document.getElementById("ronButton");
+  const kanButton = document.getElementById("kanButton");
+  const ponButton = document.getElementById("ponButton");
+  const chiButton = document.getElementById("chiButton");
+  const passButton = document.getElementById("passButton");
+  const winButton = document.getElementById("openWinButton");
+  const assistButton = document.getElementById("toggleAssistButton");
+  const { canTsumo, canRon, canKan, canSelfKan, canPon, canChi, canPass, selfKanState } = getHumanActionState();
+  const claimHint = getHumanClaimHint();
+  const hasWinningView = (state.phase === "finished" && state.pendingClaim && state.winner !== null)
+    || Boolean(state.matchSummary)
+    || Boolean(
+      state.pendingClaim &&
+      isHumanIndex(state.pendingClaim.playerIndex) &&
+      (state.pendingClaim.type === "tsumo" || state.pendingClaim.type === "ron")
+    );
+
+  tsumoButton.disabled = !canTsumo;
+  ronButton.disabled = !canRon;
+  kanButton.disabled = !(canKan || canSelfKan);
+  ponButton.disabled = !canPon;
+  chiButton.disabled = !canChi;
+  passButton.disabled = !canPass;
+  winButton.disabled = !hasWinningView;
+  assistButton.setAttribute("aria-pressed", state.assistEnabled ? "true" : "false");
+  [tsumoButton, ronButton, kanButton, ponButton, chiButton, passButton].forEach((button) => {
+    button.classList.remove("recommended");
+  });
+
+  if (claimHint) {
+    const claimButtons = {
+      tsumo: tsumoButton,
+      ron: ronButton,
+      kan: kanButton,
+      pon: ponButton,
+      chi: chiButton,
+      pass: passButton,
+    };
+    claimButtons[claimHint.action]?.classList.add("recommended");
+  }
+
+  if (state.phase === "finished") {
+    if (state.matchFinished) {
+      hint.textContent = "Match over · Enter starts a new match";
+    } else if (state.matchSummary) {
+      hint.textContent = "Sudden death · Enter starts next round";
+    } else if (state.winner !== null) {
+      hint.textContent = "Hand over · Enter starts next round";
+    } else {
+      hint.textContent = "Draw · Enter starts next round";
+    }
+  } else if (claimHint) {
+    const sourceText = claimHint.action === "pass" || !state.pendingClaim?.sourceCard
+      ? ""
+      : ` · ${state.pendingClaim.sourceCard.chinese}`;
+    const detailText = claimHint.detail ? ` · ${claimHint.detail}` : "";
+    hint.textContent = `Hint: ${claimHint.label}${sourceText}${detailText}`;
+  } else if (canRon) {
+    hint.textContent = `Ron: ${state.pendingClaim.sourceCard.chinese} · Enter or R`;
+  } else if (canKan) {
+    hint.textContent = `Kan: ${state.pendingClaim.sourceCard.chinese} · Enter or K`;
+  } else if (canSelfKan) {
+    hint.textContent = `Self Kan: ${selfKanState?.animal || ""} · Enter or K`;
+  } else if (canPon) {
+    hint.textContent = `Pon: ${state.pendingClaim.sourceCard.chinese} · Enter or P`;
+  } else if (canChi) {
+    hint.textContent = `Chi: ${state.pendingClaim.sourceCard.chinese} · Enter or C`;
+  } else if (canTsumo) {
+    hint.textContent = "Tsumo ready · Enter or T";
+  } else if (state.currentTurn === HUMAN_PLAYER_INDEX && state.phase === "human-discard") {
+    hint.textContent = "Discard a card";
+  } else {
+    hint.textContent = "Waiting";
+  }
+}
+
+function renderHumanHand() {
+  const container = document.getElementById("humanHand");
+  const human = getHumanPlayer();
+  const canDiscard =
+    state.phase === "human-discard" &&
+    state.currentTurn === HUMAN_PLAYER_INDEX &&
+    state.pendingClaim?.type !== "tsumo";
+  const suggestedCardId = canDiscard && state.assistEnabled ? chooseAIDiscard(HUMAN_PLAYER_INDEX)?.card.id ?? null : null;
+  const handCards = [
+    ...human.hand.map((card) => ({ card, kind: "concealed" })),
+    ...human.openCards.map((card) => ({ card, kind: getOpenClaimType(card) })),
+  ];
+
+  container.innerHTML = "";
+
+  handCards.forEach(({ card, kind }) => {
+    const isOpenClaim = kind !== "concealed";
+    const isArrived = state.lastDrawnCardId === card.id;
+    const isDiscardable = canDiscard && !isOpenClaim;
+    const openClaimLabel = ({
+      chi: "Chi Card",
+      pon: "Pon Card",
+      kan: "Kan Card",
+      open: "Open Card",
+    })[kind] || "Open Card";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `hand-card${state.selectedCardId === card.id ? " selected" : ""}${suggestedCardId === card.id ? " suggested" : ""}${isDiscardable ? "" : " locked"}${isOpenClaim ? " open-claimed" : ""}${isArrived ? " arrived" : ""}`;
+    button.innerHTML = `
+      ${renderCardMarkup(card)}
+      <div class="hand-copy">
+        <div class="hand-code">${displayCodeForId(card.id)}</div>
+        <div class="hand-title">${card.animal}</div>
+        <div class="hand-subtitle">${card.label}</div>
+        ${isArrived ? `<div class="hand-arrival-badge">New</div>` : ""}
+        ${isOpenClaim ? `<div class="hand-claim-badge">${openClaimLabel}</div><div class="hand-claim-note">Open claim · cannot discard</div>` : ""}
+        <div class="hand-tags">
+          <span class="hand-tag">${card.element}</span>
+          <span class="hand-tag">${card.animal}</span>
+        </div>
+      </div>
+    `;
+    button.addEventListener("mouseenter", (event) => {
+      showInspectPopup(card, button, event.clientX, event.clientY);
+    });
+    button.addEventListener("mousemove", (event) => {
+      positionInspectPopup(button, event.clientX, event.clientY);
+    });
+    button.addEventListener("mouseleave", hideInspectPopup);
+    button.addEventListener("focus", () => {
+      showInspectPopup(card, button);
+    });
+    button.addEventListener("blur", hideInspectPopup);
+    if (isDiscardable) {
+      button.addEventListener("click", () => onHumanDiscard(card.id));
+    }
+    container.appendChild(button);
+  });
+}
+
+function renderLogs() {
+  const container = document.getElementById("logList");
+  container.innerHTML = "";
+  state.logs.slice(0, GAME_CONFIG.logLimit).forEach((entry) => {
+    const item = document.createElement("div");
+    item.className = "log-item";
+    item.innerHTML = entry.text;
+    container.appendChild(item);
+  });
+}
+
+function renderDiscards() {
+  const container = document.getElementById("discardList");
+  container.innerHTML = "";
+
+  state.players.forEach((player) => {
+    const group = document.createElement("div");
+    group.className = "discard-group";
+    const displayDiscards = sortCardsForDisplay(player.discards);
+
+    if (!displayDiscards.length) {
+      group.innerHTML = `
+        <strong>${player.seat}</strong>
+        <div class="discard-empty">No discards</div>
+      `;
+      container.appendChild(group);
+      return;
+    }
+
+    group.innerHTML = `
+      <strong>${player.seat}</strong>
+      <div class="discard-cards">
+        ${displayDiscards.map((card) => `
+          <button class="discard-detail-card" type="button" data-inspect="${card.id}" aria-label="${player.seat} discarded ${card.label}">
+            ${renderCardMarkup(card)}
+          </button>
+        `).join("")}
+      </div>
+    `;
+    container.appendChild(group);
+  });
+}
+
+function renderSets() {
+  const container = document.getElementById("setList");
+  container.innerHTML = "";
+  SET_RULES
+    .slice()
+    .sort((a, b) => {
+      if (a.points !== b.points) return a.points - b.points;
+      return a.label.localeCompare(b.label);
+    })
+    .forEach((rule) => {
+    const item = document.createElement("div");
+    item.className = "set-item";
+    item.innerHTML = `
+      <strong>${rule.label}</strong>
+      <span>${describeSetRule(rule)}</span>
+    `;
+    container.appendChild(item);
+    });
+}
+
+function renderRules() {
+  const container = document.getElementById("rulesList");
+  const roundMonth = getRoundMonthTarget();
+  container.innerHTML = "";
+
+  const sections = [
+    {
+      title: "Goal",
+      body: `Finish the match ahead on points. Everyone starts at ${GAME_CONFIG.startingPoints} points, and a match lasts up to ${GAME_CONFIG.matchRounds} rounds.`,
+    },
+    {
+      title: "Turn Flow",
+      body: `Draw to ${GAME_CONFIG.winningHandSize}. If your ${GAME_CONFIG.winningHandSize} total cards win, declare Tsumo. Otherwise discard 1 concealed card back to ${GAME_CONFIG.startingHandSize}.`,
+    },
+    {
+      title: "Claims",
+      body: "Discard claims resolve in this order: Ron, Kan, Pon, Chi. Chi is not a sequence claim here. It simply lets only the next player take the discard as 1 open card. On your own turn, if all 5 cards of one month are concealed in your hand, you may self-kan to open them and then discard.",
+    },
+    {
+      title: "Gear",
+      body: "Open cards unlock point tiers: 3pt needs 3+, 6pt needs 2+, 9pt needs 1+, and 12pt/15pt have no gear requirement.",
+    },
+    {
+      title: "Round Bonus",
+      body: roundMonth
+        ? `This round targets month ${roundMonth}. If a winning 6-card hand contains month ${roundMonth}, it gains +${GAME_CONFIG.roundBonusPoints} once.`
+        : `Sudden death has no month bonus. During rounds 1 to ${GAME_CONFIG.matchRounds}, a winning hand with the round month gains +${GAME_CONFIG.roundBonusPoints} once.`,
+    },
+    {
+      title: "Settlement",
+      body: "Ron takes the full points from the discarder. Tsumo splits the value equally across the other 3 players.",
+    },
+    {
+      title: "Match End",
+      body: `The match ends early if any player reaches 0 or below. After round ${GAME_CONFIG.matchRounds}, highest points wins. Ties go to sudden death.`,
+    },
+  ];
+
+  sections.forEach((section) => {
+    const item = document.createElement("div");
+    item.className = "set-item";
+    item.innerHTML = `
+      <strong>${section.title}</strong>
+      <span>${section.body}</span>
+    `;
+    container.appendChild(item);
+  });
+}
+
+function bindVisibleCardInspect() {
+  document.querySelectorAll("[data-inspect]").forEach((el) => {
+    const id = Number(el.dataset.inspect);
+    const card = cardById(id);
+    if (!card) return;
+    el.addEventListener("mouseenter", (event) => {
+      showInspectPopup(card, el, event.clientX, event.clientY);
+    });
+    el.addEventListener("mousemove", (event) => {
+      positionInspectPopup(el, event.clientX, event.clientY);
+    });
+    el.addEventListener("mouseleave", hideInspectPopup);
+    el.addEventListener("focus", () => {
+      showInspectPopup(card, el);
+    });
+    el.addEventListener("blur", hideInspectPopup);
+  });
+}
+
+function renderHeader() {
+  document.getElementById("turnStat").textContent = getPlayer(state.currentTurn)?.seat || "-";
+  document.getElementById("wallStat").textContent = String(state.wall.length);
+  document.getElementById("phaseStat").textContent = `R${getRoundLabel()} · ${state.phase.replace("-", " ")}`;
+  document.getElementById("callStat").textContent = state.phase === "finished" && state.pendingClaim?.points
+    ? `${state.call} ${state.pendingClaim.points}`
+    : state.call;
+}
+
+function renderCompass() {
+  const labelBySlot = Object.fromEntries(state.players.map((player) => [player.renderSlot, player.seat]));
+  document.getElementById("compassNorth").textContent = labelBySlot.north || "North";
+  document.getElementById("compassSouth").textContent = labelBySlot.south || "South";
+  document.getElementById("compassWest").textContent = labelBySlot.west || "West";
+  document.getElementById("compassEast").textContent = labelBySlot.east || "East";
+}
+
+function render() {
+  hideInspectPopup();
+  renderHeader();
+  renderCompass();
+  TABLE_CONFIG.renderOrder.forEach((seatKey) => {
+    if (seatKey === "south") return;
+    const playerIndex = TABLE_CONFIG.players.findIndex((player) => player.renderSlot === seatKey);
+    renderSeat(seatKey, playerIndex);
+  });
+  renderSouthCallPanel();
+  renderCenter();
+  renderWinningLayouts();
+  renderActions();
+  renderHumanHand();
+  renderLogs();
+  renderDiscards();
+  renderSets();
+  renderRules();
+  bindVisibleCardInspect();
+}
+
+function setLogOverlay(open) {
+  const overlay = document.getElementById("logOverlay");
+  const nextOpen = Boolean(open);
+  const wasOpen = overlay.classList.contains("open");
+  if (nextOpen !== wasOpen) sound.overlay(nextOpen);
+  overlay.classList.toggle("open", open);
+  overlay.setAttribute("aria-hidden", open ? "false" : "true");
+}
+
+function setWinOverlay(open) {
+  const overlay = document.getElementById("winOverlay");
+  const nextOpen = Boolean(open);
+  const wasOpen = overlay.classList.contains("open");
+  if (nextOpen !== wasOpen) sound.overlay(nextOpen);
+  overlay.classList.toggle("open", open);
+  overlay.setAttribute("aria-hidden", open ? "false" : "true");
+}
+
+function setDiscardOverlay(open) {
+  const overlay = document.getElementById("discardOverlay");
+  const nextOpen = Boolean(open);
+  const wasOpen = overlay.classList.contains("open");
+  if (nextOpen !== wasOpen) sound.overlay(nextOpen);
+  overlay.classList.toggle("open", open);
+  overlay.setAttribute("aria-hidden", open ? "false" : "true");
+}
+
+function setSetsOverlay(open) {
+  const overlay = document.getElementById("setsOverlay");
+  const nextOpen = Boolean(open);
+  const wasOpen = overlay.classList.contains("open");
+  if (nextOpen !== wasOpen) sound.overlay(nextOpen);
+  overlay.classList.toggle("open", open);
+  overlay.setAttribute("aria-hidden", open ? "false" : "true");
+}
+
+function setRulesOverlay(open) {
+  const overlay = document.getElementById("rulesOverlay");
+  const nextOpen = Boolean(open);
+  const wasOpen = overlay.classList.contains("open");
+  if (nextOpen !== wasOpen) sound.overlay(nextOpen);
+  overlay.classList.toggle("open", open);
+  overlay.setAttribute("aria-hidden", open ? "false" : "true");
+}
+
+function toggleAssist() {
+  state.assistEnabled = !state.assistEnabled;
+  render();
+}
+
+function updateViewportFit() {
+  const shell = document.getElementById("viewportShell");
+  const shouldUseFluidLayout =
+    window.innerWidth <= VIEWPORT_FIT.minFluidWidth ||
+    window.innerHeight <= VIEWPORT_FIT.minFluidHeight;
+
+  document.body.classList.toggle("fluid-mode", shouldUseFluidLayout);
+  shell.classList.toggle("fluid", shouldUseFluidLayout);
+
+  if (shouldUseFluidLayout) {
+    shell.style.setProperty("--app-scale", "1");
+    return;
+  }
+
+  const baseWidth = GAME_CONFIG ? Number(getComputedStyle(document.documentElement).getPropertyValue("--app-base-width")) : 1236;
+  const baseHeight = GAME_CONFIG ? Number(getComputedStyle(document.documentElement).getPropertyValue("--app-base-height")) : 1040;
+  const scale = Math.min(
+    (window.innerWidth - VIEWPORT_FIT.chromePaddingX) / baseWidth,
+    (window.innerHeight - VIEWPORT_FIT.chromePaddingY) / baseHeight,
+    1
+  );
+
+  shell.style.setProperty("--app-scale", String(Math.max(scale, 0.7)));
+}
+
+document.addEventListener("pointerdown", unlockAudio, { passive: true });
+window.addEventListener("keydown", unlockAudio, { passive: true });
+document.addEventListener("click", (event) => {
+  if (event.target.closest("button")) sound.uiClick();
+});
+
+document.getElementById("tsumoButton").addEventListener("click", declareHumanTsumo);
+document.getElementById("ronButton").addEventListener("click", declareHumanRon);
+document.getElementById("kanButton").addEventListener("click", declareHumanKan);
+document.getElementById("ponButton").addEventListener("click", declareHumanPon);
+document.getElementById("chiButton").addEventListener("click", declareHumanChi);
+document.getElementById("passButton").addEventListener("click", passHumanClaim);
+document.getElementById("openWinButton").addEventListener("click", () => setWinOverlay(true));
+document.getElementById("closeWinButton").addEventListener("click", () => setWinOverlay(false));
+document.getElementById("openLogButton").addEventListener("click", () => setLogOverlay(true));
+document.getElementById("closeLogButton").addEventListener("click", () => setLogOverlay(false));
+document.getElementById("openDiscardsButton").addEventListener("click", () => setDiscardOverlay(true));
+document.getElementById("closeDiscardButton").addEventListener("click", () => setDiscardOverlay(false));
+document.getElementById("openRulesButton").addEventListener("click", () => setRulesOverlay(true));
+document.getElementById("closeRulesButton").addEventListener("click", () => setRulesOverlay(false));
+document.getElementById("openSetsButton").addEventListener("click", () => setSetsOverlay(true));
+document.getElementById("closeSetsButton").addEventListener("click", () => setSetsOverlay(false));
+document.getElementById("toggleAssistButton").addEventListener("click", toggleAssist);
+document.getElementById("logOverlay").addEventListener("click", (event) => {
+  if (event.target.id === "logOverlay") setLogOverlay(false);
+});
+document.getElementById("winOverlay").addEventListener("click", (event) => {
+  if (event.target.id === "winOverlay") setWinOverlay(false);
+});
+document.getElementById("discardOverlay").addEventListener("click", (event) => {
+  if (event.target.id === "discardOverlay") setDiscardOverlay(false);
+});
+document.getElementById("setsOverlay").addEventListener("click", (event) => {
+  if (event.target.id === "setsOverlay") setSetsOverlay(false);
+});
+document.getElementById("rulesOverlay").addEventListener("click", (event) => {
+  if (event.target.id === "rulesOverlay") setRulesOverlay(false);
+});
+window.addEventListener("keydown", (event) => {
+  const target = event.target;
+  if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT" || target.isContentEditable)) {
+    return;
+  }
+
+  const actionState = getHumanActionState();
+  const key = event.key.toLowerCase();
+  const discardIndex = Number(event.key) - 1;
+  const isSpace = event.key === " ";
+  const isEnter = event.key === "Enter";
+
+  if (event.key === "Escape") {
+    if (anyOverlayOpen()) {
+      closeAllOverlays();
+      return;
+    }
+    if (actionState.canPass) {
+      event.preventDefault();
+      passHumanClaim();
+    }
+    return;
+  }
+
+  if ((isEnter || isSpace) && anyOverlayOpen()) {
+    event.preventDefault();
+    closeAllOverlays();
+    return;
+  }
+
+  if ((isEnter || isSpace) && state.phase === "finished") {
+    event.preventDefault();
+    continueAfterFinishedHand();
+    return;
+  }
+
+  if (!anyOverlayOpen() && Number.isInteger(discardIndex) && discardIndex >= 0 && discardIndex < 6) {
+    const discardableCards = getHumanDiscardableCards();
+    const card = discardableCards[discardIndex];
+    if (card) {
+      event.preventDefault();
+      onHumanDiscard(card.id);
+      return;
+    }
+  }
+
+  if (isEnter) {
+    if (triggerPrimaryClaim()) {
+      event.preventDefault();
+    }
+    return;
+  }
+
+  if (isSpace && !anyOverlayOpen() && actionState.canPass) {
+    event.preventDefault();
+    passHumanClaim();
+    return;
+  }
+
+  if (isSpace && !anyOverlayOpen()) {
+    const freshDrawCard = getHumanFreshDrawCard();
+    if (freshDrawCard) {
+      event.preventDefault();
+      onHumanDiscard(freshDrawCard.id);
+      return;
+    }
+  }
+
+  if (key === "r" && actionState.canRon) {
+    event.preventDefault();
+    declareHumanRon();
+    return;
+  }
+
+  if (key === "c" && actionState.canChi) {
+    event.preventDefault();
+    declareHumanChi();
+    return;
+  }
+
+  if (key === "k" && (actionState.canKan || actionState.canSelfKan)) {
+    event.preventDefault();
+    declareHumanKan();
+    return;
+  }
+
+  if (key === "p" && actionState.canPon) {
+    event.preventDefault();
+    declareHumanPon();
+    return;
+  }
+
+  if (key === "t" && actionState.canTsumo) {
+    event.preventDefault();
+    declareHumanTsumo();
+    return;
+  }
+
+  if (key === "n" && state.phase === "finished") {
+    event.preventDefault();
+    continueAfterFinishedHand();
+  }
+});
+
+window.addEventListener("resize", updateViewportFit);
+updateViewportFit();
+dealOpeningHands(true);
+</script>
+</body>
+</html>
