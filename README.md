@@ -8,6 +8,10 @@ Each card belongs to a numbered month and one of five colors. Players draw to si
 
 ## Play
 
+Play in the browser on GitHub Pages:
+
+https://fernsugi.github.io/month-cycle-table-game
+
 Open `index.html` in a modern browser to play locally.
 
 The current package is designed for itch.io as a static HTML game. No build step or server is required.
