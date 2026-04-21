@@ -4,7 +4,7 @@ This document describes the finished rules used by the current version of the ga
 
 ## 1. Overview
 
-Month Cycle Table is a 4-player draw-discard card game built around a 60-card custom deck.
+Month Cycle Table is a 4-player draw-discard card game built around a 72-card custom deck.
 
 Core flow:
 
@@ -18,24 +18,24 @@ Core flow:
 The game is built around:
 
 - `Month`: `1` to `12`
-- `Color`: `G`, `R`, `Y`, `K`, `B`
-- a player-facing card code such as `AA`, `AB`, `AC`
+- `Color`: `G`, `R`, `Y`, `K`, `B`, `W`
+- each card's unique month-color identity
 
 ## 2. Components
 
-The deck has `60` unique cards.
+The deck has `72` unique cards.
 
 Each card has:
 
-- a display code using two letters from `A` to `L`
 - a month from `1` to `12`
-- a color: `G`, `R`, `Y`, `K`, or `B`
+- a color: `G`, `R`, `Y`, `K`, `B`, or `W`
 
 Deck structure:
 
 - months repeat every `12` cards
-- colors repeat every `10` cards
-- each month appears exactly `5` times in the deck
+- the first `60` cards use the original five colors: `G`, `R`, `Y`, `K`, `B`
+- the final `12` cards are white cards
+- each month appears exactly `6` times in the deck
 - each color appears exactly `12` times in the deck
 
 ## 3. Players, Seats, and Dealer
@@ -49,7 +49,7 @@ The game uses exactly `4` players:
 
 At the start of a new match:
 
-- all players begin with `15` points
+- all players begin with `18` points
 - a random dealer is chosen
 - that dealer becomes `East`
 
@@ -79,9 +79,9 @@ Early match end:
 
 At the start of each hand:
 
-- shuffle all `60` cards
+- shuffle all `72` cards
 - deal `5` cards to each player
-- the remaining `40` cards become the wall
+- the remaining `52` cards become the wall
 - East takes the first turn
 
 ## 6. Hand Structure
@@ -179,10 +179,10 @@ On your own turn, you may also declare a `self kan`.
 
 Rules:
 
-- if your concealed hand contains all `5` cards of the same month, you may open them immediately as a `kan`
+- if your concealed hand contains `5` cards of the same month, you may open them immediately as a `kan`
 - after `self kan`, you must discard `1` concealed card
 
-In practice, `self kan` converts a fully concealed 5-card month into an open 5-card month block without needing an opponent discard.
+In practice, `self kan` converts a concealed 5-card month into an open 5-card month block without needing an opponent discard.
 
 ## 9. Winning
 
@@ -196,19 +196,31 @@ A winning hand is always exactly `6` total cards.
 If a 6-card hand matches more than one pattern:
 
 - remove any pattern that fails the gear rule
-- from the remaining valid patterns, use the highest-point result
+- from the remaining valid patterns, apply any gear-based point reduction
+- use the highest-point result after gear is applied
 
 ## 10. Gear Rule
 
-Gear is based on the literal number of visible open cards in your open area.
+Gear is based on the literal number of visible open cards in your open area. Some higher-value sets can still score with lower gear, but they score as a smaller point tier until you have enough open cards.
 
 Current gear requirements:
 
 - `3pt` requires at least `3` open cards
 - `6pt` requires at least `2` open cards
+  - with exactly `2` open cards, it scores `3pt`
+  - with `3` or more open cards, it scores the full `6pt`
 - `9pt` requires at least `1` open card
-- `12pt` has no gear requirement
-- `15pt` has no gear requirement
+  - with exactly `1` open card, it scores `3pt`
+  - with exactly `2` open cards, it scores `6pt`
+  - with `3` or more open cards, it scores the full `9pt`
+- `12pt` is always valid, but gear changes the score
+  - with `0` to `3` open cards, it scores `6pt`
+  - with exactly `4` open cards, it scores `9pt`
+  - with `5` open cards, it scores the full `12pt`
+- `15pt` is always valid, but gear changes the score
+  - with `0` to `3` open cards, it scores `9pt`
+  - with exactly `4` open cards, it scores `12pt`
+  - with `5` open cards, it scores the full `15pt`
 
 This applies to both:
 
@@ -284,46 +296,49 @@ All patterns below use exactly `6` cards.
 
 | Pattern | Requirement | Gear |
 | --- | --- | --- |
-| One Color | All 6 cards share one color | At least 3 open cards |
-| Odd or Even, Five Colors | All 6 cards are all odd or all even, all 5 colors are present, and all 6 months are different | At least 3 open cards |
-| Consecutive Months | Six different months in order | At least 3 open cards |
+| Mono | All 6 cards share one color | At least 3 open cards |
+| Skip | All 6 cards are all odd months or all even months, all 6 months are different, and all 6 colors are different | At least 3 open cards |
+| Run | Six different months in order; if any of those cards are open, the open months must also be consecutive within the run | At least 3 open cards |
 
 ### 13.2 6-point patterns
 
 | Pattern | Requirement | Gear |
 | --- | --- | --- |
-| Three Month Pairs | 3 pairs from 3 consecutive months | At least 2 open cards |
-| Three Month Pairs, Two Colors | 3 pairs from 3 different months, using at most 2 colors total | At least 2 open cards |
-| Three Month Pairs, Odd or Even | 3 pairs from 3 different months, all odd or all even | At least 2 open cards |
+| Triple Pair | 3 pairs from 3 consecutive months | 2 open cards scores 3pt; 3+ open cards scores 6pt |
+| Twin Tone Pairs | 3 pairs from 3 different months, using at most 2 colors total | 2 open cards scores 3pt; 3+ open cards scores 6pt |
+| Parity Pairs | 3 pairs from 3 different months, all odd or all even | 2 open cards scores 3pt; 3+ open cards scores 6pt |
 
 ### 13.3 9-point patterns
 
 | Pattern | Requirement | Gear |
 | --- | --- | --- |
-| Two Month Threes | 3 cards of one month and 3 cards of a consecutive month | At least 1 open card |
-| Two Month Threes, Three Colors | 3 cards of one month and 3 cards of another month, using at most 3 colors total | At least 1 open card |
-| Two Month Threes, Odd or Even | 3 cards of one month and 3 cards of another month, all odd or all even | At least 1 open card |
+| Twin Triples | 3 cards of one month and 3 cards of a consecutive month | 1 open card scores 3pt; 2 open cards scores 6pt; 3+ open cards scores 9pt |
+| Tri Tone Triples | 3 cards of one month and 3 cards of another month, using at most 3 colors total | 1 open card scores 3pt; 2 open cards scores 6pt; 3+ open cards scores 9pt |
+| Parity Triples | 3 cards of one month and 3 cards of another month, all odd or all even | 1 open card scores 3pt; 2 open cards scores 6pt; 3+ open cards scores 9pt |
 
 ### 13.4 12-point patterns
 
 | Pattern | Requirement | Gear |
 | --- | --- | --- |
-| Five With Side Month | 5 of one month plus 1 neighboring month, with all 5 colors present | No gear requirement |
-| Four With Double Side Month | 4 of one month plus 2 matching cards from either the previous or next month, with all 5 colors present | No gear requirement |
-| Four With Split Side Months | 4 of one month plus 1 previous and 1 next month, with all 5 colors present | No gear requirement |
+| Crown | 5 of one month plus 1 neighboring month, or 6 of one month, with all 6 colors present | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
+| Escort | 4 of one month plus 2 matching cards from either the previous or next month, with all 6 colors present | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
+| Split Escort | 4 of one month plus 1 previous and 1 next month, with all 6 colors present | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
 
 ### 13.5 15-point patterns
 
 | Pattern | Requirement | Gear |
 | --- | --- | --- |
-| Straight Run | 6 adjacent card codes in deck order | No gear requirement |
-| Consecutive Months, One Color | Six different months in order, all sharing one color | No gear requirement |
-| Alternating Months, One Color | 6 cards of one color across alternating months | No gear requirement |
+| Mono Skip | All 6 cards share one color and are all odd months or all even months | 0-3 open cards scores 9pt; 4 open cards scores 12pt; 5 open cards scores 15pt |
+| Mono Run | Six different months in order, all sharing one color | 0-3 open cards scores 9pt; 4 open cards scores 12pt; 5 open cards scores 15pt |
+| Round Crown | All 6 cards are the current round month | 0-3 open cards scores 9pt; 4 open cards scores 12pt; 5 open cards scores 15pt |
 
 Notes on the 15-point patterns:
 
-- `Straight Run` means 6 adjacent codes in full deck order, such as `AA AB AC AD AE AF`.
-- `Alternating Months, One Color` means one repeating color lane through the deck while the months jump in alternating steps.
+- `Skip` means all odd months or all even months, with all 6 colors and all 6 months different.
+- `Run` means a 6-month consecutive run.
+- `Mono Skip` means a `Skip` played in a single color lane.
+- `Round Crown` means collecting all 6 cards of the round's target month. In sudden death there is no target month, so this pattern is unavailable.
+- Only `Run` requires any open cards inside that pattern to form a consecutive block of months within the completed run.
 
 ## 14. End of Hand
 
@@ -354,9 +369,7 @@ If round `12` ends tied for first:
 
 ## 16. Practical Notes
 
-- The display code like `AA`, `AB`, `AC` is the player-facing card reference used throughout the interface and rule explanations.
-- Some high-tier patterns care about deck order. In practice, players should read those patterns through the visible card codes shown by the game.
-- Odd/even patterns use the deck order of the visible codes: `AA` is odd, `AB` is even, `AC` is odd, and so on.
+- Odd/even patterns use the card's hidden deck position parity. Each month contains both odd and even cards.
 - The month labels are numeric `1` to `12`.
-- The color labels are abbreviated: `G`, `R`, `Y`, `K`, `B`.
+- The color labels are abbreviated: `G`, `R`, `Y`, `K`, `B`, `W`.
 - Open-card count matters a lot because of gear. A beautiful hand may still be invalid if it does not meet the required visible open count for its point tier.
