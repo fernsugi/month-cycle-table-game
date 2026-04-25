@@ -30,6 +30,7 @@ function parseValue(value) {
 function parseArgs(argv) {
   const options = { ...DEFAULT_OPTIONS };
   let outPath = null;
+  let validatePath = null;
   let jsonOnly = false;
 
   argv.forEach((arg) => {
@@ -49,13 +50,17 @@ function parseArgs(argv) {
       outPath = path.resolve(ROOT_DIR, arg.slice("--out=".length));
       return;
     }
+    if (arg.startsWith("--validate=")) {
+      validatePath = path.resolve(ROOT_DIR, arg.slice("--validate=".length));
+      return;
+    }
     if (!arg.startsWith("--")) return;
 
     const [rawKey, rawValue = "true"] = arg.slice(2).split("=");
     options[rawKey] = parseValue(rawValue);
   });
 
-  return { options, outPath, jsonOnly };
+  return { options, outPath, validatePath, jsonOnly };
 }
 
 function printHelp() {
@@ -72,6 +77,7 @@ Common options:
   --finalMatches=64
   --drawSampleMax=10
   --accurate
+  --validate=ai-tuning-result.json
   --out=ai-tuning-result.json
   --json
 
@@ -80,6 +86,9 @@ Fast example:
 
 Longer example:
   node scripts/ai-tuner.js --generations=8 --populationSize=24 --matchesPerGeneration=32 --roundsPerMatch=8 --finalMatches=64 --out=ai-tuning-result.json
+
+Validate saved leaderboard:
+  node scripts/ai-tuner.js --validate=ai-tuning-result.json --accurate --validationMatches=12 --roundsPerMatch=4
 `.trim());
 }
 
@@ -169,6 +178,9 @@ function loadGameScript() {
   if (typeof window.runAITuningTournament !== "function") {
     throw new Error("Game script did not expose window.runAITuningTournament");
   }
+  if (typeof window.runAITuningValidation !== "function") {
+    throw new Error("Game script did not expose window.runAITuningValidation");
+  }
 }
 
 function printSummary(result) {
@@ -196,11 +208,16 @@ function printSummary(result) {
 }
 
 function main() {
-  const { options, outPath, jsonOnly } = parseArgs(process.argv.slice(2));
+  const { options, outPath, validatePath, jsonOnly } = parseArgs(process.argv.slice(2));
   installHeadlessDom();
   loadGameScript();
 
-  const result = window.runAITuningTournament(options);
+  const result = validatePath
+    ? window.runAITuningValidation(
+      JSON.parse(fs.readFileSync(validatePath, "utf8")).leaderboard || [],
+      options
+    )
+    : window.runAITuningTournament(options);
   if (outPath) {
     fs.writeFileSync(outPath, `${JSON.stringify(result, null, 2)}\n`);
   }
