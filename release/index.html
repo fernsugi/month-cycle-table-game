@@ -7020,6 +7020,12 @@ function getHumanClaimHint() {
   if (claim.type === "ron") {
     return { action: "ron", label: "Ron" };
   }
+  if (claim.type === "home-wind-open") {
+    const openCard = chooseAIHomeWindOpenCard(HUMAN_PLAYER_INDEX);
+    return openCard
+      ? { action: "open", label: `Open ${formatCardShort(openCard)}` }
+      : { action: "pass", label: "Pass" };
+  }
   if (!claim.sourceCard) return null;
 
   if (claim.type === "kan") {
@@ -7427,7 +7433,15 @@ function renderHumanHand() {
     state.phase === "human-home-wind-open" &&
     state.currentTurn === HUMAN_PLAYER_INDEX &&
     state.pendingClaim?.type === "home-wind-open";
-  const suggestedCardId = canDiscard && state.assistEnabled ? chooseAIDiscard(HUMAN_PLAYER_INDEX)?.card.id ?? null : null;
+  const suggestedCardId = state.assistEnabled
+    ? (
+      canDiscard
+        ? chooseAIDiscard(HUMAN_PLAYER_INDEX)?.card.id ?? null
+        : canHomeWindOpen
+          ? chooseAIHomeWindOpenCard(HUMAN_PLAYER_INDEX)?.id ?? null
+          : null
+    )
+    : null;
   const handCards = [
     ...human.hand.map((card) => ({ card, kind: "concealed" })),
     ...human.openCards.map((card) => ({ card, kind: getOpenClaimType(card) })),
