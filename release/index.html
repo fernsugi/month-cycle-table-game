@@ -1871,19 +1871,27 @@ const PUBLIC_AI_CONTEXT = Object.freeze({
   useHiddenIntel: false,
   lookaheadDepth: 0,
   exactResponseDepth: 0,
+  allowExactHiddenResponse: false,
 });
 
 const BRUTAL_AI_CONTEXT = Object.freeze({
   useHiddenIntel: false,
   lookaheadDepth: 0,
   exactResponseDepth: 1,
+  allowExactHiddenResponse: false,
 });
 
 const FAST_TUNING_AI_CONTEXT = Object.freeze({
   useHiddenIntel: true,
   lookaheadDepth: 0,
   exactResponseDepth: 0,
+  allowExactHiddenResponse: false,
   drawSampleMax: 10,
+});
+
+const ACCURATE_TUNING_AI_CONTEXT = Object.freeze({
+  ...BRUTAL_AI_CONTEXT,
+  allowExactHiddenResponse: true,
 });
 
 const TABLE_CONFIG = {
@@ -4320,7 +4328,15 @@ function evaluateImmediateResponseProfile(discarderIndex, card, context = BRUTAL
   };
 }
 
-function evaluateImmediateRonResponseProfile(discarderIndex, card) {
+function evaluateImmediateRonResponseProfile(discarderIndex, card, context = BRUTAL_AI_CONTEXT) {
+  if (!context?.allowExactHiddenResponse || context?.exactResponseDepth <= 0) {
+    return {
+      type: null,
+      claimerIndex: null,
+      ronThreats: [],
+      totalPenalty: 0,
+    };
+  }
   const tactical = AI_CONFIG.tactical;
   const ronThreats = exactRonThreats(discarderIndex, card);
   if (!ronThreats.length) {
@@ -5024,8 +5040,8 @@ function evaluateAIDiscardOptions(
     const focus = future.focus;
     const drawStats = future.drawStats;
     const continuityScore = evaluateDiscardContinuity(baselineShape, baselineFocus, shape, focus);
-    const immediateResponse = context?.exactResponseDepth > 0
-      ? evaluateImmediateRonResponseProfile(playerIndex, card)
+    const immediateResponse = context?.exactResponseDepth > 0 && context?.allowExactHiddenResponse
+      ? evaluateImmediateRonResponseProfile(playerIndex, card, context)
       : null;
     const lookahead = includeLookahead && context?.lookaheadDepth > 0
       ? evaluateLookaheadContinuation(playerIndex, nextHand, openCards, extraKnownCards.concat(card), context)
@@ -6495,7 +6511,7 @@ function simulateAITuningMatch(profiles, options = {}) {
   const roundsPerMatch = options.roundsPerMatch ?? GAME_CONFIG.matchRounds;
   const startingPoints = options.startingPoints ?? GAME_CONFIG.startingPoints;
   const decisionContext = options.accurate
-    ? BRUTAL_AI_CONTEXT
+    ? ACCURATE_TUNING_AI_CONTEXT
     : { ...FAST_TUNING_AI_CONTEXT, drawSampleMax: options.drawSampleMax ?? FAST_TUNING_AI_CONTEXT.drawSampleMax };
   let points = Array(TABLE_CONFIG.players.length).fill(startingPoints);
   let dealerIndex = options.dealerIndex ?? Math.floor(Math.random() * TABLE_CONFIG.players.length);
