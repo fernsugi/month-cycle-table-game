@@ -19,9 +19,26 @@ The current package is designed for itch.io as a static HTML game. No build step
 ## What's Included
 
 - `index.html`: the playable game
+- `scripts/ai-tuner.js`: command-line AI self-play/tuning runner
 - `RULES.md`: the full text rules
 - `month_cycle_table_rulebook.pdf`: printable/reference rulebook
 - `cover.png` and `gameplay.png`: itch.io page assets
+
+## AI Tuning
+
+Run a quick terminal tuning pass:
+
+```sh
+node scripts/ai-tuner.js --generations=2 --populationSize=8 --matchesPerGeneration=4 --roundsPerMatch=4
+```
+
+Run a longer pass and save the full JSON result:
+
+```sh
+node scripts/ai-tuner.js --generations=8 --populationSize=24 --matchesPerGeneration=32 --roundsPerMatch=8 --finalMatches=64 --out=ai-tuning-result.json
+```
+
+Use `--accurate` for slower full-response evaluation after finding promising profiles.
 
 ## Rules
 

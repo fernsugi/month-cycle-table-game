@@ -1607,22 +1607,22 @@ const HOME_WIND_BY_SEAT = {
   North: "N",
 };
 
-const branches = [
-  { cn: "1", animal: "1" },
-  { cn: "2", animal: "2" },
-  { cn: "3", animal: "3" },
-  { cn: "4", animal: "4" },
-  { cn: "5", animal: "5" },
-  { cn: "6", animal: "6" },
-  { cn: "7", animal: "7" },
-  { cn: "8", animal: "8" },
-  { cn: "9", animal: "9" },
-  { cn: "10", animal: "10" },
-  { cn: "11", animal: "11" },
-  { cn: "12", animal: "12" },
+const monthDefinitions = [
+  { cn: "1", month: "1" },
+  { cn: "2", month: "2" },
+  { cn: "3", month: "3" },
+  { cn: "4", month: "4" },
+  { cn: "5", month: "5" },
+  { cn: "6", month: "6" },
+  { cn: "7", month: "7" },
+  { cn: "8", month: "8" },
+  { cn: "9", month: "9" },
+  { cn: "10", month: "10" },
+  { cn: "11", month: "11" },
+  { cn: "12", month: "12" },
 ];
 
-const ZODIAC_ORDER = branches.map((branch) => branch.animal);
+const MONTH_ORDER = monthDefinitions.map((monthDefinition) => monthDefinition.month);
 const WIND_ORDER_SHORT = ["N", "S", "E", "W"];
 const ELEMENT_COLORS = {
   G: "#2f6a3d",
@@ -1661,6 +1661,7 @@ const AI_CONFIG = {
     focusPrimary: 20,
     focusSecondary: 7,
     focusGap: 4,
+    windAffinity: 1,
     readyBonus: 120,
     oneAwayBonus: 56,
     openPressureBonus: 18,
@@ -1696,40 +1697,63 @@ const AI_CONFIG = {
     leadRiskBrakePerPoint: 0.012,
     maxLeadRiskBrake: 0.12,
   },
+  windStrategy: {
+    homeWindCard: 16,
+    homeWindStack: 12,
+    sameWindPair: 18,
+    sameWindTriple: 26,
+    sameWindNearCrown: 42,
+    distinctWind: 7,
+    compassCoverage: 20,
+    monoCompassCoverage: 12,
+    allWindMass: 8,
+    openWindGear: 14,
+    openHomeWindGear: 18,
+  },
   opponentSignals: {
     minSignal: 0.42,
     maxSignal: 3.2,
     openCardPressure: 0.1,
-    openAnimalBonus: 0.24,
+    openMonthBonus: 0.24,
     openElementBonus: 0.15,
     openPolarityBonus: 0.08,
-    sideAnimalBonus: 0.12,
+    sideMonthBonus: 0.12,
     sixColorOpenPressure: 0.14,
     sixColorNewColorBonus: 0.22,
     sixColorNewMonthBonus: 0.18,
     sixColorNearBonus: 0.34,
-    discardAnimalRelief: 0.16,
+    discardMonthRelief: 0.16,
     discardElementRelief: 0.1,
     discardPolarityRelief: 0.06,
     maxDiscardRelief: 0.65,
     dealerPressure: 0.08,
     trailingPointFactor: 0.015,
     maxTrailingPressure: 0.18,
+    homeWindDanger: 18,
+    openSameWindDanger: 22,
+    openCompassDanger: 34,
+    openMonoCompassDanger: 42,
   },
   claimSignals: {
     nextChiBase: 18,
     nextChiInterest: 5,
-    nextChiAnimalBonus: 4,
+    nextChiMonthBonus: 4,
     ponBase: 14,
     kanBase: 20,
     claimInterest: 4,
-    openAnimalBonus: 5,
-    sameAnimalDepthBonus: 1.5,
+    openMonthBonus: 5,
+    sameMonthDepthBonus: 1.5,
     dealerThreatBonus: 0.08,
     leaderThreatBonus: 0.1,
-    discardAnimalRelief: 0.16,
+    discardMonthRelief: 0.16,
     maxDiscardRelief: 0.58,
     hiddenNeedFactors: [1.18, 0.92, 0.58, 0.28, 0.12],
+    windPonMultiplier: 1.22,
+    windKanMultiplier: 1.35,
+    homeWindSetClaimMultiplier: 1.2,
+    windChiMultiplier: 0.58,
+    windChiOpenSupport: 0.18,
+    windChiCompassSupport: 0.28,
   },
   claimJudgement: {
     chi: {
@@ -1796,6 +1820,52 @@ const AI_CONFIG = {
   },
 };
 
+function cloneAIConfig(config) {
+  return JSON.parse(JSON.stringify(config));
+}
+
+function mergeAIConfig(target, source = {}) {
+  Object.entries(source || {}).forEach(([key, value]) => {
+    if (
+      value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      target[key] &&
+      typeof target[key] === "object" &&
+      !Array.isArray(target[key])
+    ) {
+      mergeAIConfig(target[key], value);
+      return;
+    }
+    target[key] = value;
+  });
+  return target;
+}
+
+function restoreAIConfig(snapshot) {
+  Object.keys(AI_CONFIG).forEach((key) => delete AI_CONFIG[key]);
+  mergeAIConfig(AI_CONFIG, snapshot);
+}
+
+const AI_BASE_CONFIG = cloneAIConfig(AI_CONFIG);
+
+function aiProfileOverridesForPlayer(playerIndex) {
+  return getPlayer(playerIndex)?.aiProfile?.overrides || null;
+}
+
+function withAIProfile(playerIndex, fn) {
+  const overrides = aiProfileOverridesForPlayer(playerIndex);
+  if (!overrides) return fn();
+  const snapshot = cloneAIConfig(AI_CONFIG);
+  try {
+    restoreAIConfig(AI_BASE_CONFIG);
+    mergeAIConfig(AI_CONFIG, overrides);
+    return fn();
+  } finally {
+    restoreAIConfig(snapshot);
+  }
+}
+
 const PUBLIC_AI_CONTEXT = Object.freeze({
   useHiddenIntel: false,
   lookaheadDepth: 0,
@@ -1806,6 +1876,13 @@ const BRUTAL_AI_CONTEXT = Object.freeze({
   useHiddenIntel: false,
   lookaheadDepth: 0,
   exactResponseDepth: 1,
+});
+
+const FAST_TUNING_AI_CONTEXT = Object.freeze({
+  useHiddenIntel: true,
+  lookaheadDepth: 0,
+  exactResponseDepth: 0,
+  drawSampleMax: 10,
 });
 
 const TABLE_CONFIG = {
@@ -1836,32 +1913,32 @@ const SOUND_CONFIG = {
 
 const baseCards = Array.from({ length: 60 }, (_, index) => {
   const stem = stems[index % 10];
-  const branch = branches[index % 12];
+  const monthDefinition = monthDefinitions[index % 12];
   const id = index + 1;
   const code = String(id).padStart(2, "0");
   return {
     id,
     code,
-    chinese: branch.cn,
-    label: `${stem.element} ${branch.animal}`,
+    chinese: monthDefinition.cn,
+    label: `${stem.element} ${monthDefinition.month}`,
     element: stem.element,
     kind: "month",
-    animal: branch.animal,
+    month: monthDefinition.month,
     wind: null,
   };
 });
 
-const whiteCards = branches.map((branch, index) => {
+const whiteCards = monthDefinitions.map((monthDefinition, index) => {
   const id = baseCards.length + index + 1;
   const code = String(id).padStart(2, "0");
   return {
     id,
     code,
-    chinese: branch.cn,
-    label: `${WHITE_ELEMENT} ${branch.animal}`,
+    chinese: monthDefinition.cn,
+    label: `${WHITE_ELEMENT} ${monthDefinition.month}`,
     element: WHITE_ELEMENT,
     kind: "month",
-    animal: branch.animal,
+    month: monthDefinition.month,
     wind: null,
   };
 });
@@ -1876,7 +1953,7 @@ const windCards = WIND_SYMBOLS.flatMap((wind, windIndex) => ALL_ELEMENTS.map((el
     label: `${element} ${WIND_NAMES[wind]}`,
     element,
     kind: "wind",
-    animal: null,
+    month: null,
     wind,
   };
 }));
@@ -1887,7 +1964,7 @@ const WIND_ORDER = ["East", "South", "West", "North"];
 const HUMAN_PLAYER_INDEX = TABLE_CONFIG.players.findIndex((player) => player.isHuman);
 const INITIAL_DEALER_INDEX = TABLE_CONFIG.players.findIndex((player) => player.renderSlot === "east");
 const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-const ANIMAL_ORDER_INDEX = Object.fromEntries(ZODIAC_ORDER.map((animal, index) => [animal, index]));
+const MONTH_ORDER_INDEX = Object.fromEntries(MONTH_ORDER.map((month, index) => [month, index]));
 const WIND_ORDER_INDEX = Object.fromEntries(WIND_ORDER_SHORT.map((wind, index) => [wind, index]));
 
 const soundState = {
@@ -2165,21 +2242,21 @@ function isWindCard(card) {
 }
 
 function cardGroupKey(card) {
-  if (isMonthCard(card)) return `month:${card.animal}`;
+  if (isMonthCard(card)) return `month:${card.month}`;
   if (isWindCard(card)) return `wind:${card.wind}`;
   return "";
 }
 
 function cardDisplayValue(card) {
-  return isWindCard(card) ? card.wind : card.animal;
+  return isWindCard(card) ? card.wind : card.month;
 }
 
 function cardDisplayName(card) {
-  return isWindCard(card) ? WIND_NAMES[card.wind] : `Month ${card.animal}`;
+  return isWindCard(card) ? WIND_NAMES[card.wind] : `Month ${card.month}`;
 }
 
 function cardMonth(card) {
-  return isMonthCard(card) ? card.animal : null;
+  return isMonthCard(card) ? card.month : null;
 }
 
 function cardHomeWindMatchesPlayer(card, playerIndex) {
@@ -2187,7 +2264,7 @@ function cardHomeWindMatchesPlayer(card, playerIndex) {
 }
 
 function claimGroupLabel(card) {
-  return isWindCard(card) ? WIND_NAMES[card.wind] : `month ${card.animal}`;
+  return isWindCard(card) ? WIND_NAMES[card.wind] : `month ${card.month}`;
 }
 
 function allMonthCards(cards) {
@@ -2202,8 +2279,8 @@ function sortCardsForDisplay(cards) {
   return cards.slice().sort((a, b) => {
     if (a.kind !== b.kind) return a.kind === "month" ? -1 : 1;
     if (isMonthCard(a) && isMonthCard(b)) {
-      const animalDiff = ANIMAL_ORDER_INDEX[a.animal] - ANIMAL_ORDER_INDEX[b.animal];
-      if (animalDiff !== 0) return animalDiff;
+      const monthDiff = MONTH_ORDER_INDEX[a.month] - MONTH_ORDER_INDEX[b.month];
+      if (monthDiff !== 0) return monthDiff;
     }
     if (isWindCard(a) && isWindCard(b)) {
       const windDiff = WIND_ORDER_INDEX[a.wind] - WIND_ORDER_INDEX[b.wind];
@@ -2235,32 +2312,32 @@ function combinations(cards, size, start = 0, prefix = [], out = []) {
   return out;
 }
 
-function previousAnimal(animal) {
-  const index = ZODIAC_ORDER.indexOf(animal);
-  return ZODIAC_ORDER[(index - 1 + ZODIAC_ORDER.length) % ZODIAC_ORDER.length];
+function previousMonth(month) {
+  const index = MONTH_ORDER.indexOf(month);
+  return MONTH_ORDER[(index - 1 + MONTH_ORDER.length) % MONTH_ORDER.length];
 }
 
-function nextAnimal(animal) {
-  const index = ZODIAC_ORDER.indexOf(animal);
-  return ZODIAC_ORDER[(index + 1) % ZODIAC_ORDER.length];
+function nextMonth(month) {
+  const index = MONTH_ORDER.indexOf(month);
+  return MONTH_ORDER[(index + 1) % MONTH_ORDER.length];
 }
 
-function animalsFormRun(animals, runLength) {
-  const uniqueAnimals = Array.from(new Set(animals));
-  if (uniqueAnimals.length !== runLength) return false;
-  return ZODIAC_ORDER.some((_, start) => (
-    Array.from({ length: runLength }, (_, index) => ZODIAC_ORDER[(start + index) % ZODIAC_ORDER.length])
-      .every((animal) => uniqueAnimals.includes(animal))
+function monthsFormRun(months, runLength) {
+  const uniqueMonths = Array.from(new Set(months));
+  if (uniqueMonths.length !== runLength) return false;
+  return MONTH_ORDER.some((_, start) => (
+    Array.from({ length: runLength }, (_, index) => MONTH_ORDER[(start + index) % MONTH_ORDER.length])
+      .every((month) => uniqueMonths.includes(month))
   ));
 }
 
 function matchingConsecutiveMonthSequence(months) {
   const uniqueMonths = Array.from(new Set(months));
   if (uniqueMonths.length !== months.length) return null;
-  for (let start = 0; start < ZODIAC_ORDER.length; start += 1) {
+  for (let start = 0; start < MONTH_ORDER.length; start += 1) {
     const targets = Array.from(
       { length: months.length },
-      (_, index) => ZODIAC_ORDER[(start + index) % ZODIAC_ORDER.length]
+      (_, index) => MONTH_ORDER[(start + index) % MONTH_ORDER.length]
     );
     if (targets.every((month) => uniqueMonths.includes(month))) {
       return targets;
@@ -2269,15 +2346,15 @@ function matchingConsecutiveMonthSequence(months) {
   return null;
 }
 
-function bestAnimalRunProgress(cards, runLength, capPerAnimal) {
+function bestMonthRunProgress(cards, runLength, capPerMonth) {
   let best = 0;
-  for (let start = 0; start < ZODIAC_ORDER.length; start += 1) {
-    const targetAnimals = Array.from(
+  for (let start = 0; start < MONTH_ORDER.length; start += 1) {
+    const targetMonths = Array.from(
       { length: runLength },
-      (_, index) => ZODIAC_ORDER[(start + index) % ZODIAC_ORDER.length]
+      (_, index) => MONTH_ORDER[(start + index) % MONTH_ORDER.length]
     );
-    const progress = targetAnimals.reduce((sum, animal) => (
-      sum + Math.min(capPerAnimal, cards.filter((card) => card.animal === animal).length)
+    const progress = targetMonths.reduce((sum, month) => (
+      sum + Math.min(capPerMonth, cards.filter((card) => card.month === month).length)
     ), 0);
     best = Math.max(best, progress);
   }
@@ -2301,17 +2378,17 @@ function allSixColorsPresent(cards) {
   return countPresentColors(cards, ALL_ELEMENTS) === ALL_ELEMENTS.length;
 }
 
-function monthParityOfAnimal(animal) {
-  return Number(animal) % 2 === 0 ? "even" : "odd";
+function monthParityOfMonth(month) {
+  return Number(month) % 2 === 0 ? "even" : "odd";
 }
 
 function allSameMonthParity(cards) {
   if (!allMonthCards(cards)) return false;
-  return new Set(cards.map((card) => monthParityOfAnimal(card.animal))).size === 1;
+  return new Set(cards.map((card) => monthParityOfMonth(card.month))).size === 1;
 }
 
 function monthParityTargets(parity) {
-  return ZODIAC_ORDER.filter((animal) => monthParityOfAnimal(animal) === parity);
+  return MONTH_ORDER.filter((month) => monthParityOfMonth(month) === parity);
 }
 
 function matchingMonthParitySequence(months) {
@@ -2330,7 +2407,7 @@ function bestMonthParityProgress(cards, capPerMonth = 1) {
   const monthCards = cards.filter(isMonthCard);
   return Math.max(...["odd", "even"].map((parity) => (
     monthParityTargets(parity).reduce((sum, month) => (
-      sum + Math.min(capPerMonth, monthCards.filter((card) => card.animal === month).length)
+      sum + Math.min(capPerMonth, monthCards.filter((card) => card.month === month).length)
     ), 0)
   )));
 }
@@ -2348,13 +2425,26 @@ function windCompassProgress(cards) {
   return WIND_SYMBOLS.reduce((sum, wind) => sum + Math.min(1, cards.filter((card) => card.wind === wind).length), 0);
 }
 
+function windElementCoverage(cards, element = null) {
+  const windCards = cards.filter((card) => isWindCard(card) && (!element || card.element === element));
+  return windCompassProgress(windCards);
+}
+
+function maxSameWindCount(cards) {
+  return Math.max(0, ...WIND_SYMBOLS.map((wind) => cards.filter((card) => isWindCard(card) && card.wind === wind).length));
+}
+
+function maxSameElementWindCoverage(cards) {
+  return Math.max(0, ...ALL_ELEMENTS.map((element) => windElementCoverage(cards, element)));
+}
+
 function twoMonthSequenceProgress(cards) {
-  return bestAnimalRunProgress(cards.filter(isMonthCard), 2, 1);
+  return bestMonthRunProgress(cards.filter(isMonthCard), 2, 1);
 }
 
 function twoMonthPairProgress(cards) {
   const monthCounts = cards.filter(isMonthCard).reduce((counts, card) => {
-    counts[card.animal] = (counts[card.animal] || 0) + 1;
+    counts[card.month] = (counts[card.month] || 0) + 1;
     return counts;
   }, {});
   return Math.min(2, Math.max(0, ...Object.values(monthCounts)));
@@ -2394,14 +2484,14 @@ function canContainThreeOddThreeEven(cards) {
 function alternatingMonthTargets(start) {
   return Array.from(
     { length: GAME_CONFIG.winningHandSize },
-    (_, index) => ZODIAC_ORDER[(start + index * 2) % ZODIAC_ORDER.length]
+    (_, index) => MONTH_ORDER[(start + index * 2) % MONTH_ORDER.length]
   );
 }
 
 function matchingAlternatingMonthSequence(months) {
   const uniqueMonths = Array.from(new Set(months));
   if (uniqueMonths.length !== GAME_CONFIG.winningHandSize) return null;
-  for (let start = 0; start < ZODIAC_ORDER.length; start += 1) {
+  for (let start = 0; start < MONTH_ORDER.length; start += 1) {
     const targets = alternatingMonthTargets(start);
     if (targets.every((month) => uniqueMonths.includes(month))) {
       return targets;
@@ -2412,10 +2502,10 @@ function matchingAlternatingMonthSequence(months) {
 
 function bestAlternatingMonthProgress(cards, capPerMonth = 1) {
   let best = 0;
-  for (let start = 0; start < ZODIAC_ORDER.length; start += 1) {
+  for (let start = 0; start < MONTH_ORDER.length; start += 1) {
     const targets = alternatingMonthTargets(start);
     const progress = targets.reduce((sum, month) => (
-      sum + Math.min(capPerMonth, cards.filter((card) => card.animal === month).length)
+      sum + Math.min(capPerMonth, cards.filter((card) => card.month === month).length)
     ), 0);
     best = Math.max(best, progress);
   }
@@ -2472,9 +2562,9 @@ const SET_RULES = [
       );
     },
     describe(cards) {
-      const orderedMonths = matchingMonthParitySequence(cards.map((card) => card.animal))
-        || Array.from(new Set(cards.map((card) => card.animal))).sort((a, b) => Number(a) - Number(b));
-      return `One color across all ${monthParityOfAnimal(orderedMonths[0])} months: ${orderedMonths.join(", ")}.`;
+      const orderedMonths = matchingMonthParitySequence(cards.map((card) => card.month))
+        || Array.from(new Set(cards.map((card) => card.month))).sort((a, b) => Number(a) - Number(b));
+      return `One color across all ${monthParityOfMonth(orderedMonths[0])} months: ${orderedMonths.join(", ")}.`;
     },
     distance(cards) {
       return Math.min(...ALL_ELEMENTS.map((element) => (
@@ -2515,10 +2605,10 @@ const SET_RULES = [
       return allMonthCards(cards)
         && allSixColorsPresent(cards)
         && allSameMonthParity(cards)
-        && new Set(cards.map((card) => card.animal)).size === GAME_CONFIG.winningHandSize;
+        && new Set(cards.map((card) => card.month)).size === GAME_CONFIG.winningHandSize;
     },
     describe(cards) {
-      return `All six colors across all ${monthParityOfAnimal(cards[0].animal)} months.`;
+      return `All six colors across all ${monthParityOfMonth(cards[0].month)} months.`;
     },
     distance(cards) {
       const missingElements = Math.max(0, ALL_ELEMENTS.length - countPresentColors(cards, ALL_ELEMENTS));
@@ -2526,29 +2616,29 @@ const SET_RULES = [
       return Math.max(missingElements, missingMonths);
     },
   },
-  // The Zodiac Procession: six neighboring animals marching in order.
+  // The Month Procession: six neighboring months marching in order.
   {
-    id: "zodiac-run",
+    id: "month-run",
     label: "Run",
     points: 3,
     size: GAME_CONFIG.winningHandSize,
     matches(cards) {
       if (!allMonthCards(cards)) return false;
-      if (new Set(cards.map((card) => card.animal)).size !== GAME_CONFIG.winningHandSize) return false;
-      return animalsFormRun(cards.map((card) => card.animal), GAME_CONFIG.winningHandSize);
+      if (new Set(cards.map((card) => card.month)).size !== GAME_CONFIG.winningHandSize) return false;
+      return monthsFormRun(cards.map((card) => card.month), GAME_CONFIG.winningHandSize);
     },
     describe(cards) {
-      const sortedAnimals = cards
+      const sortedMonths = cards
         .map((card) => ({
-          animal: card.animal,
-          index: ZODIAC_ORDER.indexOf(card.animal),
+          month: card.month,
+          index: MONTH_ORDER.indexOf(card.month),
         }))
         .sort((a, b) => a.index - b.index)
-        .map((entry) => entry.animal);
-      return `Six months in order: ${sortedAnimals.join(", ")}.`;
+        .map((entry) => entry.month);
+      return `Six months in order: ${sortedMonths.join(", ")}.`;
     },
     distance(cards) {
-      return GAME_CONFIG.winningHandSize - bestAnimalRunProgress(cards.filter(isMonthCard), GAME_CONFIG.winningHandSize, 1);
+      return GAME_CONFIG.winningHandSize - bestMonthRunProgress(cards.filter(isMonthCard), GAME_CONFIG.winningHandSize, 1);
     },
   },
   {
@@ -2568,31 +2658,31 @@ const SET_RULES = [
       return Math.max(windCountGap, colorGap);
     },
   },
-  // The Elemental Procession: six neighboring animals bound to one element.
+  // The Elemental Procession: six neighboring months bound to one element.
   {
-    id: "zodiac-run-element",
+    id: "month-run-element",
     label: "Mono Run",
     points: 15,
     size: GAME_CONFIG.winningHandSize,
     matches(cards) {
       if (!allMonthCards(cards)) return false;
-      if (new Set(cards.map((card) => card.animal)).size !== GAME_CONFIG.winningHandSize) return false;
+      if (new Set(cards.map((card) => card.month)).size !== GAME_CONFIG.winningHandSize) return false;
       return new Set(cards.map((card) => card.element)).size === 1
-        && animalsFormRun(cards.map((card) => card.animal), GAME_CONFIG.winningHandSize);
+        && monthsFormRun(cards.map((card) => card.month), GAME_CONFIG.winningHandSize);
     },
     describe(cards) {
-      const sortedAnimals = cards
+      const sortedMonths = cards
         .map((card) => ({
-          animal: card.animal,
-          index: ZODIAC_ORDER.indexOf(card.animal),
+          month: card.month,
+          index: MONTH_ORDER.indexOf(card.month),
         }))
         .sort((a, b) => a.index - b.index)
-        .map((entry) => entry.animal);
-      return `Six ${cards[0].element} months in order: ${sortedAnimals.join(", ")}.`;
+        .map((entry) => entry.month);
+      return `Six ${cards[0].element} months in order: ${sortedMonths.join(", ")}.`;
     },
     distance(cards) {
       return Math.min(...ALL_ELEMENTS.map((element) => (
-        GAME_CONFIG.winningHandSize - bestAnimalRunProgress(
+        GAME_CONFIG.winningHandSize - bestMonthRunProgress(
           cards.filter((card) => card.element === element && isMonthCard(card)),
           GAME_CONFIG.winningHandSize,
           1
@@ -2600,7 +2690,7 @@ const SET_RULES = [
       )));
     },
   },
-  // The Beast and Its Shadow: five of one animal with one neighboring sign, or all six of a month.
+  // The Beast and Its Shadow: five of one month with one neighboring sign, or all six of a month.
   {
     id: "four-with-neighbors",
     label: "Crown",
@@ -2613,38 +2703,38 @@ const SET_RULES = [
           && !cards.some((card) => cardHomeWindMatchesPlayer(card, playerIndex));
       }
       if (!allMonthCards(cards) || !allSixColorsPresent(cards)) return false;
-      const animalCounts = {};
+      const monthCounts = {};
       cards.forEach((card) => {
-        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+        monthCounts[card.month] = (monthCounts[card.month] || 0) + 1;
       });
 
-      return Object.entries(animalCounts).some(([animal, count]) => {
+      return Object.entries(monthCounts).some(([month, count]) => {
         if (count === GAME_CONFIG.winningHandSize) return true;
         if (count !== 5) return false;
-        const sideAnimals = new Set([previousAnimal(animal), nextAnimal(animal)]);
-        const remainders = cards.filter((card) => card.animal !== animal);
-        return remainders.length === 1 && sideAnimals.has(remainders[0].animal);
+        const sideMonths = new Set([previousMonth(month), nextMonth(month)]);
+        const remainders = cards.filter((card) => card.month !== month);
+        return remainders.length === 1 && sideMonths.has(remainders[0].month);
       });
     },
     describe(cards, playerIndex = null) {
       if (allWindCards(cards)) {
         return `All 6 cards are the same guest wind: ${WIND_NAMES[cards[0]?.wind] || "guest wind"}.`;
       }
-      const animalCounts = {};
+      const monthCounts = {};
       cards.forEach((card) => {
-        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+        monthCounts[card.month] = (monthCounts[card.month] || 0) + 1;
       });
 
-      const sameAnimal = Object.entries(animalCounts)
+      const sameMonth = Object.entries(monthCounts)
         .find(([, count]) => count === GAME_CONFIG.winningHandSize)?.[0];
-      if (sameAnimal) {
-        return `All ${GAME_CONFIG.winningHandSize} ${sameAnimal} cards, with all six colors present.`;
+      if (sameMonth) {
+        return `All ${GAME_CONFIG.winningHandSize} ${sameMonth} cards, with all six colors present.`;
       }
 
-      const coreAnimal = Object.entries(animalCounts).find(([, count]) => count === 5)?.[0];
-      const left = previousAnimal(coreAnimal);
-      const right = nextAnimal(coreAnimal);
-      return `Five ${coreAnimal} cards plus one side month from ${left} or ${right}, with all six colors present.`;
+      const coreMonth = Object.entries(monthCounts).find(([, count]) => count === 5)?.[0];
+      const left = previousMonth(coreMonth);
+      const right = nextMonth(coreMonth);
+      return `Five ${coreMonth} cards plus one side month from ${left} or ${right}, with all six colors present.`;
     },
     distance(cards, playerIndex = null) {
       if (cards.some(isWindCard)) {
@@ -2655,10 +2745,10 @@ const SET_RULES = [
       }
       let best = GAME_CONFIG.winningHandSize;
       const missingColors = Math.max(0, ALL_ELEMENTS.length - countPresentColors(cards, ALL_ELEMENTS));
-      ZODIAC_ORDER.forEach((animal) => {
-        const sameCount = cards.filter((card) => card.animal === animal).length;
-        const sideAnimals = new Set([previousAnimal(animal), nextAnimal(animal)]);
-        const sideCount = cards.filter((card) => sideAnimals.has(card.animal)).length;
+      MONTH_ORDER.forEach((month) => {
+        const sameCount = cards.filter((card) => card.month === month).length;
+        const sideMonths = new Set([previousMonth(month), nextMonth(month)]);
+        const sideCount = cards.filter((card) => sideMonths.has(card.month)).length;
         const progress = Math.max(
           Math.min(GAME_CONFIG.winningHandSize, sameCount),
           Math.min(5, sameCount) + Math.min(1, sideCount)
@@ -2677,35 +2767,35 @@ const SET_RULES = [
     matches(cards) {
       if (!allMonthCards(cards)) return false;
       if (!allSixColorsPresent(cards)) return false;
-      const animalCounts = {};
+      const monthCounts = {};
       cards.forEach((card) => {
-        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+        monthCounts[card.month] = (monthCounts[card.month] || 0) + 1;
       });
 
-      return Object.entries(animalCounts).some(([animal, count]) => {
+      return Object.entries(monthCounts).some(([month, count]) => {
         if (count !== 4) return false;
-        const remainders = cards.filter((card) => card.animal !== animal);
+        const remainders = cards.filter((card) => card.month !== month);
         if (remainders.length !== 2) return false;
-        return remainders[0].animal === remainders[1].animal
-          && [previousAnimal(animal), nextAnimal(animal)].includes(remainders[0].animal);
+        return remainders[0].month === remainders[1].month
+          && [previousMonth(month), nextMonth(month)].includes(remainders[0].month);
       });
     },
     describe(cards) {
-      const animalCounts = {};
+      const monthCounts = {};
       cards.forEach((card) => {
-        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+        monthCounts[card.month] = (monthCounts[card.month] || 0) + 1;
       });
-      const coreAnimal = Object.entries(animalCounts).find(([, count]) => count === 4)?.[0];
-      const sideAnimal = cards.find((card) => card.animal !== coreAnimal)?.animal;
-      return `Four ${coreAnimal} cards plus two ${sideAnimal} cards from one neighboring month, with all six colors present.`;
+      const coreMonth = Object.entries(monthCounts).find(([, count]) => count === 4)?.[0];
+      const sideMonth = cards.find((card) => card.month !== coreMonth)?.month;
+      return `Four ${coreMonth} cards plus two ${sideMonth} cards from one neighboring month, with all six colors present.`;
     },
     distance(cards) {
       let best = GAME_CONFIG.winningHandSize;
       const missingColors = Math.max(0, ALL_ELEMENTS.length - countPresentColors(cards, ALL_ELEMENTS));
-      ZODIAC_ORDER.forEach((animal) => {
-        const sameCount = cards.filter((card) => card.animal === animal).length;
-        [previousAnimal(animal), nextAnimal(animal)].forEach((sideAnimal) => {
-          const sideCount = cards.filter((card) => card.animal === sideAnimal).length;
+      MONTH_ORDER.forEach((month) => {
+        const sameCount = cards.filter((card) => card.month === month).length;
+        [previousMonth(month), nextMonth(month)].forEach((sideMonth) => {
+          const sideCount = cards.filter((card) => card.month === sideMonth).length;
           const progress = Math.min(4, sameCount) + Math.min(2, sideCount);
           best = Math.min(best, GAME_CONFIG.winningHandSize - progress);
         });
@@ -2722,36 +2812,36 @@ const SET_RULES = [
     matches(cards) {
       if (!allMonthCards(cards)) return false;
       if (!allSixColorsPresent(cards)) return false;
-      const animalCounts = {};
+      const monthCounts = {};
       cards.forEach((card) => {
-        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+        monthCounts[card.month] = (monthCounts[card.month] || 0) + 1;
       });
 
-      return Object.entries(animalCounts).some(([animal, count]) => {
+      return Object.entries(monthCounts).some(([month, count]) => {
         if (count !== 4) return false;
-        const remainders = cards.filter((card) => card.animal !== animal);
+        const remainders = cards.filter((card) => card.month !== month);
         if (remainders.length !== 2) return false;
-        const remainderAnimals = new Set(remainders.map((card) => card.animal));
-        return remainderAnimals.size === 2
-          && remainderAnimals.has(previousAnimal(animal))
-          && remainderAnimals.has(nextAnimal(animal));
+        const remainderMonths = new Set(remainders.map((card) => card.month));
+        return remainderMonths.size === 2
+          && remainderMonths.has(previousMonth(month))
+          && remainderMonths.has(nextMonth(month));
       });
     },
     describe(cards) {
-      const animalCounts = {};
+      const monthCounts = {};
       cards.forEach((card) => {
-        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+        monthCounts[card.month] = (monthCounts[card.month] || 0) + 1;
       });
-      const coreAnimal = Object.entries(animalCounts).find(([, count]) => count === 4)?.[0];
-      return `Four ${coreAnimal} cards plus one ${previousAnimal(coreAnimal)} and one ${nextAnimal(coreAnimal)}, with all six colors present.`;
+      const coreMonth = Object.entries(monthCounts).find(([, count]) => count === 4)?.[0];
+      return `Four ${coreMonth} cards plus one ${previousMonth(coreMonth)} and one ${nextMonth(coreMonth)}, with all six colors present.`;
     },
     distance(cards) {
       let best = GAME_CONFIG.winningHandSize;
       const missingColors = Math.max(0, ALL_ELEMENTS.length - countPresentColors(cards, ALL_ELEMENTS));
-      ZODIAC_ORDER.forEach((animal) => {
-        const sameCount = cards.filter((card) => card.animal === animal).length;
-        const prevCount = cards.filter((card) => card.animal === previousAnimal(animal)).length;
-        const nextCount = cards.filter((card) => card.animal === nextAnimal(animal)).length;
+      MONTH_ORDER.forEach((month) => {
+        const sameCount = cards.filter((card) => card.month === month).length;
+        const prevCount = cards.filter((card) => card.month === previousMonth(month)).length;
+        const nextCount = cards.filter((card) => card.month === nextMonth(month)).length;
         const progress = Math.min(4, sameCount) + Math.min(1, prevCount) + Math.min(1, nextCount);
         best = Math.min(best, GAME_CONFIG.winningHandSize - progress);
       });
@@ -2769,12 +2859,12 @@ const SET_RULES = [
       if (windCards.length !== 4 || otherCards.length !== 2) return false;
       if (new Set(windCards.map((card) => card.wind)).size !== 4) return false;
       if (!allSixColorsPresent(cards)) return false;
-      const sameMonthPair = otherCards[0].animal === otherCards[1].animal;
-      const sequence = animalsFormRun(otherCards.map((card) => card.animal), 2);
+      const sameMonthPair = otherCards[0].month === otherCards[1].month;
+      const sequence = monthsFormRun(otherCards.map((card) => card.month), 2);
       return sameMonthPair || sequence;
     },
     describe(cards) {
-      const sequence = cards.filter(isMonthCard).map((card) => card.animal).sort((a, b) => Number(a) - Number(b));
+      const sequence = cards.filter(isMonthCard).map((card) => card.month).sort((a, b) => Number(a) - Number(b));
       const isPair = sequence.length === 2 && sequence[0] === sequence[1];
       return isPair
         ? `N, S, E, W plus a ${sequence[0]} pair, with all six colors present.`
@@ -2787,36 +2877,36 @@ const SET_RULES = [
       return Math.max(GAME_CONFIG.winningHandSize - (windProgress + pairOrSequenceProgress), colorGap);
     },
   },
-  // The Three Gates: three distinct animal pairs in balance.
+  // The Three Gates: three distinct month pairs in balance.
   {
-    id: "three-animal-pairs",
+    id: "three-month-pairs",
     label: "Triple Pair",
     points: 6,
     size: GAME_CONFIG.winningHandSize,
     matches(cards) {
       if (!allMonthCards(cards)) return false;
-      const animalCounts = {};
+      const monthCounts = {};
       cards.forEach((card) => {
-        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+        monthCounts[card.month] = (monthCounts[card.month] || 0) + 1;
       });
 
-      const counts = Object.values(animalCounts).sort((a, b) => b - a);
+      const counts = Object.values(monthCounts).sort((a, b) => b - a);
       return counts.length === 3
         && counts.every((count) => count === 2)
-        && animalsFormRun(Object.keys(animalCounts), 3);
+        && monthsFormRun(Object.keys(monthCounts), 3);
     },
     describe(cards) {
-      const animalCounts = {};
+      const monthCounts = {};
       cards.forEach((card) => {
-        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+        monthCounts[card.month] = (monthCounts[card.month] || 0) + 1;
       });
-      const animals = Object.keys(animalCounts)
-        .sort((a, b) => ANIMAL_ORDER_INDEX[a] - ANIMAL_ORDER_INDEX[b])
-        .map((animal) => animal);
-      return `Three consecutive month pairs: ${animals.join(", ")}.`;
+      const months = Object.keys(monthCounts)
+        .sort((a, b) => MONTH_ORDER_INDEX[a] - MONTH_ORDER_INDEX[b])
+        .map((month) => month);
+      return `Three consecutive month pairs: ${months.join(", ")}.`;
     },
     distance(cards) {
-      return GAME_CONFIG.winningHandSize - bestAnimalRunProgress(cards, 3, 2);
+      return GAME_CONFIG.winningHandSize - bestMonthRunProgress(cards, 3, 2);
     },
   },
   {
@@ -2852,36 +2942,36 @@ const SET_RULES = [
       return GAME_CONFIG.winningHandSize - pairProgress;
     },
   },
-  // The Three Courts: any three animal pairs restrained to two elements.
+  // The Three Courts: any three month pairs restrained to two elements.
   {
-    id: "three-animal-pairs-three-elements",
+    id: "three-month-pairs-three-elements",
     label: "Twin Tone Pairs",
     points: 6,
     priority: 1,
     size: GAME_CONFIG.winningHandSize,
     matches(cards) {
       if (!allMonthCards(cards)) return false;
-      const animalCounts = {};
+      const monthCounts = {};
       cards.forEach((card) => {
-        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+        monthCounts[card.month] = (monthCounts[card.month] || 0) + 1;
       });
-      const counts = Object.values(animalCounts).sort((a, b) => b - a);
+      const counts = Object.values(monthCounts).sort((a, b) => b - a);
       return counts.length === 3
         && counts.every((count) => count === 2)
         && new Set(cards.map((card) => card.element)).size <= 2;
     },
     describe(cards) {
-      const animals = Array.from(new Set(cards.map((card) => card.animal)))
-        .sort((a, b) => ANIMAL_ORDER_INDEX[a] - ANIMAL_ORDER_INDEX[b])
-        .map((animal) => animal);
-      return `Three month pairs within at most two colors: ${animals.join(", ")}.`;
+      const months = Array.from(new Set(cards.map((card) => card.month)))
+        .sort((a, b) => MONTH_ORDER_INDEX[a] - MONTH_ORDER_INDEX[b])
+        .map((month) => month);
+      return `Three month pairs within at most two colors: ${months.join(", ")}.`;
     },
     distance(cards) {
-      const animalCounts = {};
+      const monthCounts = {};
       cards.forEach((card) => {
-        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+        monthCounts[card.month] = (monthCounts[card.month] || 0) + 1;
       });
-      const pairProgress = Object.values(animalCounts)
+      const pairProgress = Object.values(monthCounts)
         .sort((a, b) => b - a)
         .slice(0, 3)
         .reduce((sum, count) => sum + Math.min(2, count), 0);
@@ -2891,36 +2981,36 @@ const SET_RULES = [
       );
     },
   },
-  // The Banner Gates: any three animal pairs sharing one odd/even parity.
+  // The Banner Gates: any three month pairs sharing one odd/even parity.
   {
-    id: "three-animal-pairs-balance",
+    id: "three-month-pairs-balance",
     label: "Parity Pairs",
     points: 6,
     priority: 1,
     size: GAME_CONFIG.winningHandSize,
     matches(cards) {
       if (!allMonthCards(cards)) return false;
-      const animalCounts = {};
+      const monthCounts = {};
       cards.forEach((card) => {
-        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+        monthCounts[card.month] = (monthCounts[card.month] || 0) + 1;
       });
-      const counts = Object.values(animalCounts).sort((a, b) => b - a);
+      const counts = Object.values(monthCounts).sort((a, b) => b - a);
       return counts.length === 3
         && counts.every((count) => count === 2)
         && allSameParity(cards);
     },
     describe(cards) {
-      const animals = Array.from(new Set(cards.map((card) => card.animal)))
-        .sort((a, b) => ANIMAL_ORDER_INDEX[a] - ANIMAL_ORDER_INDEX[b])
-        .map((animal) => animal);
-      return `Three month pairs, all ${parityOfCard(cards[0])}: ${animals.join(", ")}.`;
+      const months = Array.from(new Set(cards.map((card) => card.month)))
+        .sort((a, b) => MONTH_ORDER_INDEX[a] - MONTH_ORDER_INDEX[b])
+        .map((month) => month);
+      return `Three month pairs, all ${parityOfCard(cards[0])}: ${months.join(", ")}.`;
     },
     distance(cards) {
-      const animalCounts = {};
+      const monthCounts = {};
       cards.forEach((card) => {
-        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+        monthCounts[card.month] = (monthCounts[card.month] || 0) + 1;
       });
-      const pairProgress = Object.values(animalCounts)
+      const pairProgress = Object.values(monthCounts)
         .sort((a, b) => b - a)
         .slice(0, 3)
         .reduce((sum, count) => sum + Math.min(2, count), 0);
@@ -2935,36 +3025,36 @@ const SET_RULES = [
       );
     },
   },
-  // The Twin Standards: two animal clans standing three cards strong each.
+  // The Twin Standards: two month clans standing three cards strong each.
   {
-    id: "two-animal-threes",
+    id: "two-month-threes",
     label: "Twin Triples",
     points: 9,
     size: GAME_CONFIG.winningHandSize,
     matches(cards) {
       if (!allMonthCards(cards)) return false;
-      const animalCounts = {};
+      const monthCounts = {};
       cards.forEach((card) => {
-        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+        monthCounts[card.month] = (monthCounts[card.month] || 0) + 1;
       });
 
-      const counts = Object.values(animalCounts).sort((a, b) => b - a);
+      const counts = Object.values(monthCounts).sort((a, b) => b - a);
       return counts.length === 2
         && counts.every((count) => count === 3)
-        && animalsFormRun(Object.keys(animalCounts), 2);
+        && monthsFormRun(Object.keys(monthCounts), 2);
     },
     describe(cards) {
-      const animalCounts = {};
+      const monthCounts = {};
       cards.forEach((card) => {
-        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+        monthCounts[card.month] = (monthCounts[card.month] || 0) + 1;
       });
-      const animals = Object.keys(animalCounts)
-        .sort((a, b) => ANIMAL_ORDER_INDEX[a] - ANIMAL_ORDER_INDEX[b])
-        .map((animal) => animal);
-      return `Three ${animals[0]} cards and three ${animals[1]} cards from consecutive months.`;
+      const months = Object.keys(monthCounts)
+        .sort((a, b) => MONTH_ORDER_INDEX[a] - MONTH_ORDER_INDEX[b])
+        .map((month) => month);
+      return `Three ${months[0]} cards and three ${months[1]} cards from consecutive months.`;
     },
     distance(cards) {
-      const progress = bestAnimalRunProgress(cards, 2, 3);
+      const progress = bestMonthRunProgress(cards, 2, 3);
       return GAME_CONFIG.winningHandSize - progress;
     },
   },
@@ -3003,35 +3093,35 @@ const SET_RULES = [
   },
   // The Twin Courts: two triads held within three elements.
   {
-    id: "two-animal-threes-two-elements",
+    id: "two-month-threes-two-elements",
     label: "Tri Tone Triples",
     points: 9,
     priority: 1,
     size: GAME_CONFIG.winningHandSize,
     matches(cards) {
       if (!allMonthCards(cards)) return false;
-      const animalCounts = {};
+      const monthCounts = {};
       cards.forEach((card) => {
-        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+        monthCounts[card.month] = (monthCounts[card.month] || 0) + 1;
       });
 
-      const counts = Object.values(animalCounts).sort((a, b) => b - a);
+      const counts = Object.values(monthCounts).sort((a, b) => b - a);
       return counts.length === 2
         && counts.every((count) => count === 3)
         && new Set(cards.map((card) => card.element)).size <= 3;
     },
     describe(cards) {
-      const animals = Array.from(new Set(cards.map((card) => card.animal)))
-        .sort((a, b) => ANIMAL_ORDER_INDEX[a] - ANIMAL_ORDER_INDEX[b])
-        .map((animal) => animal);
-      return `Three ${animals[0]} cards and three ${animals[1]} cards within at most three colors.`;
+      const months = Array.from(new Set(cards.map((card) => card.month)))
+        .sort((a, b) => MONTH_ORDER_INDEX[a] - MONTH_ORDER_INDEX[b])
+        .map((month) => month);
+      return `Three ${months[0]} cards and three ${months[1]} cards within at most three colors.`;
     },
     distance(cards) {
-      const animalCounts = {};
+      const monthCounts = {};
       cards.forEach((card) => {
-        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+        monthCounts[card.month] = (monthCounts[card.month] || 0) + 1;
       });
-      const tripleProgress = Object.values(animalCounts)
+      const tripleProgress = Object.values(monthCounts)
         .sort((a, b) => b - a)
         .slice(0, 2)
         .reduce((sum, count) => sum + Math.min(3, count), 0);
@@ -3043,35 +3133,35 @@ const SET_RULES = [
   },
   // The Twin Banner: two triads sharing one odd/even parity.
   {
-    id: "two-animal-threes-polarity",
+    id: "two-month-threes-polarity",
     label: "Parity Triples",
     points: 9,
     priority: 1,
     size: GAME_CONFIG.winningHandSize,
     matches(cards) {
       if (!allMonthCards(cards)) return false;
-      const animalCounts = {};
+      const monthCounts = {};
       cards.forEach((card) => {
-        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+        monthCounts[card.month] = (monthCounts[card.month] || 0) + 1;
       });
 
-      const counts = Object.values(animalCounts).sort((a, b) => b - a);
+      const counts = Object.values(monthCounts).sort((a, b) => b - a);
       return counts.length === 2
         && counts.every((count) => count === 3)
         && allSameParity(cards);
     },
     describe(cards) {
-      const animals = Array.from(new Set(cards.map((card) => card.animal)))
-        .sort((a, b) => ANIMAL_ORDER_INDEX[a] - ANIMAL_ORDER_INDEX[b])
-        .map((animal) => animal);
-      return `Three ${animals[0]} cards and three ${animals[1]} cards, all ${parityOfCard(cards[0])}.`;
+      const months = Array.from(new Set(cards.map((card) => card.month)))
+        .sort((a, b) => MONTH_ORDER_INDEX[a] - MONTH_ORDER_INDEX[b])
+        .map((month) => month);
+      return `Three ${months[0]} cards and three ${months[1]} cards, all ${parityOfCard(cards[0])}.`;
     },
     distance(cards) {
-      const animalCounts = {};
+      const monthCounts = {};
       cards.forEach((card) => {
-        animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
+        monthCounts[card.month] = (monthCounts[card.month] || 0) + 1;
       });
-      const tripleProgress = Object.values(animalCounts)
+      const tripleProgress = Object.values(monthCounts)
         .sort((a, b) => b - a)
         .slice(0, 2)
         .reduce((sum, count) => sum + Math.min(3, count), 0);
@@ -3094,20 +3184,20 @@ const SET_RULES = [
     size: GAME_CONFIG.winningHandSize,
     matches(cards, playerIndex = null) {
       const roundMonth = getRoundMonthTarget();
-      return (Boolean(roundMonth) && allMonthCards(cards) && cards.every((card) => card.animal === roundMonth))
+      return (Boolean(roundMonth) && allMonthCards(cards) && cards.every((card) => card.month === roundMonth))
         || (playerIndex !== null && allWindCards(cards) && cards.every((card) => cardHomeWindMatchesPlayer(card, playerIndex)));
     },
     describe(cards, playerIndex = null) {
       if (allWindCards(cards)) {
         return `All 6 cards are your home wind: ${WIND_NAMES[HOME_WIND_BY_SEAT[getPlayer(playerIndex)?.seat] || "home wind"]}.`;
       }
-      const roundMonth = getRoundMonthTarget() || cards[0]?.animal;
+      const roundMonth = getRoundMonthTarget() || cards[0]?.month;
       return `All 6 cards are month ${roundMonth}, matching the current round.`;
     },
     distance(cards, playerIndex = null) {
       const roundMonth = getRoundMonthTarget();
       const monthProgress = roundMonth
-        ? cards.filter((card) => isMonthCard(card) && card.animal === roundMonth).length
+        ? cards.filter((card) => isMonthCard(card) && card.month === roundMonth).length
         : 0;
       const windProgress = playerIndex === null
         ? 0
@@ -3126,10 +3216,10 @@ const SET_RULES = [
       if (windCards.length !== 4 || otherCards.length !== 2) return false;
       if (new Set(windCards.map((card) => card.wind)).size !== 4) return false;
       if (new Set(cards.map((card) => card.element)).size !== 1) return false;
-      return animalsFormRun(otherCards.map((card) => card.animal), 2);
+      return monthsFormRun(otherCards.map((card) => card.month), 2);
     },
     describe(cards) {
-      const sequence = cards.filter(isMonthCard).map((card) => card.animal).sort((a, b) => Number(a) - Number(b));
+      const sequence = cards.filter(isMonthCard).map((card) => card.month).sort((a, b) => Number(a) - Number(b));
       return `N, S, E, W plus the ${sequence.join("-")} sequence, all in one color.`;
     },
     distance(cards) {
@@ -3143,6 +3233,24 @@ const SET_RULES = [
     },
   },
 ];
+
+const WIND_RULE_IDS = new Set([
+  "any-wind",
+  "four-with-neighbors",
+  "compass-pair",
+  "three-wind-pairs",
+  "two-wind-threes",
+  "ending-digit-ladder",
+  "mono-compass",
+]);
+
+const ALWAYS_WIND_RULE_IDS = new Set([
+  "any-wind",
+  "compass-pair",
+  "three-wind-pairs",
+  "two-wind-threes",
+  "mono-compass",
+]);
 
 const analysisCache = {
   winningLayouts: new Map(),
@@ -3196,9 +3304,9 @@ function filterLayoutsByGear(layouts, openCardCount) {
 function openCardsAreConsecutiveInGroup(cards, openCardIds) {
   const openGroupCards = cards.filter((card) => openCardIds.has(card.id));
   if (openGroupCards.length <= 1) return true;
-  const orderedMonths = matchingConsecutiveMonthSequence(cards.map((card) => card.animal));
+  const orderedMonths = matchingConsecutiveMonthSequence(cards.map((card) => card.month));
   if (!orderedMonths) return true;
-  const openMonths = new Set(openGroupCards.map((card) => card.animal));
+  const openMonths = new Set(openGroupCards.map((card) => card.month));
   const openIndexes = orderedMonths
     .map((month, index) => (openMonths.has(month) ? index : -1))
     .filter((index) => index >= 0);
@@ -3207,7 +3315,7 @@ function openCardsAreConsecutiveInGroup(cards, openCardIds) {
 
 function groupMatchesOpenConstraints(group, openCardIds) {
   if (!openCardIds.size) return true;
-  if (group.ruleId === "zodiac-run") {
+  if (group.ruleId === "month-run") {
     return openCardsAreConsecutiveInGroup(group.cards, openCardIds);
   }
   return true;
@@ -3357,7 +3465,7 @@ function getLayoutCards(layout) {
 function roundBonusForLayout(layout) {
   const roundMonth = getRoundMonthTarget();
   if (!roundMonth) return 0;
-  return getLayoutCards(layout).some((card) => card.animal === roundMonth)
+  return getLayoutCards(layout).some((card) => card.month === roundMonth)
     ? GAME_CONFIG.roundBonusPoints
     : 0;
 }
@@ -3365,7 +3473,7 @@ function roundBonusForLayout(layout) {
 function roundBonusForCard(card) {
   const roundMonth = getRoundMonthTarget();
   if (!roundMonth || !card) return 0;
-  return card.animal === roundMonth ? GAME_CONFIG.roundBonusPoints : 0;
+  return card.month === roundMonth ? GAME_CONFIG.roundBonusPoints : 0;
 }
 
 function homeWindBonusForLayout(layout, playerIndex = null) {
@@ -3564,6 +3672,13 @@ function publicPotentialCacheKey(playerIndex, concealedHand, openCards, extraKno
   return `${playerIndex}|${visibleHandKey}|${openCards.length}|${extraKey}`;
 }
 
+function sampleDrawPoolForContext(drawPool, context = PUBLIC_AI_CONTEXT) {
+  const sampleMax = context?.drawSampleMax || 0;
+  if (!sampleMax || drawPool.length <= sampleMax) return drawPool;
+  const step = drawPool.length / sampleMax;
+  return Array.from({ length: sampleMax }, (_, index) => drawPool[Math.floor(index * step)]);
+}
+
 function analyzePublicPotential(
   playerIndex,
   concealedHand = getPlayer(playerIndex).hand,
@@ -3582,6 +3697,8 @@ function analyzePublicPotential(
   const shape = currentShape || evaluateHandShape(fullHand, openCards.length, playerIndex);
   const focus = currentFocus || evaluateRuleFocus(shape);
   const drawPool = getDrawPoolForDecision(playerIndex, concealedHand, openCards, extraKnownCards, context);
+  const sampledDrawPool = sampleDrawPoolForContext(drawPool, context);
+  const sampleScale = sampledDrawPool.length ? drawPool.length / sampledDrawPool.length : 1;
 
   const result = {
     winningDraws: 0,
@@ -3595,7 +3712,7 @@ function analyzePublicPotential(
 
   const shouldCheckWins = shape.bestDistance <= 2;
 
-  drawPool.forEach((drawCard) => {
+  sampledDrawPool.forEach((drawCard) => {
     const futureFullHand = getFullHand(playerIndex, concealedHand.concat(drawCard), openCards);
     const futureShape = evaluateHandShape(futureFullHand, openCards.length, playerIndex);
     const futureFocus = evaluateRuleFocus(futureShape);
@@ -3621,6 +3738,14 @@ function analyzePublicPotential(
     result.totalWinningPoints += points;
     result.bestWinningPoints = Math.max(result.bestWinningPoints, points);
   });
+
+  if (sampleScale !== 1) {
+    result.winningDraws *= sampleScale;
+    result.totalWinningPoints *= sampleScale;
+    result.nearReadyDraws *= sampleScale;
+    result.distanceGainDraws *= sampleScale;
+    result.focusImproveDraws *= sampleScale;
+  }
 
   if (useCache) {
     analysisCache.publicPotential.set(cacheKey, result);
@@ -3666,16 +3791,16 @@ function getRuleById(ruleId) {
 function ruleFamilyId(ruleId) {
   if (ruleId.startsWith("same-element")) return "same-element";
   if (ruleId === "polarity-five-elements") return "polarity-five-elements";
-  if (ruleId.startsWith("zodiac-run")) return "zodiac-run";
+  if (ruleId.startsWith("month-run")) return "month-run";
   if (
     ruleId === "four-with-neighbors" ||
     ruleId === "four-plus-two-side" ||
     ruleId === "four-plus-split-sides"
   ) {
-    return "neighbor-animals";
+    return "neighbor-months";
   }
-  if (ruleId.startsWith("three-animal-pairs")) return "three-animal-pairs";
-  if (ruleId.startsWith("two-animal-threes")) return "two-animal-threes";
+  if (ruleId.startsWith("three-month-pairs")) return "three-month-pairs";
+  if (ruleId.startsWith("two-month-threes")) return "two-month-threes";
   if (ruleId === "six-run") return "six-run";
   if (ruleId === "ending-digit-ladder") return "ending-digit-ladder";
   return ruleId;
@@ -3761,6 +3886,45 @@ function formatSettlement(changes) {
     .filter((entry) => entry.delta !== 0)
     .map((entry) => `${formatPlayerTag(entry.index)} ${entry.delta > 0 ? "+" : ""}${entry.delta}`)
     .join(" · ");
+}
+
+function evaluateWindAffinity(cards, openCardCount = 0, playerIndex = null) {
+  const windCards = cards.filter(isWindCard);
+  if (!windCards.length) return 0;
+
+  const weights = AI_CONFIG.windStrategy;
+  const player = getPlayer(playerIndex);
+  const openCardIds = new Set((player?.openCards || []).map((card) => card.id));
+  const homeWind = HOME_WIND_BY_SEAT[player?.seat];
+  const homeWindCount = homeWind
+    ? windCards.filter((card) => card.wind === homeWind).length
+    : 0;
+  const sameWindCount = maxSameWindCount(windCards);
+  const distinctWindCount = windCompassProgress(windCards);
+  const monoCompassCoverage = maxSameElementWindCoverage(windCards);
+  const openWindCards = windCards.filter((card) => openCardIds.has(card.id));
+
+  let score = 0;
+  score += homeWindCount * weights.homeWindCard;
+  score += Math.max(0, homeWindCount - 1) * weights.homeWindStack;
+
+  if (sameWindCount >= 2) score += weights.sameWindPair * (sameWindCount - 1);
+  if (sameWindCount >= 3) score += weights.sameWindTriple * (sameWindCount - 2);
+  if (sameWindCount >= 4) score += weights.sameWindNearCrown * (sameWindCount - 3);
+
+  score += distinctWindCount * weights.distinctWind;
+  if (distinctWindCount >= 3) score += weights.compassCoverage * (distinctWindCount - 2);
+  if (monoCompassCoverage >= 2) score += weights.monoCompassCoverage * (monoCompassCoverage - 1);
+  if (windCards.length >= 4) score += weights.allWindMass * (windCards.length - 3);
+
+  if (openWindCards.length) {
+    score += Math.min(openCardCount, openWindCards.length) * weights.openWindGear;
+    if (openWindCards.some((card) => cardHomeWindMatchesPlayer(card, playerIndex))) {
+      score += weights.openHomeWindGear;
+    }
+  }
+
+  return score;
 }
 
 function evaluateHandShape(hand, openCardCount = 0, playerIndex = null) {
@@ -3975,7 +4139,7 @@ function exactRonThreats(discarderIndex, card) {
     .filter(Boolean);
 }
 
-function buildAnimalClaimState(
+function buildMonthClaimState(
   playerIndex,
   card,
   type,
@@ -3998,7 +4162,7 @@ function buildAnimalClaimState(
     playerIndex,
     type,
     groupKey,
-    animal: card.animal,
+    month: card.month,
     wind: card.wind,
     card,
     matchingConcealed,
@@ -4032,7 +4196,7 @@ function buildSelfKanState(
     playerIndex,
     type: "self-kan",
     groupKey: targetGroup,
-    animal: leadCard?.animal || null,
+    month: leadCard?.month || null,
     wind: leadCard?.wind || null,
     claimGroup,
     remainingHand,
@@ -4042,13 +4206,13 @@ function buildSelfKanState(
 
 function exactKanThreats(discarderIndex, card) {
   return opponentsInRonOrder(discarderIndex)
-    .map((playerIndex) => buildAnimalClaimState(playerIndex, card, "kan"))
+    .map((playerIndex) => buildMonthClaimState(playerIndex, card, "kan"))
     .filter(Boolean);
 }
 
 function exactPonThreats(discarderIndex, card) {
   return opponentsInRonOrder(discarderIndex)
-    .map((playerIndex) => buildAnimalClaimState(playerIndex, card, "pon"))
+    .map((playerIndex) => buildMonthClaimState(playerIndex, card, "pon"))
     .filter(Boolean);
 }
 
@@ -4089,11 +4253,13 @@ function evaluateImmediateResponseProfile(discarderIndex, card, context = BRUTAL
   });
 
   for (const threat of exactKanThreats(discarderIndex, card)) {
-    const claimChoice = chooseAIKanWithContext(
-      threat.playerIndex,
-      card,
-      decisionContextForPlayer(threat.playerIndex, responseContext)
-    );
+    const claimChoice = withAIProfile(threat.playerIndex, () => (
+      chooseAIKanWithContext(
+        threat.playerIndex,
+        card,
+        decisionContextForPlayer(threat.playerIndex, responseContext)
+      )
+    ));
     if (claimChoice) {
       return {
         type: "kan",
@@ -4106,11 +4272,13 @@ function evaluateImmediateResponseProfile(discarderIndex, card, context = BRUTAL
   }
 
   for (const threat of exactPonThreats(discarderIndex, card)) {
-    const claimChoice = chooseAIPonWithContext(
-      threat.playerIndex,
-      card,
-      decisionContextForPlayer(threat.playerIndex, responseContext)
-    );
+    const claimChoice = withAIProfile(threat.playerIndex, () => (
+      chooseAIPonWithContext(
+        threat.playerIndex,
+        card,
+        decisionContextForPlayer(threat.playerIndex, responseContext)
+      )
+    ));
     if (claimChoice) {
       return {
         type: "pon",
@@ -4124,11 +4292,13 @@ function evaluateImmediateResponseProfile(discarderIndex, card, context = BRUTAL
 
   const chiPlayerIndex = chiPlayerIndexFor(discarderIndex);
   if (canPlayerChi(chiPlayerIndex)) {
-    const claimChoice = chooseAIChiWithContext(
-      chiPlayerIndex,
-      card,
-      decisionContextForPlayer(chiPlayerIndex, responseContext)
-    );
+    const claimChoice = withAIProfile(chiPlayerIndex, () => (
+      chooseAIChiWithContext(
+        chiPlayerIndex,
+        card,
+        decisionContextForPlayer(chiPlayerIndex, responseContext)
+      )
+    ));
     if (claimChoice) {
       return {
         type: "chi",
@@ -4188,8 +4358,36 @@ function estimatePublicDiscardDanger(card, publicPool, openCardCount = 0, player
       publicWindCards.filter((item) => item.element === card.element).map((item) => item.wind)
     );
     const pairOrSequenceProgress = Math.max(twoMonthPairProgress(publicPool), twoMonthSequenceProgress(publicPool));
+    const opponentSignals = AI_CONFIG.opponentSignals;
+    const opponentOpenCards = getPlayer(playerIndex)?.openCards || [];
+    const openWindCards = opponentOpenCards.filter(isWindCard);
+    const openSameWindCount = openWindCards.filter((item) => item.wind === card.wind).length;
+    const openWindCoverage = new Set(openWindCards.map((item) => item.wind));
+    const openMonoWindCoverage = new Set(
+      openWindCards.filter((item) => item.element === card.element).map((item) => item.wind)
+    );
 
     let danger = 0;
+    if (cardHomeWindMatchesPlayer(card, playerIndex)) {
+      danger += opponentSignals.homeWindDanger + threatPointsForRule("ending-digit-ladder", openCardCount, card, playerIndex) * 0.8;
+    }
+    if (openSameWindCount >= 1) {
+      danger += opponentSignals.openSameWindDanger * openSameWindCount;
+      if (openSameWindCount >= 3) {
+        danger += threatPointsForRule(
+          cardHomeWindMatchesPlayer(card, playerIndex) ? "ending-digit-ladder" : "four-with-neighbors",
+          openCardCount,
+          card,
+          playerIndex
+        );
+      }
+    }
+    if (!openWindCoverage.has(card.wind) && openWindCoverage.size >= 2) {
+      danger += opponentSignals.openCompassDanger * (openWindCoverage.size - 1);
+    }
+    if (!openMonoWindCoverage.has(card.wind) && openMonoWindCoverage.size >= 2) {
+      danger += opponentSignals.openMonoCompassDanger * (openMonoWindCoverage.size - 1);
+    }
     if (publicWindCards.length >= GAME_CONFIG.winningHandSize - 1) {
       danger += threatPointsForRule("any-wind", openCardCount, card, playerIndex);
     }
@@ -4223,10 +4421,10 @@ function estimatePublicDiscardDanger(card, publicPool, openCardCount = 0, player
     return danger;
   }
 
-  const sameAnimalCount = publicPool.filter((item) => item.animal === card.animal).length;
+  const sameMonthCount = publicPool.filter((item) => item.month === card.month).length;
   const sameElementCount = publicPool.filter((item) => item.element === card.element).length;
-  const sideAnimalSet = new Set([previousAnimal(card.animal), nextAnimal(card.animal)]);
-  const sideAnimalCount = publicPool.filter((item) => sideAnimalSet.has(item.animal)).length;
+  const sideMonthSet = new Set([previousMonth(card.month), nextMonth(card.month)]);
+  const sideMonthCount = publicPool.filter((item) => sideMonthSet.has(item.month)).length;
 
   let danger = 0;
 
@@ -4252,87 +4450,87 @@ function estimatePublicDiscardDanger(card, publicPool, openCardCount = 0, player
     danger += threatPointsForRule("polarity-five-elements", openCardCount, card, playerIndex) * 2;
   }
 
-  for (let start = 0; start < ZODIAC_ORDER.length; start += 1) {
-    const windowAnimals = Array.from(
+  for (let start = 0; start < MONTH_ORDER.length; start += 1) {
+    const windowMonths = Array.from(
       { length: GAME_CONFIG.winningHandSize },
-      (_, index) => ZODIAC_ORDER[(start + index) % ZODIAC_ORDER.length]
+      (_, index) => MONTH_ORDER[(start + index) % MONTH_ORDER.length]
     );
-    if (!windowAnimals.includes(card.animal)) continue;
-    const monthComplete = windowAnimals.every((animal) => (
-      animal === card.animal || publicPool.some((item) => item.animal === animal)
+    if (!windowMonths.includes(card.month)) continue;
+    const monthComplete = windowMonths.every((month) => (
+      month === card.month || publicPool.some((item) => item.month === month)
     ));
     if (monthComplete) {
-      danger += threatPointsForRule("zodiac-run", openCardCount, card, playerIndex);
+      danger += threatPointsForRule("month-run", openCardCount, card, playerIndex);
     }
-    const elementComplete = windowAnimals.every((animal) => (
-      animal === card.animal || publicPool.some((item) => item.animal === animal && item.element === card.element)
+    const elementComplete = windowMonths.every((month) => (
+      month === card.month || publicPool.some((item) => item.month === month && item.element === card.element)
     ));
     if (elementComplete) {
-      danger += threatPointsForRule("zodiac-run-element", openCardCount, card, playerIndex);
+      danger += threatPointsForRule("month-run-element", openCardCount, card, playerIndex);
     }
   }
 
   const hasSixColorsWithCard = allSixColorsPresent(publicPool.concat(card));
 
-  if (sameAnimalCount >= GAME_CONFIG.winningHandSize - 1 && hasSixColorsWithCard) {
+  if (sameMonthCount >= GAME_CONFIG.winningHandSize - 1 && hasSixColorsWithCard) {
     danger += threatPointsForRule("four-with-neighbors", openCardCount, card, playerIndex) * 1.5;
-  } else if (sameAnimalCount >= 4 && sideAnimalCount >= 1 && hasSixColorsWithCard) {
+  } else if (sameMonthCount >= 4 && sideMonthCount >= 1 && hasSixColorsWithCard) {
     danger += threatPointsForRule("four-with-neighbors", openCardCount, card, playerIndex) * 1.5;
   }
 
-  const previousCount = publicPool.filter((item) => item.animal === previousAnimal(card.animal)).length;
-  const nextCount = publicPool.filter((item) => item.animal === nextAnimal(card.animal)).length;
-  if (sameAnimalCount >= 3 && (previousCount >= 2 || nextCount >= 2) && hasSixColorsWithCard) {
+  const previousCount = publicPool.filter((item) => item.month === previousMonth(card.month)).length;
+  const nextCount = publicPool.filter((item) => item.month === nextMonth(card.month)).length;
+  if (sameMonthCount >= 3 && (previousCount >= 2 || nextCount >= 2) && hasSixColorsWithCard) {
     danger += threatPointsForRule("four-plus-two-side", openCardCount, card, playerIndex) * 1.3;
   }
-  if (sameAnimalCount >= 3 && previousCount >= 1 && nextCount >= 1 && hasSixColorsWithCard) {
+  if (sameMonthCount >= 3 && previousCount >= 1 && nextCount >= 1 && hasSixColorsWithCard) {
     danger += threatPointsForRule("four-plus-split-sides", openCardCount, card, playerIndex) * 1.2;
   }
 
-  [previousAnimal(card.animal), nextAnimal(card.animal)].forEach((coreAnimal) => {
-    const coreCount = publicPool.filter((item) => item.animal === coreAnimal).length;
+  [previousMonth(card.month), nextMonth(card.month)].forEach((coreMonth) => {
+    const coreCount = publicPool.filter((item) => item.month === coreMonth).length;
     if (coreCount >= 5 && hasSixColorsWithCard) {
       danger += threatPointsForRule("four-with-neighbors", openCardCount, card, playerIndex) * 0.75;
     }
-    if (coreCount >= 4 && sameAnimalCount >= 1 && hasSixColorsWithCard) {
+    if (coreCount >= 4 && sameMonthCount >= 1 && hasSixColorsWithCard) {
       danger += threatPointsForRule("four-plus-two-side", openCardCount, card, playerIndex);
     }
-    const oppositeSideAnimal = coreAnimal === previousAnimal(card.animal)
-      ? previousAnimal(coreAnimal)
-      : nextAnimal(coreAnimal);
-    const oppositeSideCount = publicPool.filter((item) => item.animal === oppositeSideAnimal).length;
-    if (coreCount >= 4 && oppositeSideCount >= 1 && sameAnimalCount >= 1 && hasSixColorsWithCard) {
+    const oppositeSideMonth = coreMonth === previousMonth(card.month)
+      ? previousMonth(coreMonth)
+      : nextMonth(coreMonth);
+    const oppositeSideCount = publicPool.filter((item) => item.month === oppositeSideMonth).length;
+    if (coreCount >= 4 && oppositeSideCount >= 1 && sameMonthCount >= 1 && hasSixColorsWithCard) {
       danger += threatPointsForRule("four-plus-split-sides", openCardCount, card, playerIndex);
     }
   });
 
-  if (sameAnimalCount >= 1) {
+  if (sameMonthCount >= 1) {
     let consecutivePairRuns = 0;
-    for (let start = 0; start < ZODIAC_ORDER.length; start += 1) {
-      const windowAnimals = Array.from(
+    for (let start = 0; start < MONTH_ORDER.length; start += 1) {
+      const windowMonths = Array.from(
         { length: 3 },
-        (_, index) => ZODIAC_ORDER[(start + index) % ZODIAC_ORDER.length]
+        (_, index) => MONTH_ORDER[(start + index) % MONTH_ORDER.length]
       );
-      if (!windowAnimals.includes(card.animal)) continue;
-      const otherAnimals = windowAnimals.filter((animal) => animal !== card.animal);
-      if (otherAnimals.every((animal) => publicPool.filter((item) => item.animal === animal).length >= 2)) {
+      if (!windowMonths.includes(card.month)) continue;
+      const otherMonths = windowMonths.filter((month) => month !== card.month);
+      if (otherMonths.every((month) => publicPool.filter((item) => item.month === month).length >= 2)) {
         consecutivePairRuns += 1;
       }
     }
     if (consecutivePairRuns >= 1) {
-      danger += threatPointsForRule("three-animal-pairs", openCardCount, card, playerIndex) * Math.min(2, consecutivePairRuns);
+      danger += threatPointsForRule("three-month-pairs", openCardCount, card, playerIndex) * Math.min(2, consecutivePairRuns);
     }
   }
 
-  const consecutiveTripleAnimals = [previousAnimal(card.animal), nextAnimal(card.animal)]
-    .filter((animal) => publicPool.filter((item) => item.animal === animal).length >= 3)
+  const consecutiveTripleMonths = [previousMonth(card.month), nextMonth(card.month)]
+    .filter((month) => publicPool.filter((item) => item.month === month).length >= 3)
     .length;
-  if (sameAnimalCount >= 2 && consecutiveTripleAnimals >= 1) {
-    danger += threatPointsForRule("two-animal-threes", openCardCount, card, playerIndex) * Math.min(2, consecutiveTripleAnimals);
+  if (sameMonthCount >= 2 && consecutiveTripleMonths >= 1) {
+    danger += threatPointsForRule("two-month-threes", openCardCount, card, playerIndex) * Math.min(2, consecutiveTripleMonths);
   }
 
   const roundMonth = getRoundMonthTarget();
-  if (roundMonth && card.animal === roundMonth && sameAnimalCount >= 5) {
+  if (roundMonth && card.month === roundMonth && sameMonthCount >= 5) {
     danger += threatPointsForRule("ending-digit-ladder", openCardCount, card, playerIndex) * 2;
   }
 
@@ -4361,36 +4559,36 @@ function estimateOpponentCardInterest(playerIndex, card) {
   const discards = player.discards;
   const groupKey = cardGroupKey(card);
 
-  const openAnimalMatches = openCards.filter((item) => cardGroupKey(item) === groupKey).length;
+  const openMonthMatches = openCards.filter((item) => cardGroupKey(item) === groupKey).length;
   const openElementMatches = openCards.filter((item) => item.element === card.element).length;
   const openNeighborMatches = isMonthCard(card)
     ? openCards.filter((item) => (
-      isMonthCard(item) && (previousAnimal(item.animal) === card.animal || nextAnimal(item.animal) === card.animal)
+      isMonthCard(item) && (previousMonth(item.month) === card.month || nextMonth(item.month) === card.month)
     )).length
     : 0;
   const openColors = new Set(openCards.map((item) => item.element));
-  const openMonths = new Set(openCards.filter(isMonthCard).map((item) => item.animal));
+  const openMonths = new Set(openCards.filter(isMonthCard).map((item) => item.month));
   const openWinds = new Set(openCards.filter(isWindCard).map((item) => item.wind));
 
-  const discardAnimalMatches = discards.filter((item) => cardGroupKey(item) === groupKey).length;
+  const discardMonthMatches = discards.filter((item) => cardGroupKey(item) === groupKey).length;
   const discardElementMatches = discards.filter((item) => item.element === card.element).length;
 
   let signal = 1;
   signal += openCards.length * signals.openCardPressure;
-  signal += openAnimalMatches * signals.openAnimalBonus;
+  signal += openMonthMatches * signals.openMonthBonus;
   signal += openElementMatches * signals.openElementBonus;
-  signal += openNeighborMatches * signals.sideAnimalBonus;
+  signal += openNeighborMatches * signals.sideMonthBonus;
   if (openCards.length) {
     signal += openCards.length * signals.sixColorOpenPressure;
     if (!openColors.has(card.element)) signal += signals.sixColorNewColorBonus;
-    if (isMonthCard(card) && !openMonths.has(card.animal)) signal += signals.sixColorNewMonthBonus;
+    if (isMonthCard(card) && !openMonths.has(card.month)) signal += signals.sixColorNewMonthBonus;
     if (isWindCard(card) && !openWinds.has(card.wind)) signal += signals.sixColorNewMonthBonus;
     if (openColors.size >= 4 || openMonths.size >= 4 || openWinds.size >= 3) signal += signals.sixColorNearBonus;
   }
 
   signal -= Math.min(
     signals.maxDiscardRelief,
-    discardAnimalMatches * signals.discardAnimalRelief +
+    discardMonthMatches * signals.discardMonthRelief +
       discardElementMatches * signals.discardElementRelief
   );
 
@@ -4443,15 +4641,15 @@ function estimateOpponentClaimPressure(playerIndex, discarderIndex, card, public
 
   const interest = estimateOpponentCardInterest(playerIndex, card);
   const groupKey = cardGroupKey(card);
-  const sameAnimalOpen = player.openCards.filter((item) => cardGroupKey(item) === groupKey).length;
-  const sameAnimalDiscards = player.discards.filter((item) => cardGroupKey(item) === groupKey).length;
-  const unseenSameAnimal = publicPool.filter((item) => cardGroupKey(item) === groupKey).length;
+  const sameMonthOpen = player.openCards.filter((item) => cardGroupKey(item) === groupKey).length;
+  const sameMonthDiscards = player.discards.filter((item) => cardGroupKey(item) === groupKey).length;
+  const unseenSameMonth = publicPool.filter((item) => cardGroupKey(item) === groupKey).length;
   const visibleLeaderPoints = Math.max(...state.players.map((entry) => entry.points));
   const isLeader = player.points === visibleLeaderPoints;
   const isDealer = player.seat === "East";
   const discardRelief = Math.min(
     claimSignals.maxDiscardRelief,
-    sameAnimalDiscards * claimSignals.discardAnimalRelief
+    sameMonthDiscards * claimSignals.discardMonthRelief
   );
   const threatBoost = 1
     + (isDealer ? claimSignals.dealerThreatBonus : 0)
@@ -4459,29 +4657,42 @@ function estimateOpponentClaimPressure(playerIndex, discarderIndex, card, public
 
   let chi = 0;
   if (playerIndex === chiPlayerIndexFor(discarderIndex)) {
+    const openWindCoverage = new Set(player.openCards.filter(isWindCard).map((item) => item.wind));
+    const windChiFactor = isWindCard(card)
+      ? claimSignals.windChiMultiplier +
+        player.openCards.filter((item) => cardGroupKey(item) === groupKey).length * claimSignals.windChiOpenSupport +
+        (openWindCoverage.size >= 2 && !openWindCoverage.has(card.wind) ? claimSignals.windChiCompassSupport : 0)
+      : 1;
     chi = (
       claimSignals.nextChiBase +
       interest * claimSignals.nextChiInterest +
-      sameAnimalOpen * claimSignals.nextChiAnimalBonus
-    ) * threatBoost * (1 - discardRelief * 0.5);
+      sameMonthOpen * claimSignals.nextChiMonthBonus
+    ) * windChiFactor * threatBoost * (1 - discardRelief * 0.5);
   }
 
   function estimateSetClaimPressure(type, neededTotal) {
-    const hiddenNeed = Math.max(0, neededTotal - sameAnimalOpen);
+    const hiddenNeed = Math.max(0, neededTotal - sameMonthOpen);
     if (hiddenNeed >= claimSignals.hiddenNeedFactors.length) return 0;
-    if (unseenSameAnimal < hiddenNeed) return 0;
+    if (unseenSameMonth < hiddenNeed) return 0;
     const base = type === "kan" ? claimSignals.kanBase : claimSignals.ponBase;
-    const availability = unseenSameAnimal * claimSignals.sameAnimalDepthBonus;
+    const availability = unseenSameMonth * claimSignals.sameMonthDepthBonus;
     return (
       base +
       interest * claimSignals.claimInterest +
-      sameAnimalOpen * claimSignals.openAnimalBonus +
+      sameMonthOpen * claimSignals.openMonthBonus +
       availability
     ) * claimSignals.hiddenNeedFactors[hiddenNeed] * threatBoost * (1 - discardRelief);
   }
 
-  const pon = estimateSetClaimPressure("pon", 3);
-  const kan = estimateSetClaimPressure("kan", 4);
+  let pon = estimateSetClaimPressure("pon", 3);
+  let kan = estimateSetClaimPressure("kan", 4);
+  if (isWindCard(card)) {
+    const homeWindFactor = cardHomeWindMatchesPlayer(card, playerIndex)
+      ? claimSignals.homeWindSetClaimMultiplier
+      : 1;
+    pon *= claimSignals.windPonMultiplier * homeWindFactor;
+    kan *= claimSignals.windKanMultiplier * homeWindFactor;
+  }
   return {
     playerIndex,
     chi,
@@ -4638,6 +4849,7 @@ function evaluateFutureHand(
     focus.primary * weights.focusPrimary +
     focus.secondary * weights.focusSecondary +
     focus.gap * weights.focusGap +
+    evaluateWindAffinity(fullHand, openCards.length, playerIndex) * weights.windAffinity +
     openCards.length * weights.openPressureBonus;
 
   if (shape.bestDistance === 0) {
@@ -4696,12 +4908,15 @@ function analyzeClaimCandidate(baseline, candidate) {
   };
 }
 
-function shouldTakeClaim(type, analysis, scoreThreshold, strategy = { claimBias: 1 }) {
+function shouldTakeClaim(type, analysis, scoreThreshold, strategy = { claimBias: 1 }, claimedCard = null) {
   const adjustedThreshold = scoreThreshold / Math.max(1, strategy.claimBias || 1);
   const bestRule = analysis.bestRuleImprovement;
   const sixColorPush =
     analysis.candidatePrimaryRuleId === "polarity-five-elements" ||
     bestRule?.ruleId === "polarity-five-elements";
+  const windSetPush =
+    isWindCard(claimedCard) &&
+    (WIND_RULE_IDS.has(analysis.candidatePrimaryRuleId) || WIND_RULE_IDS.has(bestRule?.ruleId));
   const samePrimaryRule =
     analysis.baselinePrimaryRuleId &&
     analysis.baselinePrimaryRuleId === analysis.candidatePrimaryRuleId;
@@ -4715,6 +4930,9 @@ function shouldTakeClaim(type, analysis, scoreThreshold, strategy = { claimBias:
 
   if (strongSpeedGain || strongRuleJump) return true;
   if (sixColorPush && (speedGain || pointGain || focusGain)) return true;
+  if ((type === "pon" || type === "kan") && windSetPush && (speedGain || pointGain || focusGain)) {
+    return analysis.scoreGain >= adjustedThreshold * 0.45 || analysis.bestDistanceGain >= 1;
+  }
   if (samePrimaryRule && speedGain) return true;
   if ((type === "pon" || type === "kan") && speedGain && (pointGain || focusGain)) return true;
   if (type === "chi" && analysis.bestDistanceGain >= 1 && (focusGain || pointGain)) return true;
@@ -4722,14 +4940,18 @@ function shouldTakeClaim(type, analysis, scoreThreshold, strategy = { claimBias:
   return analysis.scoreGain >= adjustedThreshold;
 }
 
-function shouldTakeChiClaim(baseline, candidate, analysis, strategy) {
+function shouldTakeChiClaim(baseline, candidate, analysis, strategy, claimedCard = null) {
   const adjustedThreshold = AI_CONFIG.chiThreshold / Math.max(1, strategy.claimBias || 1);
   const samePrimaryRule =
     analysis.baselinePrimaryRuleId &&
     analysis.baselinePrimaryRuleId === analysis.candidatePrimaryRuleId;
+  const bestRule = analysis.bestRuleImprovement;
   const sixColorPush =
     analysis.candidatePrimaryRuleId === "polarity-five-elements" ||
-    analysis.bestRuleImprovement?.ruleId === "polarity-five-elements";
+    bestRule?.ruleId === "polarity-five-elements";
+  const windPush =
+    isWindCard(claimedCard) &&
+    (WIND_RULE_IDS.has(analysis.candidatePrimaryRuleId) || WIND_RULE_IDS.has(bestRule?.ruleId));
   const handIsAlreadyClose = baseline.shape.bestDistance <= 2;
   const reachesReady = candidate.shape.bestDistance <= 1;
   const strongSpeedGain = analysis.bestDistanceGain >= 2 || analysis.winningDrawGain >= 2;
@@ -4739,13 +4961,20 @@ function shouldTakeChiClaim(baseline, candidate, analysis, strategy) {
     analysis.totalWinningPointGain >= 8 ||
     analysis.bestWinningPointGain >= 6;
   const linePreserveGain = samePrimaryRule && (decentSpeedGain || strongFocusGain);
-  const safeEnoughToOpen = candidate.publicDanger <= 240 || reachesReady || strongSpeedGain;
+  const meaningfulGain =
+    reachesReady ||
+    strongSpeedGain ||
+    (decentSpeedGain && (samePrimaryRule || strongFocusGain || strongPointGain || windPush || sixColorPush)) ||
+    (windPush && candidate.shape.bestDistance <= 2 && (strongFocusGain || strongPointGain || analysis.scoreGain >= adjustedThreshold * 0.75));
+  const safeEnoughToOpen = candidate.publicDanger <= 180 || reachesReady || strongSpeedGain;
 
+  if (!meaningfulGain) return false;
   if (!safeEnoughToOpen) return false;
-  if (sixColorPush && (reachesReady || decentSpeedGain || strongFocusGain || strongPointGain)) return true;
-  if (strongSpeedGain && (samePrimaryRule || strongFocusGain || strongPointGain)) return true;
-  if (handIsAlreadyClose && reachesReady && (decentSpeedGain || strongFocusGain)) return true;
-  if (linePreserveGain && candidate.score >= baseline.score + adjustedThreshold * 0.7) return true;
+  if (sixColorPush && (reachesReady || decentSpeedGain || strongFocusGain || strongPointGain) && analysis.scoreGain >= adjustedThreshold * 0.45) return true;
+  if (windPush && (reachesReady || decentSpeedGain || strongFocusGain || strongPointGain) && analysis.scoreGain >= adjustedThreshold * 0.55) return true;
+  if (strongSpeedGain && (samePrimaryRule || strongFocusGain || strongPointGain || windPush) && analysis.scoreGain >= adjustedThreshold * 0.35) return true;
+  if (handIsAlreadyClose && reachesReady && (decentSpeedGain || strongFocusGain) && analysis.scoreGain >= adjustedThreshold * 0.35) return true;
+  if (linePreserveGain && candidate.score >= baseline.score + adjustedThreshold) return true;
   if (!decentSpeedGain && !strongFocusGain && !strongPointGain) return false;
   if (!samePrimaryRule && baseline.shape.bestDistance >= 3 && !strongSpeedGain) return false;
   return analysis.scoreGain >= adjustedThreshold;
@@ -4754,6 +4983,20 @@ function shouldTakeChiClaim(baseline, candidate, analysis, strategy) {
 function claimTargetLabel(candidate, analysis) {
   if (analysis.bestRuleImprovement?.label) return analysis.bestRuleImprovement.label;
   return getRuleById(candidate.focus.primaryRuleId)?.label || "";
+}
+
+function gearUpgradeValue(beforeFocus, beforeOpenCount, afterFocus, afterOpenCount) {
+  const rule = getRuleById(afterFocus.primaryRuleId);
+  if (!rule) return 0;
+  return gearAdjustedPoints(rule.points, afterOpenCount) - gearAdjustedPoints(rule.points, beforeOpenCount);
+}
+
+function estimateOpenExposure(playerIndex, card) {
+  const opponents = opponentsInRonOrder(playerIndex);
+  if (!opponents.length) return 0;
+  return opponents.reduce((sum, opponentIndex) => (
+    sum + estimateOpponentCardInterest(opponentIndex, card)
+  ), 0) / opponents.length;
 }
 
 function evaluateAIDiscardOptions(
@@ -4899,7 +5142,7 @@ function chooseAISelfKanWithContext(playerIndex, context = PUBLIC_AI_CONTEXT) {
   const claimAnalysis = analyzeClaimCandidate(baseline, bestDiscard);
   const strategy = evaluateStrategyProfile(playerIndex);
 
-  if (!shouldTakeClaim("kan", claimAnalysis, AI_CONFIG.kanThreshold, strategy)) {
+  if (!shouldTakeClaim("kan", claimAnalysis, AI_CONFIG.kanThreshold, strategy, claimState.claimGroup[0])) {
     return null;
   }
 
@@ -4920,9 +5163,9 @@ function chooseHardAISelfKan(playerIndex) {
   return chooseAISelfKanWithContext(playerIndex, BRUTAL_AI_CONTEXT);
 }
 
-function chooseAIAnimalClaimWithContext(playerIndex, card, type, context = PUBLIC_AI_CONTEXT) {
+function chooseAIMonthClaimWithContext(playerIndex, card, type, context = PUBLIC_AI_CONTEXT) {
   const player = getPlayer(playerIndex);
-  const claimState = buildAnimalClaimState(playerIndex, card, type, player.hand, player.openCards);
+  const claimState = buildMonthClaimState(playerIndex, card, type, player.hand, player.openCards);
   if (!claimState) return null;
   if (!lockedOpenCardsCanWin(claimState.nextOpenCards, playerIndex)) return null;
 
@@ -4941,7 +5184,7 @@ function chooseAIAnimalClaimWithContext(playerIndex, card, type, context = PUBLI
   const claimAnalysis = analyzeClaimCandidate(baseline, bestDiscard);
   const strategy = evaluateStrategyProfile(playerIndex);
 
-  if (!shouldTakeClaim(type, claimAnalysis, threshold, strategy)) {
+  if (!shouldTakeClaim(type, claimAnalysis, threshold, strategy, card)) {
     return null;
   }
 
@@ -4963,11 +5206,11 @@ function chooseAIKan(playerIndex, card) {
 }
 
 function chooseAIPonWithContext(playerIndex, card, context = PUBLIC_AI_CONTEXT) {
-  return chooseAIAnimalClaimWithContext(playerIndex, card, "pon", context);
+  return chooseAIMonthClaimWithContext(playerIndex, card, "pon", context);
 }
 
 function chooseAIKanWithContext(playerIndex, card, context = PUBLIC_AI_CONTEXT) {
-  return chooseAIAnimalClaimWithContext(playerIndex, card, "kan", context);
+  return chooseAIMonthClaimWithContext(playerIndex, card, "kan", context);
 }
 
 function chooseHardAIPon(playerIndex, card) {
@@ -5001,7 +5244,7 @@ function chooseAIChiWithContext(playerIndex, card, context = PUBLIC_AI_CONTEXT) 
 
   const claimAnalysis = analyzeClaimCandidate(baseline, bestDiscard);
   const strategy = evaluateStrategyProfile(playerIndex);
-  if (!shouldTakeChiClaim(baseline, bestDiscard, claimAnalysis, strategy)) {
+  if (!shouldTakeChiClaim(baseline, bestDiscard, claimAnalysis, strategy, card)) {
     return null;
   }
 
@@ -5203,21 +5446,30 @@ function chooseAIHomeWindOpenCard(playerIndex, context = PUBLIC_AI_CONTEXT) {
   if (!player?.hand.length) return null;
 
   const baseline = evaluateFutureHand(playerIndex, player.hand, player.openCards, [], context);
+  const baselineWindAffinity = evaluateWindAffinity(getFullHand(playerIndex, player.hand, player.openCards), player.openCards.length, playerIndex);
   const candidates = player.hand
     .map((card) => {
       const nextHand = removeCardById(player.hand, card.id).next;
       const nextOpenCards = sortCardsForDisplay(player.openCards.concat(card));
       if (!lockedOpenCardsCanWin(nextOpenCards, playerIndex)) return null;
+      const future = evaluateFutureHand(playerIndex, nextHand, nextOpenCards, [], context);
+      const windAffinityGain = evaluateWindAffinity(getFullHand(playerIndex, nextHand, nextOpenCards), nextOpenCards.length, playerIndex) - baselineWindAffinity;
+      const gearGain = gearUpgradeValue(baseline.focus, player.openCards.length, future.focus, nextOpenCards.length);
+      const exposure = estimateOpenExposure(playerIndex, card);
       return {
         card,
         nextHand,
         nextOpenCards,
-        future: evaluateFutureHand(playerIndex, nextHand, nextOpenCards, [], context),
+        future,
+        gearGain,
+        windAffinityGain,
+        exposure,
+        adjustedScore: future.score + gearGain * 34 + windAffinityGain * 0.55 - exposure * 10,
       };
     })
     .filter(Boolean)
     .sort((a, b) => {
-      if (b.future.score !== a.future.score) return b.future.score - a.future.score;
+      if (b.adjustedScore !== a.adjustedScore) return b.adjustedScore - a.adjustedScore;
       if (a.future.shape.bestDistance !== b.future.shape.bestDistance) {
         return a.future.shape.bestDistance - b.future.shape.bestDistance;
       }
@@ -5230,9 +5482,13 @@ function chooseAIHomeWindOpenCard(playerIndex, context = PUBLIC_AI_CONTEXT) {
   const improvesDistance = best.future.shape.bestDistance < baseline.shape.bestDistance;
   const improvesWins = best.future.drawStats.winningDraws > baseline.drawStats.winningDraws;
   const improvesPoints = best.future.drawStats.bestWinningPoints > baseline.drawStats.bestWinningPoints;
-  const improvesScore = best.future.score >= baseline.score + 10;
-  const gainsGear = player.openCards.length < 3;
-  return (improvesDistance || improvesWins || improvesPoints || improvesScore || gainsGear) ? best.card : null;
+  const improvesScore = best.adjustedScore >= baseline.score + 18;
+  const improvesGear = best.gearGain > 0;
+  const improvesWindPlan = best.windAffinityGain >= 18;
+  const exposureIsAcceptable = best.exposure <= 2.1 || improvesDistance || improvesWins || improvesGear;
+  return (exposureIsAcceptable && (improvesDistance || improvesWins || improvesPoints || improvesScore || improvesGear || improvesWindPlan))
+    ? best.card
+    : null;
 }
 
 function finalizeHomeWindOpen(playerIndex, discardedCard, openedCard = null) {
@@ -5289,10 +5545,10 @@ function maybeHandleHomeWindDiscard(playerIndex, discardedCard) {
   return true;
 }
 
-function applyAnimalClaim(type, playerIndex, card, discarderIndex) {
+function applyMonthClaim(type, playerIndex, card, discarderIndex) {
   const player = getPlayer(playerIndex);
   const discarder = getPlayer(discarderIndex);
-  const claimState = buildAnimalClaimState(playerIndex, card, type);
+  const claimState = buildMonthClaimState(playerIndex, card, type);
   if (!claimState) return false;
 
   const removedDiscard = removeLastCardById(discarder.discards, card.id);
@@ -5382,7 +5638,7 @@ function resolveKan(discarderIndex, card) {
     }
 
     if (chooseHardAIKan(threat.playerIndex, card)) {
-      applyAnimalClaim("kan", threat.playerIndex, card, discarderIndex);
+      applyMonthClaim("kan", threat.playerIndex, card, discarderIndex);
       return;
     }
   }
@@ -5414,7 +5670,7 @@ function resolvePon(discarderIndex, card) {
     }
 
     if (chooseHardAIPon(threat.playerIndex, card)) {
-      applyAnimalClaim("pon", threat.playerIndex, card, discarderIndex);
+      applyMonthClaim("pon", threat.playerIndex, card, discarderIndex);
       return;
     }
   }
@@ -5604,7 +5860,7 @@ function declareHumanRon() {
 function declareHumanKan() {
   if (state.phase === "finished") return;
   if (state.pendingClaim?.type === "kan") {
-    applyAnimalClaim(
+    applyMonthClaim(
       "kan",
       state.pendingClaim.playerIndex,
       state.pendingClaim.sourceCard,
@@ -5634,7 +5890,7 @@ function declareHumanHomeWindOpen(cardId) {
 function declareHumanPon() {
   if (state.phase === "finished") return;
   if (!state.pendingClaim || state.pendingClaim.type !== "pon") return;
-  applyAnimalClaim(
+  applyMonthClaim(
     "pon",
     state.pendingClaim.playerIndex,
     state.pendingClaim.sourceCard,
@@ -5708,7 +5964,7 @@ function passHumanClaim() {
 
     for (const threat of remainingClaimers) {
       if (chooseHardAIKan(threat.playerIndex, sourceCard)) {
-        applyAnimalClaim("kan", threat.playerIndex, sourceCard, discarderIndex);
+        applyMonthClaim("kan", threat.playerIndex, sourceCard, discarderIndex);
         return;
       }
     }
@@ -5729,7 +5985,7 @@ function passHumanClaim() {
 
     for (const threat of remainingClaimers) {
       if (chooseHardAIPon(threat.playerIndex, sourceCard)) {
-        applyAnimalClaim("pon", threat.playerIndex, sourceCard, discarderIndex);
+        applyMonthClaim("pon", threat.playerIndex, sourceCard, discarderIndex);
         return;
       }
     }
@@ -5815,6 +6071,705 @@ function continueAfterFinishedHand() {
   dealOpeningHands(false);
 }
 
+const AI_TUNING_PARAMETERS = [
+  { path: "chiThreshold", min: 72, max: 190, mutation: 0.24 },
+  { path: "ponThreshold", min: 62, max: 170, mutation: 0.22 },
+  { path: "kanThreshold", min: 70, max: 190, mutation: 0.22 },
+  { path: "discardWeights.winningDraw", min: 92, max: 210, mutation: 0.18 },
+  { path: "discardWeights.winningPoint", min: 10, max: 28, mutation: 0.18 },
+  { path: "discardWeights.bestWinningPoint", min: 8, max: 24, mutation: 0.18 },
+  { path: "discardWeights.distancePenalty", min: 24, max: 62, mutation: 0.2 },
+  { path: "discardWeights.focusPrimary", min: 12, max: 34, mutation: 0.2 },
+  { path: "discardWeights.publicDangerPenalty", min: 2.5, max: 10.5, mutation: 0.24 },
+  { path: "discardWeights.maxOpponentDangerPenalty", min: 1.2, max: 7.2, mutation: 0.24 },
+  { path: "discardWeights.claimPressurePenalty", min: 0.25, max: 1.6, mutation: 0.25 },
+  { path: "discardWeights.windAffinity", min: 0.35, max: 2.2, mutation: 0.28 },
+  { path: "strategy.dealerAggression", min: 0, max: 0.28, mutation: 0.24 },
+  { path: "strategy.openCardAggression", min: 0, max: 0.16, mutation: 0.26 },
+  { path: "strategy.trailingAggressionPerPoint", min: 0.012, max: 0.07, mutation: 0.25 },
+  { path: "strategy.leadingDefensePerPoint", min: 0.006, max: 0.052, mutation: 0.25 },
+  { path: "strategy.claimBiasPerPoint", min: 0.008, max: 0.065, mutation: 0.25 },
+  { path: "strategy.leadRiskBrakePerPoint", min: 0, max: 0.032, mutation: 0.25 },
+  { path: "windStrategy.homeWindCard", min: 4, max: 36, mutation: 0.3 },
+  { path: "windStrategy.homeWindStack", min: 2, max: 30, mutation: 0.3 },
+  { path: "windStrategy.sameWindPair", min: 5, max: 42, mutation: 0.3 },
+  { path: "windStrategy.sameWindTriple", min: 8, max: 56, mutation: 0.3 },
+  { path: "windStrategy.compassCoverage", min: 4, max: 48, mutation: 0.32 },
+  { path: "windStrategy.monoCompassCoverage", min: 2, max: 34, mutation: 0.32 },
+  { path: "windStrategy.openWindGear", min: 2, max: 36, mutation: 0.3 },
+  { path: "opponentSignals.homeWindDanger", min: 4, max: 48, mutation: 0.3 },
+  { path: "opponentSignals.openSameWindDanger", min: 6, max: 58, mutation: 0.3 },
+  { path: "opponentSignals.openCompassDanger", min: 8, max: 74, mutation: 0.3 },
+  { path: "claimSignals.windChiMultiplier", min: 0.2, max: 1.2, mutation: 0.32 },
+  { path: "claimSignals.windPonMultiplier", min: 0.75, max: 1.8, mutation: 0.26 },
+  { path: "claimSignals.windKanMultiplier", min: 0.85, max: 2.1, mutation: 0.26 },
+  { path: "claimSignals.homeWindSetClaimMultiplier", min: 0.85, max: 1.75, mutation: 0.24 },
+];
+
+function getConfigPath(config, path) {
+  return path.split(".").reduce((value, key) => value?.[key], config);
+}
+
+function setConfigPath(target, path, value) {
+  const keys = path.split(".");
+  let cursor = target;
+  keys.slice(0, -1).forEach((key) => {
+    cursor[key] = cursor[key] || {};
+    cursor = cursor[key];
+  });
+  cursor[keys[keys.length - 1]] = value;
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function randomBetween(min, max) {
+  return min + Math.random() * (max - min);
+}
+
+function tuningProfileFromValues(id, values, parentIds = []) {
+  const overrides = {};
+  AI_TUNING_PARAMETERS.forEach((parameter) => {
+    setConfigPath(overrides, parameter.path, values[parameter.path]);
+  });
+  return {
+    id,
+    name: `AI-${id}`,
+    parentIds,
+    overrides,
+    values,
+  };
+}
+
+function makeRandomTuningProfile(id, spread = 0.35) {
+  const values = {};
+  AI_TUNING_PARAMETERS.forEach((parameter) => {
+    const base = getConfigPath(AI_BASE_CONFIG, parameter.path);
+    const low = Math.max(parameter.min, base * (1 - spread));
+    const high = Math.min(parameter.max, base * (1 + spread));
+    values[parameter.path] = randomBetween(low, high);
+  });
+  return tuningProfileFromValues(id, values);
+}
+
+function mutateTuningProfile(parent, id, mutationScale = 1) {
+  const values = {};
+  AI_TUNING_PARAMETERS.forEach((parameter) => {
+    const base = parent.values[parameter.path] ?? getConfigPath(AI_BASE_CONFIG, parameter.path);
+    const swing = parameter.mutation * mutationScale;
+    const next = base * (1 + randomBetween(-swing, swing));
+    values[parameter.path] = clamp(next, parameter.min, parameter.max);
+  });
+  return tuningProfileFromValues(id, values, [parent.id]);
+}
+
+function breedTuningProfiles(parentA, parentB, id, mutationScale = 0.8) {
+  const values = {};
+  AI_TUNING_PARAMETERS.forEach((parameter) => {
+    const inherited = Math.random() < 0.5
+      ? parentA.values[parameter.path]
+      : parentB.values[parameter.path];
+    const swing = parameter.mutation * mutationScale;
+    values[parameter.path] = clamp(inherited * (1 + randomBetween(-swing, swing)), parameter.min, parameter.max);
+  });
+  return tuningProfileFromValues(id, values, [parentA.id, parentB.id]);
+}
+
+function makeBaselineTuningProfile(id = "base") {
+  const values = {};
+  AI_TUNING_PARAMETERS.forEach((parameter) => {
+    values[parameter.path] = getConfigPath(AI_BASE_CONFIG, parameter.path);
+  });
+  return tuningProfileFromValues(id, values);
+}
+
+function clearAnalysisCaches() {
+  analysisCache.winningLayouts.clear();
+  analysisCache.handShape.clear();
+  analysisCache.publicPotential.clear();
+  analysisCache.openCompletion.clear();
+}
+
+function makeSimulationStateSnapshot() {
+  return {
+    players: state.players,
+    points: state.points,
+    roundNumber: state.roundNumber,
+    wall: state.wall,
+    currentTurn: state.currentTurn,
+    dealerIndex: state.dealerIndex,
+    phase: state.phase,
+    call: state.call,
+    pendingClaim: state.pendingClaim,
+    lastDiscard: state.lastDiscard,
+    lastDrawnCardId: state.lastDrawnCardId,
+    openCardClaims: state.openCardClaims,
+    selectedCardId: state.selectedCardId,
+    inspectCardId: state.inspectCardId,
+    logs: state.logs,
+    winner: state.winner,
+    winners: state.winners,
+    matchFinished: state.matchFinished,
+    matchSummary: state.matchSummary,
+    timer: state.timer,
+    assistEnabled: state.assistEnabled,
+  };
+}
+
+function restoreSimulationState(snapshot) {
+  Object.assign(state, snapshot);
+  restoreAIConfig(AI_BASE_CONFIG);
+  clearAnalysisCaches();
+}
+
+function makeAIOnlyPlayers(profiles = []) {
+  return TABLE_CONFIG.players.map((player, index) => ({
+    ...player,
+    isHuman: false,
+    seat: seatForPlayer(index, state.dealerIndex),
+    homeWind: HOME_WIND_BY_SEAT[seatForPlayer(index, state.dealerIndex)],
+    points: state.points[index],
+    aiProfile: profiles[index] || null,
+    hand: [],
+    openCards: [],
+    discards: [],
+    status: "AI simulation",
+  }));
+}
+
+function recordSimulationWin(metrics, playerIndex, layouts, openCardCount, type, discarderIndex = null) {
+  const scoringLayout = chooseBestLayout(layouts, openCardCount, playerIndex);
+  const ruleIds = new Set((scoringLayout || []).map((group) => group.ruleId));
+  const cards = getLayoutCards(scoringLayout || []);
+  const points = totalLayoutPoints(scoringLayout || [], openCardCount, playerIndex);
+  metrics.handsEnded += 1;
+  metrics.totalWinPoints += points;
+  metrics.winPointsByPlayer[playerIndex] = (metrics.winPointsByPlayer[playerIndex] || 0) + points;
+  metrics.winsByType[type] = (metrics.winsByType[type] || 0) + 1;
+  metrics.winsByPlayer[playerIndex] = (metrics.winsByPlayer[playerIndex] || 0) + 1;
+  if (type === "tsumo") {
+    const share = points / (state.players.length - 1);
+    state.players.forEach((_, index) => {
+      if (index === playerIndex) return;
+      metrics.pointDelta[index] -= share;
+      metrics.pointDelta[playerIndex] += share;
+    });
+  } else if (discarderIndex !== null) {
+    metrics.dealIns[discarderIndex] = (metrics.dealIns[discarderIndex] || 0) + 1;
+    metrics.pointDelta[playerIndex] += points;
+    metrics.pointDelta[discarderIndex] -= points;
+  }
+  if (cards.some(isWindCard) || Array.from(ruleIds).some((ruleId) => ALWAYS_WIND_RULE_IDS.has(ruleId))) {
+    metrics.windWins += 1;
+  }
+  ruleIds.forEach((ruleId) => {
+    metrics.rules[ruleId] = (metrics.rules[ruleId] || 0) + 1;
+  });
+}
+
+function simulateAIDiscardResolution(discarderIndex, card, metrics, depth = 0) {
+  if (depth > 12) return { ended: false, nextTurn: (discarderIndex + 1) % state.players.length };
+
+  const ronThreats = exactRonThreats(discarderIndex, card);
+  if (ronThreats.length) {
+    ronThreats.forEach((threat) => {
+      recordSimulationWin(metrics, threat.playerIndex, threat.layouts, threat.openCardCount, "ron", discarderIndex);
+    });
+    return { ended: true, nextTurn: null };
+  }
+
+  if (cardHomeWindMatchesPlayer(card, discarderIndex) && getPlayer(discarderIndex).hand.length) {
+    const openCard = withAIProfile(discarderIndex, () => (
+      chooseAIHomeWindOpenCard(discarderIndex, decisionContextForPlayer(discarderIndex, metrics.decisionContext || BRUTAL_AI_CONTEXT))
+    ));
+    if (openCard) {
+      const player = getPlayer(discarderIndex);
+      const removal = removeCardById(player.hand, openCard.id);
+      player.hand = sortCardsForDisplay(removal.next);
+      player.openCards = sortCardsForDisplay(player.openCards.concat(removal.removed));
+      metrics.homeWindOpens += 1;
+    } else {
+      metrics.homeWindOpenSkips += 1;
+    }
+  }
+
+  for (const threat of exactKanThreats(discarderIndex, card)) {
+    const choice = withAIProfile(threat.playerIndex, () => (
+      chooseAIKanWithContext(threat.playerIndex, card, decisionContextForPlayer(threat.playerIndex, metrics.decisionContext || BRUTAL_AI_CONTEXT))
+    ));
+    if (!choice) continue;
+    const claimer = getPlayer(threat.playerIndex);
+    const discarder = getPlayer(discarderIndex);
+    discarder.discards = removeLastCardById(discarder.discards, card.id).next;
+    claimer.hand = choice.remainingHand;
+    claimer.openCards = choice.nextOpenCards;
+    metrics.kanClaims += 1;
+    return simulateAIClaimDiscard(threat.playerIndex, metrics, depth + 1);
+  }
+
+  for (const threat of exactPonThreats(discarderIndex, card)) {
+    const choice = withAIProfile(threat.playerIndex, () => (
+      chooseAIPonWithContext(threat.playerIndex, card, decisionContextForPlayer(threat.playerIndex, metrics.decisionContext || BRUTAL_AI_CONTEXT))
+    ));
+    if (!choice) continue;
+    const claimer = getPlayer(threat.playerIndex);
+    const discarder = getPlayer(discarderIndex);
+    discarder.discards = removeLastCardById(discarder.discards, card.id).next;
+    claimer.hand = choice.remainingHand;
+    claimer.openCards = choice.nextOpenCards;
+    metrics.ponClaims += 1;
+    return simulateAIClaimDiscard(threat.playerIndex, metrics, depth + 1);
+  }
+
+  const chiPlayerIndex = chiPlayerIndexFor(discarderIndex);
+  if (canPlayerChi(chiPlayerIndex)) {
+    metrics.chiOffers += 1;
+    const choice = withAIProfile(chiPlayerIndex, () => (
+      chooseAIChiWithContext(chiPlayerIndex, card, decisionContextForPlayer(chiPlayerIndex, metrics.decisionContext || BRUTAL_AI_CONTEXT))
+    ));
+    if (choice) {
+      const claimer = getPlayer(chiPlayerIndex);
+      const discarder = getPlayer(discarderIndex);
+      discarder.discards = removeLastCardById(discarder.discards, card.id).next;
+      claimer.openCards = sortCardsForDisplay(claimer.openCards.concat(card));
+      metrics.chiClaims += 1;
+      if (isWindCard(card)) metrics.windChiClaims += 1;
+      return simulateAIClaimDiscard(chiPlayerIndex, metrics, depth + 1);
+    }
+  }
+
+  return { ended: false, nextTurn: (discarderIndex + 1) % state.players.length };
+}
+
+function simulateAIClaimDiscard(playerIndex, metrics, depth = 0) {
+  const decisionContext = decisionContextForPlayer(playerIndex, metrics.decisionContext || BRUTAL_AI_CONTEXT);
+  const choice = withAIProfile(playerIndex, () => (
+    chooseAIDiscardWithContext(playerIndex, getPlayer(playerIndex).hand, getPlayer(playerIndex).openCards, [], true, decisionContext)
+  ));
+  if (!choice) return { ended: false, nextTurn: (playerIndex + 1) % state.players.length };
+  const player = getPlayer(playerIndex);
+  const removal = removeCardById(player.hand, choice.card.id);
+  player.hand = sortCardsForDisplay(removal.next);
+  player.discards.push(removal.removed);
+  metrics.discards += 1;
+  if (isWindCard(removal.removed)) metrics.windDiscards += 1;
+  return simulateAIDiscardResolution(playerIndex, removal.removed, metrics, depth);
+}
+
+function simulateAIHandForMetrics(
+  roundNumber = 1,
+  profiles = [],
+  points = Array(TABLE_CONFIG.players.length).fill(GAME_CONFIG.startingPoints),
+  dealerIndex = null,
+  simOptions = {}
+) {
+  state.points = points.slice();
+  state.roundNumber = roundNumber;
+  state.dealerIndex = dealerIndex ?? Math.floor(Math.random() * TABLE_CONFIG.players.length);
+  state.players = makeAIOnlyPlayers(profiles);
+  state.wall = shuffle(allCards);
+  state.currentTurn = state.dealerIndex;
+  state.openCardClaims = {};
+  state.lastDiscard = null;
+
+  for (let round = 0; round < GAME_CONFIG.startingHandSize; round += 1) {
+    state.players.forEach((player) => {
+      player.hand = sortCardsForDisplay(player.hand.concat(state.wall.pop()));
+    });
+  }
+
+  const metrics = {
+    handsEnded: 0,
+    winsByType: {},
+    winsByPlayer: {},
+    decisionContext: simOptions.decisionContext || BRUTAL_AI_CONTEXT,
+    rules: {},
+    dealIns: {},
+    pointDelta: Array(TABLE_CONFIG.players.length).fill(0),
+    winPointsByPlayer: {},
+    totalWinPoints: 0,
+    windWins: 0,
+    discards: 0,
+    windDiscards: 0,
+    chiOffers: 0,
+    chiClaims: 0,
+    windChiClaims: 0,
+    ponClaims: 0,
+    kanClaims: 0,
+    selfKans: 0,
+    homeWindOpens: 0,
+    homeWindOpenSkips: 0,
+    wallDraws: 0,
+    draws: 0,
+  };
+
+  let turnGuard = 0;
+  while (state.wall.length && metrics.handsEnded === 0 && turnGuard < 220) {
+    turnGuard += 1;
+    const player = getPlayer(state.currentTurn);
+    const drawn = state.wall.pop();
+    player.hand = sortCardsForDisplay(player.hand.concat(drawn));
+    metrics.wallDraws += 1;
+
+    const winningLayouts = findValidWinningLayouts(getFullHand(state.currentTurn), player.openCards.length, player.openCards, state.currentTurn);
+    if (winningLayouts.length) {
+      recordSimulationWin(metrics, state.currentTurn, winningLayouts, player.openCards.length, "tsumo");
+      break;
+    }
+
+    const selfKanChoice = withAIProfile(state.currentTurn, () => (
+      chooseAISelfKanWithContext(state.currentTurn, decisionContextForPlayer(state.currentTurn, metrics.decisionContext))
+    ));
+    if (selfKanChoice) {
+      player.hand = selfKanChoice.remainingHand;
+      player.openCards = selfKanChoice.nextOpenCards;
+      metrics.selfKans += 1;
+      const result = simulateAIClaimDiscard(state.currentTurn, metrics);
+      if (result.ended) break;
+      state.currentTurn = result.nextTurn;
+      continue;
+    }
+
+    const result = simulateAIClaimDiscard(state.currentTurn, metrics);
+    if (result.ended) break;
+    state.currentTurn = result.nextTurn;
+  }
+
+  if (metrics.handsEnded === 0) metrics.draws += 1;
+  return metrics;
+}
+
+function makeTuningSeatStats() {
+  return {
+    score: 0,
+    games: 0,
+    matchWins: 0,
+    handsWon: 0,
+    dealIns: 0,
+    totalWinPoints: 0,
+    windWins: 0,
+    draws: 0,
+    chiClaims: 0,
+    chiOffers: 0,
+    windChiClaims: 0,
+    ponClaims: 0,
+    kanClaims: 0,
+    selfKans: 0,
+    homeWindOpens: 0,
+    homeWindOpenSkips: 0,
+    finalPointDelta: 0,
+  };
+}
+
+function addHandMetricsToSeatStats(stats, metrics, seatIndex) {
+  stats.handsWon += metrics.winsByPlayer[seatIndex] || 0;
+  stats.dealIns += metrics.dealIns[seatIndex] || 0;
+  stats.totalWinPoints += metrics.winPointsByPlayer[seatIndex] || 0;
+  stats.windWins += metrics.winsByPlayer[seatIndex] ? metrics.windWins || 0 : 0;
+  stats.draws += metrics.draws || 0;
+  stats.chiClaims += metrics.chiClaims || 0;
+  stats.chiOffers += metrics.chiOffers || 0;
+  stats.windChiClaims += metrics.windChiClaims || 0;
+  stats.ponClaims += metrics.ponClaims || 0;
+  stats.kanClaims += metrics.kanClaims || 0;
+  stats.selfKans += metrics.selfKans || 0;
+  stats.homeWindOpens += metrics.homeWindOpens || 0;
+  stats.homeWindOpenSkips += metrics.homeWindOpenSkips || 0;
+}
+
+function scoreTuningSeatStats(stats) {
+  return (
+    stats.finalPointDelta +
+    stats.matchWins * 36 +
+    stats.handsWon * 16 +
+    stats.totalWinPoints * 0.35 +
+    stats.windWins * 2 -
+    stats.dealIns * 14 -
+    stats.draws * 1.2
+  );
+}
+
+function simulateAITuningMatch(profiles, options = {}) {
+  const roundsPerMatch = options.roundsPerMatch ?? GAME_CONFIG.matchRounds;
+  const startingPoints = options.startingPoints ?? GAME_CONFIG.startingPoints;
+  const decisionContext = options.accurate
+    ? BRUTAL_AI_CONTEXT
+    : { ...FAST_TUNING_AI_CONTEXT, drawSampleMax: options.drawSampleMax ?? FAST_TUNING_AI_CONTEXT.drawSampleMax };
+  let points = Array(TABLE_CONFIG.players.length).fill(startingPoints);
+  let dealerIndex = options.dealerIndex ?? Math.floor(Math.random() * TABLE_CONFIG.players.length);
+  const seatStats = Array.from({ length: TABLE_CONFIG.players.length }, makeTuningSeatStats);
+
+  for (let roundIndex = 0; roundIndex < roundsPerMatch; roundIndex += 1) {
+    const roundNumber = (roundIndex % GAME_CONFIG.matchRounds) + 1;
+    const metrics = simulateAIHandForMetrics(roundNumber, profiles, points, dealerIndex, { decisionContext });
+    points = points.map((value, index) => value + (metrics.pointDelta[index] || 0));
+    seatStats.forEach((stats, seatIndex) => addHandMetricsToSeatStats(stats, metrics, seatIndex));
+
+    const dealerWon = Boolean(metrics.winsByPlayer[dealerIndex]);
+    dealerIndex = dealerWon ? dealerIndex : (dealerIndex + 1) % TABLE_CONFIG.players.length;
+    if (points.some((value) => value <= 0)) break;
+  }
+
+  const maxPoints = Math.max(...points);
+  const winnerSeats = points
+    .map((value, index) => ({ value, index }))
+    .filter((entry) => entry.value === maxPoints)
+    .map((entry) => entry.index);
+
+  seatStats.forEach((stats, seatIndex) => {
+    stats.games += 1;
+    stats.finalPointDelta += points[seatIndex] - startingPoints;
+    if (winnerSeats.includes(seatIndex)) stats.matchWins += 1 / winnerSeats.length;
+    stats.score += scoreTuningSeatStats(stats);
+  });
+
+  return {
+    profiles,
+    points,
+    winnerSeats,
+    seatStats,
+  };
+}
+
+function makeTuningAggregate(profile) {
+  return {
+    id: profile.id,
+    name: profile.name,
+    profile,
+    score: 0,
+    games: 0,
+    matchWins: 0,
+    handsWon: 0,
+    dealIns: 0,
+    totalWinPoints: 0,
+    windWins: 0,
+    draws: 0,
+    chiClaims: 0,
+    chiOffers: 0,
+    windChiClaims: 0,
+    ponClaims: 0,
+    kanClaims: 0,
+    selfKans: 0,
+    homeWindOpens: 0,
+    homeWindOpenSkips: 0,
+    finalPointDelta: 0,
+  };
+}
+
+function addSeatStatsToAggregate(aggregate, stats) {
+  aggregate.score += scoreTuningSeatStats(stats);
+  aggregate.games += stats.games;
+  aggregate.matchWins += stats.matchWins;
+  aggregate.handsWon += stats.handsWon;
+  aggregate.dealIns += stats.dealIns;
+  aggregate.totalWinPoints += stats.totalWinPoints;
+  aggregate.windWins += stats.windWins;
+  aggregate.draws += stats.draws;
+  aggregate.chiClaims += stats.chiClaims;
+  aggregate.chiOffers += stats.chiOffers;
+  aggregate.windChiClaims += stats.windChiClaims;
+  aggregate.ponClaims += stats.ponClaims;
+  aggregate.kanClaims += stats.kanClaims;
+  aggregate.selfKans += stats.selfKans;
+  aggregate.homeWindOpens += stats.homeWindOpens;
+  aggregate.homeWindOpenSkips += stats.homeWindOpenSkips;
+  aggregate.finalPointDelta += stats.finalPointDelta;
+}
+
+function summarizeTuningAggregate(aggregate) {
+  const games = Math.max(1, aggregate.games);
+  return {
+    id: aggregate.id,
+    name: aggregate.name,
+    scorePerGame: aggregate.score / games,
+    matchWinRate: aggregate.matchWins / games,
+    handsWonPerGame: aggregate.handsWon / games,
+    dealInsPerGame: aggregate.dealIns / games,
+    pointsPerGame: aggregate.finalPointDelta / games,
+    averageWinPoints: aggregate.handsWon ? aggregate.totalWinPoints / aggregate.handsWon : 0,
+    chiTakeRate: aggregate.chiOffers ? aggregate.chiClaims / aggregate.chiOffers : 0,
+    windChiShare: aggregate.chiClaims ? aggregate.windChiClaims / aggregate.chiClaims : 0,
+    windWinShare: aggregate.handsWon ? aggregate.windWins / aggregate.handsWon : 0,
+    profile: aggregate.profile,
+  };
+}
+
+function pickRandomProfiles(population, count) {
+  const pool = population.slice();
+  const picked = [];
+  while (pool.length && picked.length < count) {
+    picked.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  }
+  return picked;
+}
+
+function rotateProfilesForSeatBias(profiles, offset) {
+  return profiles.map((_, index) => profiles[(index + offset) % profiles.length]);
+}
+
+function evaluateTuningPopulation(population, options) {
+  const aggregates = new Map(population.map((profile) => [profile.id, makeTuningAggregate(profile)]));
+  const matchesPerGeneration = options.matchesPerGeneration ?? population.length * 2;
+  const seatRotations = options.seatRotations ?? 2;
+
+  for (let matchIndex = 0; matchIndex < matchesPerGeneration; matchIndex += 1) {
+    const group = pickRandomProfiles(population, TABLE_CONFIG.players.length);
+    for (let rotation = 0; rotation < seatRotations; rotation += 1) {
+      const seatedProfiles = rotateProfilesForSeatBias(group, rotation);
+      const match = simulateAITuningMatch(seatedProfiles, options);
+      match.seatStats.forEach((seatStats, seatIndex) => {
+        addSeatStatsToAggregate(aggregates.get(seatedProfiles[seatIndex].id), seatStats);
+      });
+    }
+    if (matchIndex % 8 === 0) clearAnalysisCaches();
+  }
+
+  return Array.from(aggregates.values())
+    .map(summarizeTuningAggregate)
+    .sort((a, b) => b.scorePerGame - a.scorePerGame);
+}
+
+function runAITuningTournament(options = {}) {
+  const startTime = performance.now();
+  const snapshot = makeSimulationStateSnapshot();
+  const populationSize = options.populationSize ?? 20;
+  const generations = options.generations ?? 6;
+  const eliteCount = options.eliteCount ?? Math.max(4, Math.ceil(populationSize * 0.22));
+  const randomImmigrants = options.randomImmigrants ?? Math.max(2, Math.ceil(populationSize * 0.12));
+  let nextProfileId = 1;
+  let population = [makeBaselineTuningProfile("base")];
+
+  while (population.length < populationSize) {
+    population.push(makeRandomTuningProfile(nextProfileId++, options.initialSpread ?? 0.42));
+  }
+
+  const history = [];
+  try {
+    for (let generation = 1; generation <= generations; generation += 1) {
+      const leaderboard = evaluateTuningPopulation(population, options);
+      history.push({
+        generation,
+        best: leaderboard[0],
+        averageScore: leaderboard.reduce((sum, entry) => sum + entry.scorePerGame, 0) / leaderboard.length,
+      });
+
+      const elites = leaderboard.slice(0, eliteCount).map((entry) => entry.profile);
+      const nextPopulation = elites.slice();
+      while (nextPopulation.length < populationSize - randomImmigrants) {
+        if (Math.random() < 0.45 && elites.length >= 2) {
+          const parentA = elites[Math.floor(Math.random() * elites.length)];
+          let parentB = elites[Math.floor(Math.random() * elites.length)];
+          if (parentA.id === parentB.id) parentB = elites[(elites.indexOf(parentA) + 1) % elites.length];
+          nextPopulation.push(breedTuningProfiles(parentA, parentB, nextProfileId++, options.mutationScale ?? 0.85));
+        } else {
+          const parent = elites[Math.floor(Math.random() * elites.length)];
+          nextPopulation.push(mutateTuningProfile(parent, nextProfileId++, options.mutationScale ?? 1));
+        }
+      }
+      while (nextPopulation.length < populationSize) {
+        nextPopulation.push(makeRandomTuningProfile(nextProfileId++, options.initialSpread ?? 0.42));
+      }
+      population = nextPopulation;
+    }
+
+    const finalLeaderboard = evaluateTuningPopulation(population, {
+      ...options,
+      matchesPerGeneration: options.finalMatches ?? Math.max(options.matchesPerGeneration ?? populationSize * 2, populationSize * 3),
+      seatRotations: options.finalSeatRotations ?? Math.max(2, options.seatRotations ?? 2),
+    });
+    return {
+      elapsedMs: performance.now() - startTime,
+      options: {
+        generations,
+        populationSize,
+        eliteCount,
+        matchesPerGeneration: options.matchesPerGeneration ?? populationSize * 2,
+        roundsPerMatch: options.roundsPerMatch ?? GAME_CONFIG.matchRounds,
+        seatRotations: options.seatRotations ?? 2,
+      },
+      best: finalLeaderboard[0],
+      leaderboard: finalLeaderboard.slice(0, options.leaderboardSize ?? 10),
+      history,
+      parameters: AI_TUNING_PARAMETERS.map((parameter) => parameter.path),
+    };
+  } finally {
+    restoreSimulationState(snapshot);
+  }
+}
+
+function runAISelfPlayMetrics(handCount = 20) {
+  const snapshot = makeSimulationStateSnapshot();
+  clearAnalysisCaches();
+
+  const totals = {
+    hands: handCount,
+    wins: 0,
+    draws: 0,
+    windWins: 0,
+    windDiscards: 0,
+    discards: 0,
+    chiOffers: 0,
+    chiClaims: 0,
+    windChiClaims: 0,
+    ponClaims: 0,
+    kanClaims: 0,
+    selfKans: 0,
+    homeWindOpens: 0,
+    homeWindOpenSkips: 0,
+    totalWinPoints: 0,
+    winsByType: {},
+    rules: {},
+    dealIns: {},
+  };
+
+  try {
+    for (let index = 0; index < handCount; index += 1) {
+      const metrics = simulateAIHandForMetrics((index % GAME_CONFIG.matchRounds) + 1);
+      totals.wins += metrics.handsEnded;
+      totals.draws += metrics.draws;
+      totals.windWins += metrics.windWins;
+      totals.windDiscards += metrics.windDiscards;
+      totals.discards += metrics.discards;
+      totals.chiOffers += metrics.chiOffers;
+      totals.chiClaims += metrics.chiClaims;
+      totals.windChiClaims += metrics.windChiClaims;
+      totals.ponClaims += metrics.ponClaims;
+      totals.kanClaims += metrics.kanClaims;
+      totals.selfKans += metrics.selfKans;
+      totals.homeWindOpens += metrics.homeWindOpens;
+      totals.homeWindOpenSkips += metrics.homeWindOpenSkips;
+      totals.totalWinPoints += metrics.totalWinPoints;
+      Object.entries(metrics.winsByType).forEach(([key, value]) => {
+        totals.winsByType[key] = (totals.winsByType[key] || 0) + value;
+      });
+      Object.entries(metrics.rules).forEach(([key, value]) => {
+        totals.rules[key] = (totals.rules[key] || 0) + value;
+      });
+      Object.entries(metrics.dealIns).forEach(([key, value]) => {
+        totals.dealIns[key] = (totals.dealIns[key] || 0) + value;
+      });
+    }
+  } finally {
+    restoreSimulationState(snapshot);
+  }
+
+  return {
+    ...totals,
+    chiTakeRate: totals.chiOffers ? totals.chiClaims / totals.chiOffers : 0,
+    windChiShare: totals.chiClaims ? totals.windChiClaims / totals.chiClaims : 0,
+    windDiscardShare: totals.discards ? totals.windDiscards / totals.discards : 0,
+    windWinShare: totals.wins ? totals.windWins / totals.wins : 0,
+    homeWindOpenRate: (totals.homeWindOpens + totals.homeWindOpenSkips)
+      ? totals.homeWindOpens / (totals.homeWindOpens + totals.homeWindOpenSkips)
+      : 0,
+  };
+}
+
+window.runAISelfPlayMetrics = runAISelfPlayMetrics;
+window.runAITuningTournament = runAITuningTournament;
+window.AI_TUNING_PARAMETERS = AI_TUNING_PARAMETERS;
+
 function renderRulePills() {
   const container = document.getElementById("rulePills");
   if (!container) return;
@@ -5832,21 +6787,21 @@ function describeSetRule(rule) {
     "six-run": "1 color across all odd months or all even months.",
     "same-element": "All 6 cards share 1 color.",
     "polarity-five-elements": "All odd months or all even months, with 6 different colors and 6 different months.",
-    "zodiac-run": "6 different consecutive months. Open cards, if any, must stay consecutive.",
+    "month-run": "6 different consecutive months. Open cards, if any, must stay consecutive.",
     "any-wind": "All 6 cards are wind cards, with all 6 colors.",
-    "zodiac-run-element": "1 color across 6 consecutive months.",
+    "month-run-element": "1 color across 6 consecutive months.",
     "four-with-neighbors": "5 of 1 month + 1 side month, or 6 of the same month, with all 6 colors. Also scores as 6 of the same guest wind.",
     "four-plus-two-side": "4 of 1 month + 2 matching cards from the previous or next month, with all 6 colors.",
     "four-plus-split-sides": "4 of 1 month + 1 previous + 1 next, with all 6 colors.",
     "compass-pair": "N, S, E, W plus either a month pair or a 2-month sequence, with all 6 colors.",
-    "three-animal-pairs": "3 pairs across 3 consecutive months.",
+    "three-month-pairs": "3 pairs across 3 consecutive months.",
     "three-wind-pairs": "3 wind pairs across 3 different winds.",
-    "three-animal-pairs-three-elements": "3 pairs across 3 months, using at most 2 colors.",
-    "three-animal-pairs-balance": "3 pairs across 3 months, all odd or all even.",
-    "two-animal-threes": "3 cards of 1 month + 3 cards of a consecutive month.",
+    "three-month-pairs-three-elements": "3 pairs across 3 months, using at most 2 colors.",
+    "three-month-pairs-balance": "3 pairs across 3 months, all odd or all even.",
+    "two-month-threes": "3 cards of 1 month + 3 cards of a consecutive month.",
     "two-wind-threes": "3 cards of 1 wind + 3 cards of another wind.",
-    "two-animal-threes-two-elements": "3 cards of 1 month + 3 cards of another month, using at most 3 colors.",
-    "two-animal-threes-polarity": "3 cards of 1 month + 3 cards of another month, all odd or all even.",
+    "two-month-threes-two-elements": "3 cards of 1 month + 3 cards of another month, using at most 3 colors.",
+    "two-month-threes-polarity": "3 cards of 1 month + 3 cards of another month, all odd or all even.",
     "ending-digit-ladder": "All 6 cards are the current round month, or all 6 cards are your home wind.",
     "mono-compass": "N, S, E, W plus a 2-month sequence, all in 1 color.",
   };
@@ -6534,14 +7489,14 @@ function renderPossibleWall() {
     return;
   }
 
-  ZODIAC_ORDER.forEach((animal) => {
-    const monthCards = possibleCards.filter((card) => isMonthCard(card) && card.animal === animal);
+  MONTH_ORDER.forEach((month) => {
+    const monthCards = possibleCards.filter((card) => isMonthCard(card) && card.month === month);
     if (!monthCards.length) return;
 
     const group = document.createElement("div");
     group.className = "discard-group";
     group.innerHTML = `
-      <strong>Month ${animal} · ${monthCards.length}</strong>
+      <strong>Month ${month} · ${monthCards.length}</strong>
       <div class="discard-cards">
         ${monthCards.map((card) => `
           <button class="discard-detail-card" type="button" data-inspect="${card.id}" aria-label="Possible ${card.label}">
