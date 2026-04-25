@@ -841,19 +841,19 @@ button.open-card {
 .hand-card {
   appearance: none;
   position: relative;
-  display: grid;
-  grid-template-columns: 84px minmax(0, 1fr);
-  gap: 12px;
+  display: flex;
   align-items: center;
+  justify-content: center;
   min-height: 134px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 18px;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.03);
-  padding: 9px;
-  text-align: left;
+  padding: 10px 8px;
+  text-align: center;
   color: inherit;
   cursor: pointer;
   transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+  overflow: hidden;
 }
 
 .hand-card.arrived {
@@ -865,6 +865,7 @@ button.open-card {
 }
 
 .hand-card .card-face {
+  width: min(100%, 86px);
   border-radius: 0;
   box-shadow:
     0 0 0 1px var(--card-glow-ring, transparent),
@@ -872,40 +873,6 @@ button.open-card {
     0 0 24px var(--card-glow-soft, transparent),
     0 12px 22px rgba(0, 0, 0, 0.28),
     0 0 48px var(--card-glow-deep, transparent);
-}
-
-.hand-copy {
-  min-width: 0;
-  display: grid;
-  gap: 4px;
-}
-
-.hand-title {
-  font-family: "Alegreya SC", serif;
-  font-size: 1rem;
-  line-height: 1.05;
-}
-
-.hand-subtitle {
-  color: var(--muted);
-  font-size: 0.72rem;
-  line-height: 1.15;
-}
-
-.hand-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.hand-tag {
-  padding: 3px 6px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  color: var(--muted);
-  font-size: 0.62rem;
-  line-height: 1;
 }
 
 .hand-card:hover,
@@ -941,16 +908,6 @@ button.open-card {
   box-shadow:
     inset 0 0 0 1px rgba(217, 187, 122, 0.28),
     0 14px 24px rgba(0, 0, 0, 0.24);
-}
-
-.hand-card.open-claimed .hand-title,
-.hand-card.open-claimed .hand-subtitle {
-  color: #f7e4b0;
-}
-
-.hand-card.open-claimed .hand-tag {
-  border-color: rgba(217, 187, 122, 0.32);
-  color: #efe0b8;
 }
 
 .hand-card.open-claimed.locked {
@@ -991,7 +948,7 @@ button.open-card {
 .hand-arrival-badge {
   position: absolute;
   top: 8px;
-  right: 8px;
+  left: 8px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1011,7 +968,8 @@ button.open-card {
 
 .hand-claim-note {
   position: absolute;
-  left: 9px;
+  left: 8px;
+  right: 8px;
   bottom: 8px;
   color: #f2d79b;
   font-size: 0.54rem;
@@ -1024,6 +982,7 @@ button.open-card {
   border: 1px solid rgba(217, 187, 122, 0.18);
   pointer-events: none;
   z-index: 1;
+  text-align: center;
 }
 
 .hand-card.selected {
@@ -1136,8 +1095,7 @@ button.open-card {
 }
 
 .inspect-popup .pill-row {
-  margin-top: 10px;
-  justify-content: center;
+  display: none;
 }
 
 .discard-list {
@@ -1635,6 +1593,19 @@ const stems = [
 const ELEMENTS = Array.from(new Set(stems.map((stem) => stem.element)));
 const WHITE_ELEMENT = "W";
 const ALL_ELEMENTS = ELEMENTS.concat(WHITE_ELEMENT);
+const WIND_SYMBOLS = ["N", "S", "E", "W"];
+const WIND_NAMES = {
+  N: "North",
+  S: "South",
+  E: "East",
+  W: "West",
+};
+const HOME_WIND_BY_SEAT = {
+  East: "E",
+  South: "S",
+  West: "W",
+  North: "N",
+};
 
 const branches = [
   { cn: "1", animal: "1" },
@@ -1652,6 +1623,7 @@ const branches = [
 ];
 
 const ZODIAC_ORDER = branches.map((branch) => branch.animal);
+const WIND_ORDER_SHORT = ["N", "S", "E", "W"];
 const ELEMENT_COLORS = {
   G: "#2f6a3d",
   R: "#8a2f2f",
@@ -1667,6 +1639,7 @@ const GAME_CONFIG = {
   startingPoints: 18,
   matchRounds: 12,
   roundBonusPoints: 3,
+  homeWindBonusPoints: 3,
   wallDrawDelayMs: 250,
   nextTurnDelayMs: 180,
   aiThinkDelayMs: 220,
@@ -1872,7 +1845,9 @@ const baseCards = Array.from({ length: 60 }, (_, index) => {
     chinese: branch.cn,
     label: `${stem.element} ${branch.animal}`,
     element: stem.element,
+    kind: "month",
     animal: branch.animal,
+    wind: null,
   };
 });
 
@@ -1885,17 +1860,35 @@ const whiteCards = branches.map((branch, index) => {
     chinese: branch.cn,
     label: `${WHITE_ELEMENT} ${branch.animal}`,
     element: WHITE_ELEMENT,
+    kind: "month",
     animal: branch.animal,
+    wind: null,
   };
 });
 
-const allCards = baseCards.concat(whiteCards);
+const windCards = WIND_SYMBOLS.flatMap((wind, windIndex) => ALL_ELEMENTS.map((element, elementIndex) => {
+  const id = baseCards.length + whiteCards.length + windIndex * ALL_ELEMENTS.length + elementIndex + 1;
+  const code = String(id).padStart(2, "0");
+  return {
+    id,
+    code,
+    chinese: wind,
+    label: `${element} ${WIND_NAMES[wind]}`,
+    element,
+    kind: "wind",
+    animal: null,
+    wind,
+  };
+}));
+
+const allCards = baseCards.concat(whiteCards, windCards);
 
 const WIND_ORDER = ["East", "South", "West", "North"];
 const HUMAN_PLAYER_INDEX = TABLE_CONFIG.players.findIndex((player) => player.isHuman);
 const INITIAL_DEALER_INDEX = TABLE_CONFIG.players.findIndex((player) => player.renderSlot === "east");
 const AudioContextClass = window.AudioContext || window.webkitAudioContext;
 const ANIMAL_ORDER_INDEX = Object.fromEntries(ZODIAC_ORDER.map((animal, index) => [animal, index]));
+const WIND_ORDER_INDEX = Object.fromEntries(WIND_ORDER_SHORT.map((wind, index) => [wind, index]));
 
 const soundState = {
   context: null,
@@ -2163,10 +2156,59 @@ function sortCardsByNumber(cards) {
   return cards.slice().sort((a, b) => a.id - b.id);
 }
 
+function isMonthCard(card) {
+  return card?.kind === "month";
+}
+
+function isWindCard(card) {
+  return card?.kind === "wind";
+}
+
+function cardGroupKey(card) {
+  if (isMonthCard(card)) return `month:${card.animal}`;
+  if (isWindCard(card)) return `wind:${card.wind}`;
+  return "";
+}
+
+function cardDisplayValue(card) {
+  return isWindCard(card) ? card.wind : card.animal;
+}
+
+function cardDisplayName(card) {
+  return isWindCard(card) ? WIND_NAMES[card.wind] : `Month ${card.animal}`;
+}
+
+function cardMonth(card) {
+  return isMonthCard(card) ? card.animal : null;
+}
+
+function cardHomeWindMatchesPlayer(card, playerIndex) {
+  return isWindCard(card) && card.wind === HOME_WIND_BY_SEAT[getPlayer(playerIndex)?.seat];
+}
+
+function claimGroupLabel(card) {
+  return isWindCard(card) ? WIND_NAMES[card.wind] : `month ${card.animal}`;
+}
+
+function allMonthCards(cards) {
+  return cards.every(isMonthCard);
+}
+
+function allWindCards(cards) {
+  return cards.every(isWindCard);
+}
+
 function sortCardsForDisplay(cards) {
   return cards.slice().sort((a, b) => {
-    const animalDiff = ANIMAL_ORDER_INDEX[a.animal] - ANIMAL_ORDER_INDEX[b.animal];
-    if (animalDiff !== 0) return animalDiff;
+    if (a.kind !== b.kind) return a.kind === "month" ? -1 : 1;
+    if (isMonthCard(a) && isMonthCard(b)) {
+      const animalDiff = ANIMAL_ORDER_INDEX[a.animal] - ANIMAL_ORDER_INDEX[b.animal];
+      if (animalDiff !== 0) return animalDiff;
+    }
+    if (isWindCard(a) && isWindCard(b)) {
+      const windDiff = WIND_ORDER_INDEX[a.wind] - WIND_ORDER_INDEX[b.wind];
+      if (windDiff !== 0) return windDiff;
+    }
     return a.id - b.id;
   });
 }
@@ -2264,6 +2306,7 @@ function monthParityOfAnimal(animal) {
 }
 
 function allSameMonthParity(cards) {
+  if (!allMonthCards(cards)) return false;
   return new Set(cards.map((card) => monthParityOfAnimal(card.animal))).size === 1;
 }
 
@@ -2284,11 +2327,37 @@ function matchingMonthParitySequence(months) {
 }
 
 function bestMonthParityProgress(cards, capPerMonth = 1) {
+  const monthCards = cards.filter(isMonthCard);
   return Math.max(...["odd", "even"].map((parity) => (
     monthParityTargets(parity).reduce((sum, month) => (
-      sum + Math.min(capPerMonth, cards.filter((card) => card.animal === month).length)
+      sum + Math.min(capPerMonth, monthCards.filter((card) => card.animal === month).length)
     ), 0)
   )));
+}
+
+function pairIdentityGroups(cards) {
+  const counts = {};
+  cards.forEach((card) => {
+    const key = cardGroupKey(card);
+    counts[key] = (counts[key] || 0) + 1;
+  });
+  return Object.entries(counts).filter(([, count]) => count === 2);
+}
+
+function windCompassProgress(cards) {
+  return WIND_SYMBOLS.reduce((sum, wind) => sum + Math.min(1, cards.filter((card) => card.wind === wind).length), 0);
+}
+
+function twoMonthSequenceProgress(cards) {
+  return bestAnimalRunProgress(cards.filter(isMonthCard), 2, 1);
+}
+
+function twoMonthPairProgress(cards) {
+  const monthCounts = cards.filter(isMonthCard).reduce((counts, card) => {
+    counts[card.animal] = (counts[card.animal] || 0) + 1;
+    return counts;
+  }, {});
+  return Math.min(2, Math.max(0, ...Object.values(monthCounts)));
 }
 
 function parityOfCard(card) {
@@ -2370,7 +2439,7 @@ function renderCardMarkup(card, { back = false } = {}) {
   const faceClass = card.element === WHITE_ELEMENT ? "card-face white-card-face" : "card-face";
   return `
     <div class="${faceClass}" style="--card-accent: ${accent};" aria-hidden="true">
-      <div class="tile-month">${card.animal}</div>
+      <div class="tile-month">${cardDisplayValue(card)}</div>
     </div>
   `;
 }
@@ -2443,7 +2512,8 @@ const SET_RULES = [
     points: 3,
     size: GAME_CONFIG.winningHandSize,
     matches(cards) {
-      return allSixColorsPresent(cards)
+      return allMonthCards(cards)
+        && allSixColorsPresent(cards)
         && allSameMonthParity(cards)
         && new Set(cards.map((card) => card.animal)).size === GAME_CONFIG.winningHandSize;
     },
@@ -2463,6 +2533,7 @@ const SET_RULES = [
     points: 3,
     size: GAME_CONFIG.winningHandSize,
     matches(cards) {
+      if (!allMonthCards(cards)) return false;
       if (new Set(cards.map((card) => card.animal)).size !== GAME_CONFIG.winningHandSize) return false;
       return animalsFormRun(cards.map((card) => card.animal), GAME_CONFIG.winningHandSize);
     },
@@ -2477,7 +2548,24 @@ const SET_RULES = [
       return `Six months in order: ${sortedAnimals.join(", ")}.`;
     },
     distance(cards) {
-      return GAME_CONFIG.winningHandSize - bestAnimalRunProgress(cards, GAME_CONFIG.winningHandSize, 1);
+      return GAME_CONFIG.winningHandSize - bestAnimalRunProgress(cards.filter(isMonthCard), GAME_CONFIG.winningHandSize, 1);
+    },
+  },
+  {
+    id: "any-wind",
+    label: "Wind",
+    points: 3,
+    size: GAME_CONFIG.winningHandSize,
+    matches(cards) {
+      return allWindCards(cards) && allSixColorsPresent(cards);
+    },
+    describe() {
+      return "All 6 cards are wind cards, with all six colors present.";
+    },
+    distance(cards) {
+      const windCountGap = GAME_CONFIG.winningHandSize - cards.filter(isWindCard).length;
+      const colorGap = Math.max(0, ALL_ELEMENTS.length - countPresentColors(cards, ALL_ELEMENTS));
+      return Math.max(windCountGap, colorGap);
     },
   },
   // The Elemental Procession: six neighboring animals bound to one element.
@@ -2487,6 +2575,7 @@ const SET_RULES = [
     points: 15,
     size: GAME_CONFIG.winningHandSize,
     matches(cards) {
+      if (!allMonthCards(cards)) return false;
       if (new Set(cards.map((card) => card.animal)).size !== GAME_CONFIG.winningHandSize) return false;
       return new Set(cards.map((card) => card.element)).size === 1
         && animalsFormRun(cards.map((card) => card.animal), GAME_CONFIG.winningHandSize);
@@ -2504,7 +2593,7 @@ const SET_RULES = [
     distance(cards) {
       return Math.min(...ALL_ELEMENTS.map((element) => (
         GAME_CONFIG.winningHandSize - bestAnimalRunProgress(
-          cards.filter((card) => card.element === element),
+          cards.filter((card) => card.element === element && isMonthCard(card)),
           GAME_CONFIG.winningHandSize,
           1
         )
@@ -2517,8 +2606,13 @@ const SET_RULES = [
     label: "Crown",
     points: 12,
     size: GAME_CONFIG.winningHandSize,
-    matches(cards) {
-      if (!allSixColorsPresent(cards)) return false;
+    matches(cards, playerIndex = null) {
+      if (allWindCards(cards)) {
+        return playerIndex !== null
+          && new Set(cards.map((card) => card.wind)).size === 1
+          && !cards.some((card) => cardHomeWindMatchesPlayer(card, playerIndex));
+      }
+      if (!allMonthCards(cards) || !allSixColorsPresent(cards)) return false;
       const animalCounts = {};
       cards.forEach((card) => {
         animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
@@ -2532,7 +2626,10 @@ const SET_RULES = [
         return remainders.length === 1 && sideAnimals.has(remainders[0].animal);
       });
     },
-    describe(cards) {
+    describe(cards, playerIndex = null) {
+      if (allWindCards(cards)) {
+        return `All 6 cards are the same guest wind: ${WIND_NAMES[cards[0]?.wind] || "guest wind"}.`;
+      }
       const animalCounts = {};
       cards.forEach((card) => {
         animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
@@ -2549,7 +2646,13 @@ const SET_RULES = [
       const right = nextAnimal(coreAnimal);
       return `Five ${coreAnimal} cards plus one side month from ${left} or ${right}, with all six colors present.`;
     },
-    distance(cards) {
+    distance(cards, playerIndex = null) {
+      if (cards.some(isWindCard)) {
+        const guestWindCounts = WIND_SYMBOLS
+          .filter((wind) => wind !== HOME_WIND_BY_SEAT[getPlayer(playerIndex)?.seat])
+          .map((wind) => cards.filter((card) => isWindCard(card) && card.wind === wind).length);
+        return GAME_CONFIG.winningHandSize - Math.max(0, ...guestWindCounts);
+      }
       let best = GAME_CONFIG.winningHandSize;
       const missingColors = Math.max(0, ALL_ELEMENTS.length - countPresentColors(cards, ALL_ELEMENTS));
       ZODIAC_ORDER.forEach((animal) => {
@@ -2572,6 +2675,7 @@ const SET_RULES = [
     points: 12,
     size: GAME_CONFIG.winningHandSize,
     matches(cards) {
+      if (!allMonthCards(cards)) return false;
       if (!allSixColorsPresent(cards)) return false;
       const animalCounts = {};
       cards.forEach((card) => {
@@ -2616,6 +2720,7 @@ const SET_RULES = [
     points: 12,
     size: GAME_CONFIG.winningHandSize,
     matches(cards) {
+      if (!allMonthCards(cards)) return false;
       if (!allSixColorsPresent(cards)) return false;
       const animalCounts = {};
       cards.forEach((card) => {
@@ -2653,6 +2758,35 @@ const SET_RULES = [
       return Math.max(best, missingColors);
     },
   },
+  {
+    id: "compass-pair",
+    label: "Compass",
+    points: 12,
+    size: GAME_CONFIG.winningHandSize,
+    matches(cards) {
+      const windCards = cards.filter(isWindCard);
+      const otherCards = cards.filter(isMonthCard);
+      if (windCards.length !== 4 || otherCards.length !== 2) return false;
+      if (new Set(windCards.map((card) => card.wind)).size !== 4) return false;
+      if (!allSixColorsPresent(cards)) return false;
+      const sameMonthPair = otherCards[0].animal === otherCards[1].animal;
+      const sequence = animalsFormRun(otherCards.map((card) => card.animal), 2);
+      return sameMonthPair || sequence;
+    },
+    describe(cards) {
+      const sequence = cards.filter(isMonthCard).map((card) => card.animal).sort((a, b) => Number(a) - Number(b));
+      const isPair = sequence.length === 2 && sequence[0] === sequence[1];
+      return isPair
+        ? `N, S, E, W plus a ${sequence[0]} pair, with all six colors present.`
+        : `N, S, E, W plus the ${sequence.join("-")} sequence, with all six colors present.`;
+    },
+    distance(cards) {
+      const windProgress = windCompassProgress(cards.filter(isWindCard));
+      const pairOrSequenceProgress = Math.max(twoMonthPairProgress(cards), twoMonthSequenceProgress(cards));
+      const colorGap = Math.max(0, ALL_ELEMENTS.length - countPresentColors(cards, ALL_ELEMENTS));
+      return Math.max(GAME_CONFIG.winningHandSize - (windProgress + pairOrSequenceProgress), colorGap);
+    },
+  },
   // The Three Gates: three distinct animal pairs in balance.
   {
     id: "three-animal-pairs",
@@ -2660,6 +2794,7 @@ const SET_RULES = [
     points: 6,
     size: GAME_CONFIG.winningHandSize,
     matches(cards) {
+      if (!allMonthCards(cards)) return false;
       const animalCounts = {};
       cards.forEach((card) => {
         animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
@@ -2684,6 +2819,39 @@ const SET_RULES = [
       return GAME_CONFIG.winningHandSize - bestAnimalRunProgress(cards, 3, 2);
     },
   },
+  {
+    id: "three-wind-pairs",
+    label: "Wind Pairs",
+    points: 6,
+    size: GAME_CONFIG.winningHandSize,
+    matches(cards) {
+      if (!allWindCards(cards)) return false;
+      const windCounts = {};
+      cards.forEach((card) => {
+        windCounts[card.wind] = (windCounts[card.wind] || 0) + 1;
+      });
+      const counts = Object.values(windCounts).sort((a, b) => b - a);
+      return counts.length === 3 && counts.every((count) => count === 2);
+    },
+    describe(cards) {
+      const winds = Object.keys(cards.reduce((counts, card) => {
+        counts[card.wind] = (counts[card.wind] || 0) + 1;
+        return counts;
+      }, {})).sort((a, b) => WIND_ORDER_INDEX[a] - WIND_ORDER_INDEX[b]);
+      return `Three wind pairs: ${winds.map((wind) => WIND_NAMES[wind]).join(", ")}.`;
+    },
+    distance(cards) {
+      const windCounts = cards.filter(isWindCard).reduce((counts, card) => {
+        counts[card.wind] = (counts[card.wind] || 0) + 1;
+        return counts;
+      }, {});
+      const pairProgress = Object.values(windCounts)
+        .sort((a, b) => b - a)
+        .slice(0, 3)
+        .reduce((sum, count) => sum + Math.min(2, count), 0);
+      return GAME_CONFIG.winningHandSize - pairProgress;
+    },
+  },
   // The Three Courts: any three animal pairs restrained to two elements.
   {
     id: "three-animal-pairs-three-elements",
@@ -2692,6 +2860,7 @@ const SET_RULES = [
     priority: 1,
     size: GAME_CONFIG.winningHandSize,
     matches(cards) {
+      if (!allMonthCards(cards)) return false;
       const animalCounts = {};
       cards.forEach((card) => {
         animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
@@ -2730,6 +2899,7 @@ const SET_RULES = [
     priority: 1,
     size: GAME_CONFIG.winningHandSize,
     matches(cards) {
+      if (!allMonthCards(cards)) return false;
       const animalCounts = {};
       cards.forEach((card) => {
         animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
@@ -2772,6 +2942,7 @@ const SET_RULES = [
     points: 9,
     size: GAME_CONFIG.winningHandSize,
     matches(cards) {
+      if (!allMonthCards(cards)) return false;
       const animalCounts = {};
       cards.forEach((card) => {
         animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
@@ -2797,6 +2968,39 @@ const SET_RULES = [
       return GAME_CONFIG.winningHandSize - progress;
     },
   },
+  {
+    id: "two-wind-threes",
+    label: "Wind Triples",
+    points: 9,
+    size: GAME_CONFIG.winningHandSize,
+    matches(cards) {
+      if (!allWindCards(cards)) return false;
+      const windCounts = {};
+      cards.forEach((card) => {
+        windCounts[card.wind] = (windCounts[card.wind] || 0) + 1;
+      });
+      const counts = Object.values(windCounts).sort((a, b) => b - a);
+      return counts.length === 2 && counts.every((count) => count === 3);
+    },
+    describe(cards) {
+      const winds = Object.keys(cards.reduce((counts, card) => {
+        counts[card.wind] = (counts[card.wind] || 0) + 1;
+        return counts;
+      }, {})).sort((a, b) => WIND_ORDER_INDEX[a] - WIND_ORDER_INDEX[b]);
+      return `Three ${WIND_NAMES[winds[0]]} cards and three ${WIND_NAMES[winds[1]]} cards.`;
+    },
+    distance(cards) {
+      const windCounts = cards.filter(isWindCard).reduce((counts, card) => {
+        counts[card.wind] = (counts[card.wind] || 0) + 1;
+        return counts;
+      }, {});
+      const tripleProgress = Object.values(windCounts)
+        .sort((a, b) => b - a)
+        .slice(0, 2)
+        .reduce((sum, count) => sum + Math.min(3, count), 0);
+      return GAME_CONFIG.winningHandSize - tripleProgress;
+    },
+  },
   // The Twin Courts: two triads held within three elements.
   {
     id: "two-animal-threes-two-elements",
@@ -2805,6 +3009,7 @@ const SET_RULES = [
     priority: 1,
     size: GAME_CONFIG.winningHandSize,
     matches(cards) {
+      if (!allMonthCards(cards)) return false;
       const animalCounts = {};
       cards.forEach((card) => {
         animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
@@ -2844,6 +3049,7 @@ const SET_RULES = [
     priority: 1,
     size: GAME_CONFIG.winningHandSize,
     matches(cards) {
+      if (!allMonthCards(cards)) return false;
       const animalCounts = {};
       cards.forEach((card) => {
         animalCounts[card.animal] = (animalCounts[card.animal] || 0) + 1;
@@ -2880,25 +3086,60 @@ const SET_RULES = [
       );
     },
   },
-  // Round Crown: all six cards of the current round month.
+  // Grand Crown: all six cards of the current round month, or all six of your home wind.
   {
     id: "ending-digit-ladder",
-    label: "Round Crown",
+    label: "Grand Crown",
+    points: 15,
+    size: GAME_CONFIG.winningHandSize,
+    matches(cards, playerIndex = null) {
+      const roundMonth = getRoundMonthTarget();
+      return (Boolean(roundMonth) && allMonthCards(cards) && cards.every((card) => card.animal === roundMonth))
+        || (playerIndex !== null && allWindCards(cards) && cards.every((card) => cardHomeWindMatchesPlayer(card, playerIndex)));
+    },
+    describe(cards, playerIndex = null) {
+      if (allWindCards(cards)) {
+        return `All 6 cards are your home wind: ${WIND_NAMES[HOME_WIND_BY_SEAT[getPlayer(playerIndex)?.seat] || "home wind"]}.`;
+      }
+      const roundMonth = getRoundMonthTarget() || cards[0]?.animal;
+      return `All 6 cards are month ${roundMonth}, matching the current round.`;
+    },
+    distance(cards, playerIndex = null) {
+      const roundMonth = getRoundMonthTarget();
+      const monthProgress = roundMonth
+        ? cards.filter((card) => isMonthCard(card) && card.animal === roundMonth).length
+        : 0;
+      const windProgress = playerIndex === null
+        ? 0
+        : cards.filter((card) => cardHomeWindMatchesPlayer(card, playerIndex)).length;
+      return GAME_CONFIG.winningHandSize - Math.max(monthProgress, windProgress);
+    },
+  },
+  {
+    id: "mono-compass",
+    label: "Mono Compass",
     points: 15,
     size: GAME_CONFIG.winningHandSize,
     matches(cards) {
-      const roundMonth = getRoundMonthTarget();
-      return Boolean(roundMonth)
-        && cards.every((card) => card.animal === roundMonth);
+      const windCards = cards.filter(isWindCard);
+      const otherCards = cards.filter(isMonthCard);
+      if (windCards.length !== 4 || otherCards.length !== 2) return false;
+      if (new Set(windCards.map((card) => card.wind)).size !== 4) return false;
+      if (new Set(cards.map((card) => card.element)).size !== 1) return false;
+      return animalsFormRun(otherCards.map((card) => card.animal), 2);
     },
     describe(cards) {
-      const roundMonth = getRoundMonthTarget() || cards[0]?.animal;
-      return `All six ${roundMonth} cards, matching the current round month.`;
+      const sequence = cards.filter(isMonthCard).map((card) => card.animal).sort((a, b) => Number(a) - Number(b));
+      return `N, S, E, W plus the ${sequence.join("-")} sequence, all in one color.`;
     },
     distance(cards) {
-      const roundMonth = getRoundMonthTarget();
-      if (!roundMonth) return GAME_CONFIG.winningHandSize;
-      return GAME_CONFIG.winningHandSize - cards.filter((card) => card.animal === roundMonth).length;
+      let best = GAME_CONFIG.winningHandSize;
+      ALL_ELEMENTS.forEach((element) => {
+        const matchingWinds = WIND_SYMBOLS.reduce((sum, wind) => sum + Math.min(1, cards.filter((card) => card.wind === wind && card.element === element).length), 0);
+        const sequenceProgress = twoMonthSequenceProgress(cards.filter((card) => card.element === element));
+        best = Math.min(best, GAME_CONFIG.winningHandSize - (matchingWinds + sequenceProgress));
+      });
+      return best;
     },
   },
 ];
@@ -2986,8 +3227,8 @@ function cardsAnalysisKey(cards) {
     .join("-");
 }
 
-function findWinningLayouts(cards) {
-  const cacheKey = cardsAnalysisKey(cards);
+function findWinningLayouts(cards, playerIndex = null) {
+  const cacheKey = `${cardsAnalysisKey(cards)}|${playerIndex ?? "none"}`;
   const cached = analysisCache.winningLayouts.get(cacheKey);
   if (cached) return cached;
 
@@ -3012,13 +3253,13 @@ function findWinningLayouts(cards) {
       if (rule.size > remaining.length) continue;
       const options = combinations(remaining, rule.size);
       for (const option of options) {
-        if (!rule.matches(option)) continue;
+        if (!rule.matches(option, playerIndex)) continue;
         const idSet = new Set(option.map((card) => card.id));
         const nextRemaining = remaining.filter((card) => !idSet.has(card.id));
         walk(nextRemaining, groups.concat({
           ruleId: rule.id,
           label: rule.label,
-          detail: rule.describe(option),
+          detail: rule.describe(option, playerIndex),
           cards: sortCardsForDisplay(option),
         }));
       }
@@ -3030,16 +3271,16 @@ function findWinningLayouts(cards) {
   return layouts;
 }
 
-function findValidWinningLayouts(cards, openCardCount, openCards = []) {
-  return filterLayoutsByGear(findWinningLayouts(cards), openCardCount)
+function findValidWinningLayouts(cards, openCardCount, openCards = [], playerIndex = null) {
+  return filterLayoutsByGear(findWinningLayouts(cards, playerIndex), openCardCount)
     .filter((layout) => layoutMatchesOpenConstraints(layout, openCards));
 }
 
-function lockedOpenCardsCanWin(openCards) {
+function lockedOpenCardsCanWin(openCards, playerIndex = null) {
   if (openCards.length > GAME_CONFIG.winningHandSize) return false;
   if (openCards.length < 4) return true;
 
-  const cacheKey = `${cardsAnalysisKey(openCards)}|${openCards.length}`;
+  const cacheKey = `${cardsAnalysisKey(openCards)}|${openCards.length}|${playerIndex ?? "none"}`;
   const cached = analysisCache.openCompletion.get(cacheKey);
   if (cached !== undefined) return cached;
 
@@ -3047,7 +3288,7 @@ function lockedOpenCardsCanWin(openCards) {
   const completionSize = GAME_CONFIG.winningHandSize - openCards.length;
   const candidates = allCards.filter((card) => !openIds.has(card.id));
   const canWin = combinations(candidates, completionSize).some((completion) => (
-    findValidWinningLayouts(openCards.concat(completion), openCards.length, openCards).length > 0
+    findValidWinningLayouts(openCards.concat(completion), openCards.length, openCards, playerIndex).length > 0
   ));
 
   analysisCache.openCompletion.set(cacheKey, canWin);
@@ -3127,13 +3368,20 @@ function roundBonusForCard(card) {
   return card.animal === roundMonth ? GAME_CONFIG.roundBonusPoints : 0;
 }
 
-function totalLayoutPoints(layout, openCardCount = null) {
-  return scoreLayout(layout, openCardCount) + roundBonusForLayout(layout);
+function homeWindBonusForLayout(layout, playerIndex = null) {
+  if (playerIndex === null || playerIndex === undefined) return 0;
+  return getLayoutCards(layout).some((card) => cardHomeWindMatchesPlayer(card, playerIndex))
+    ? GAME_CONFIG.homeWindBonusPoints
+    : 0;
 }
 
-function getLayoutPointBreakdown(layout, openCardCount = null) {
+function totalLayoutPoints(layout, openCardCount = null, playerIndex = null) {
+  return scoreLayout(layout, openCardCount) + roundBonusForLayout(layout) + homeWindBonusForLayout(layout, playerIndex);
+}
+
+function getLayoutPointBreakdown(layout, openCardCount = null, playerIndex = null) {
   const basePoints = scoreLayout(layout || [], openCardCount);
-  const bonusPoints = roundBonusForLayout(layout || []);
+  const bonusPoints = roundBonusForLayout(layout || []) + homeWindBonusForLayout(layout || [], playerIndex);
   return {
     basePoints,
     bonusPoints,
@@ -3169,12 +3417,12 @@ function updateMatchSummary() {
 }
 
 function formatRoundBonusText(bonusPoints) {
-  return bonusPoints ? ` + ${bonusPoints} round bonus` : "";
+  return bonusPoints ? ` + ${bonusPoints} bonus` : "";
 }
 
 function formatPointSummary(points, bonusPoints) {
   if (!bonusPoints) return `${points} points`;
-  return `${points} points (${points - bonusPoints} + ${bonusPoints} round bonus)`;
+  return `${points} points (${points - bonusPoints} + ${bonusPoints} bonus)`;
 }
 
 function groupPointsForGear(group, openCardCount = null) {
@@ -3188,7 +3436,7 @@ function formatPlayerTag(playerIndex) {
 }
 
 function formatCardShort(card) {
-  return card ? `${card.chinese} ${card.element}` : "unknown card";
+  return card ? `${cardDisplayValue(card)} ${card.element}` : "unknown card";
 }
 
 function formatCardSource(card, playerIndex) {
@@ -3212,6 +3460,7 @@ function makePlayers() {
   return TABLE_CONFIG.players.map((player, index) => ({
     ...player,
     seat: seatForPlayer(index, state.dealerIndex),
+    homeWind: HOME_WIND_BY_SEAT[seatForPlayer(index, state.dealerIndex)],
     points: state.points[index],
     hand: [],
     openCards: [],
@@ -3267,9 +3516,9 @@ function formatOrdinal(value) {
 
 function analyzeWinningDraws(hand, wall, openCardCount = 0, openCards = []) {
   return wall.reduce((summary, card) => {
-    const layouts = findValidWinningLayouts(hand.concat(card), openCardCount, openCards);
+    const layouts = findValidWinningLayouts(hand.concat(card), openCardCount, openCards, HUMAN_PLAYER_INDEX);
     if (!layouts.length) return summary;
-    const points = totalLayoutPoints(chooseBestLayout(layouts, openCardCount) || [], openCardCount);
+    const points = totalLayoutPoints(chooseBestLayout(layouts, openCardCount, HUMAN_PLAYER_INDEX) || [], openCardCount, HUMAN_PLAYER_INDEX);
     return {
       winningDraws: summary.winningDraws + 1,
       totalWinningPoints: summary.totalWinningPoints + points,
@@ -3330,7 +3579,7 @@ function analyzePublicPotential(
   if (cached) return cached;
 
   const fullHand = getFullHand(playerIndex, concealedHand, openCards);
-  const shape = currentShape || evaluateHandShape(fullHand, openCards.length);
+  const shape = currentShape || evaluateHandShape(fullHand, openCards.length, playerIndex);
   const focus = currentFocus || evaluateRuleFocus(shape);
   const drawPool = getDrawPoolForDecision(playerIndex, concealedHand, openCards, extraKnownCards, context);
 
@@ -3348,7 +3597,7 @@ function analyzePublicPotential(
 
   drawPool.forEach((drawCard) => {
     const futureFullHand = getFullHand(playerIndex, concealedHand.concat(drawCard), openCards);
-    const futureShape = evaluateHandShape(futureFullHand, openCards.length);
+    const futureShape = evaluateHandShape(futureFullHand, openCards.length, playerIndex);
     const futureFocus = evaluateRuleFocus(futureShape);
 
     if (futureShape.bestDistance < shape.bestDistance) {
@@ -3365,9 +3614,9 @@ function analyzePublicPotential(
 
     if (!shouldCheckWins || futureShape.bestDistance !== 0) return;
 
-    const winningLayouts = findValidWinningLayouts(futureFullHand, openCards.length, openCards);
+    const winningLayouts = findValidWinningLayouts(futureFullHand, openCards.length, openCards, playerIndex);
     if (!winningLayouts.length) return;
-    const points = totalLayoutPoints(chooseBestLayout(winningLayouts, openCards.length) || [], openCards.length);
+    const points = totalLayoutPoints(chooseBestLayout(winningLayouts, openCards.length, playerIndex) || [], openCards.length, playerIndex);
     result.winningDraws += 1;
     result.totalWinningPoints += points;
     result.bestWinningPoints = Math.max(result.bestWinningPoints, points);
@@ -3444,9 +3693,9 @@ function layoutPriority(layout) {
   return layout.reduce((sum, group) => sum + (getRuleById(group.ruleId)?.priority || 0), 0);
 }
 
-function chooseBestLayout(layouts, openCardCount = null) {
+function chooseBestLayout(layouts, openCardCount = null, playerIndex = null) {
   return layouts.slice().sort((a, b) => {
-    const pointDiff = totalLayoutPoints(b, openCardCount) - totalLayoutPoints(a, openCardCount);
+    const pointDiff = totalLayoutPoints(b, openCardCount, playerIndex) - totalLayoutPoints(a, openCardCount, playerIndex);
     if (pointDiff !== 0) return pointDiff;
     const priorityDiff = layoutPriority(b) - layoutPriority(a);
     if (priorityDiff !== 0) return priorityDiff;
@@ -3484,9 +3733,9 @@ function settleRonThreats(threats, discarderIndex) {
   const changes = Array(state.players.length).fill(0);
   const results = threats.map((threat) => {
     const openCardCount = threat.openCardCount ?? getPlayer(threat.playerIndex)?.openCards.length ?? 0;
-    const scoringLayout = threat.scoringLayout || chooseBestLayout(threat.layouts, openCardCount);
+    const scoringLayout = threat.scoringLayout || chooseBestLayout(threat.layouts, openCardCount, threat.playerIndex);
     const basePoints = threat.basePoints ?? scoreLayout(scoringLayout || [], openCardCount);
-    const bonusPoints = threat.bonusPoints ?? roundBonusForLayout(scoringLayout || []);
+    const bonusPoints = threat.bonusPoints ?? (roundBonusForLayout(scoringLayout || []) + homeWindBonusForLayout(scoringLayout || [], threat.playerIndex));
     const points = basePoints + bonusPoints;
     changes[threat.playerIndex] += points;
     changes[discarderIndex] -= points;
@@ -3514,13 +3763,13 @@ function formatSettlement(changes) {
     .join(" · ");
 }
 
-function evaluateHandShape(hand, openCardCount = 0) {
-  const cacheKey = `${cardsAnalysisKey(hand)}|${openCardCount}`;
+function evaluateHandShape(hand, openCardCount = 0, playerIndex = null) {
+  const cacheKey = `${cardsAnalysisKey(hand)}|${openCardCount}|${playerIndex ?? "none"}`;
   const cached = analysisCache.handShape.get(cacheKey);
   if (cached) return cached;
 
   const distances = SET_RULES.map((rule) => {
-    const rawDistance = rule.distance(hand);
+    const rawDistance = rule.distance(hand, playerIndex);
     const gearGap = gearGapForPoints(rule.points, openCardCount);
     const currentPoints = gearAdjustedPoints(rule.points, openCardCount) || rule.points;
     return {
@@ -3707,11 +3956,12 @@ function exactRonThreats(discarderIndex, card) {
       const layouts = findValidWinningLayouts(
         getFullHand(playerIndex).concat(card),
         openCardCount,
-        getPlayer(playerIndex).openCards
+        getPlayer(playerIndex).openCards,
+        playerIndex
       );
       if (!layouts.length) return null;
-      const bestLayout = chooseBestLayout(layouts, openCardCount);
-      const { basePoints, bonusPoints, points } = getLayoutPointBreakdown(bestLayout || [], openCardCount);
+      const bestLayout = chooseBestLayout(layouts, openCardCount, playerIndex);
+      const { basePoints, bonusPoints, points } = getLayoutPointBreakdown(bestLayout || [], openCardCount, playerIndex);
       return {
         playerIndex,
         layouts,
@@ -3733,20 +3983,23 @@ function buildAnimalClaimState(
   openCards = getPlayer(playerIndex).openCards
 ) {
   const neededCount = type === "kan" ? 4 : 3;
-  const matchingConcealed = concealedHand.filter((item) => item.animal === card.animal);
-  const matchingOpen = openCards.filter((item) => item.animal === card.animal);
+  const groupKey = cardGroupKey(card);
+  const matchingConcealed = concealedHand.filter((item) => cardGroupKey(item) === groupKey);
+  const matchingOpen = openCards.filter((item) => cardGroupKey(item) === groupKey);
   const totalMatching = matchingConcealed.length + matchingOpen.length;
   if (totalMatching !== neededCount) return null;
 
-  const remainingHand = sortCardsForDisplay(concealedHand.filter((item) => item.animal !== card.animal));
+  const remainingHand = sortCardsForDisplay(concealedHand.filter((item) => cardGroupKey(item) !== groupKey));
   if (!remainingHand.length) return null;
 
-  const otherOpenCards = openCards.filter((item) => item.animal !== card.animal);
+  const otherOpenCards = openCards.filter((item) => cardGroupKey(item) !== groupKey);
   const claimGroup = sortCardsForDisplay(matchingOpen.concat(matchingConcealed, card));
   return {
     playerIndex,
     type,
+    groupKey,
     animal: card.animal,
+    wind: card.wind,
     card,
     matchingConcealed,
     matchingOpen,
@@ -3761,21 +4014,26 @@ function buildSelfKanState(
   concealedHand = getPlayer(playerIndex).hand,
   openCards = getPlayer(playerIndex).openCards
 ) {
-  const countsByAnimal = concealedHand.reduce((counts, card) => {
-    counts[card.animal] = (counts[card.animal] || 0) + 1;
+  const countsByGroup = concealedHand.reduce((counts, card) => {
+    const key = cardGroupKey(card);
+    if (!key) return counts;
+    counts[key] = (counts[key] || 0) + 1;
     return counts;
   }, {});
-  const targetAnimal = Object.keys(countsByAnimal).find((animal) => countsByAnimal[animal] === 5);
-  if (!targetAnimal) return null;
+  const targetGroup = Object.keys(countsByGroup).find((key) => countsByGroup[key] === 5);
+  if (!targetGroup) return null;
 
-  const claimGroup = sortCardsForDisplay(concealedHand.filter((card) => card.animal === targetAnimal));
-  const remainingHand = sortCardsForDisplay(concealedHand.filter((card) => card.animal !== targetAnimal));
+  const claimGroup = sortCardsForDisplay(concealedHand.filter((card) => cardGroupKey(card) === targetGroup));
+  const remainingHand = sortCardsForDisplay(concealedHand.filter((card) => cardGroupKey(card) !== targetGroup));
   if (!remainingHand.length) return null;
 
+  const leadCard = claimGroup[0];
   return {
     playerIndex,
     type: "self-kan",
-    animal: targetAnimal,
+    groupKey: targetGroup,
+    animal: leadCard?.animal || null,
+    wind: leadCard?.wind || null,
     claimGroup,
     remainingHand,
     nextOpenCards: openCards.concat(claimGroup),
@@ -3912,15 +4170,59 @@ function evaluateImmediateRonResponseProfile(discarderIndex, card) {
   };
 }
 
-function threatPointsForRule(ruleId, openCardCount, card) {
+function threatPointsForRule(ruleId, openCardCount, card, playerIndex = null) {
   const rule = getRuleById(ruleId);
   if (!rule) return 0;
   const basePoints = gearAdjustedPoints(rule.points, openCardCount);
   if (!basePoints) return 0;
-  return basePoints + roundBonusForCard(card);
+  return basePoints + roundBonusForCard(card) + (cardHomeWindMatchesPlayer(card, playerIndex) ? GAME_CONFIG.homeWindBonusPoints : 0);
 }
 
-function estimatePublicDiscardDanger(card, publicPool, openCardCount = 0) {
+function estimatePublicDiscardDanger(card, publicPool, openCardCount = 0, playerIndex = null) {
+  if (isWindCard(card)) {
+    const sameWindCount = publicPool.filter((item) => item.wind === card.wind).length;
+    const sameElementCount = publicPool.filter((item) => item.element === card.element).length;
+    const publicWindCards = publicPool.filter(isWindCard);
+    const windCoverage = new Set(publicWindCards.map((item) => item.wind));
+    const monoWindCoverage = new Set(
+      publicWindCards.filter((item) => item.element === card.element).map((item) => item.wind)
+    );
+    const pairOrSequenceProgress = Math.max(twoMonthPairProgress(publicPool), twoMonthSequenceProgress(publicPool));
+
+    let danger = 0;
+    if (publicWindCards.length >= GAME_CONFIG.winningHandSize - 1) {
+      danger += threatPointsForRule("any-wind", openCardCount, card, playerIndex);
+    }
+    if (sameElementCount >= GAME_CONFIG.winningHandSize - 1) {
+      danger += threatPointsForRule("same-element", openCardCount, card, playerIndex);
+    }
+    if (sameWindCount >= GAME_CONFIG.winningHandSize - 1) {
+      danger += threatPointsForRule(
+        cardHomeWindMatchesPlayer(card, playerIndex) ? "ending-digit-ladder" : "four-with-neighbors",
+        openCardCount,
+        card,
+        playerIndex
+      ) * 1.5;
+    }
+    if (WIND_SYMBOLS.every((wind) => wind === card.wind || windCoverage.has(wind))) {
+      danger += threatPointsForRule("compass-pair", openCardCount, card, playerIndex) * (pairOrSequenceProgress >= 2 ? 1.2 : 0.75);
+    }
+    if (WIND_SYMBOLS.every((wind) => wind === card.wind || monoWindCoverage.has(wind))) {
+      danger += threatPointsForRule("mono-compass", openCardCount, card, playerIndex) * (twoMonthSequenceProgress(publicPool) >= 2 ? 1.2 : 0.75);
+    }
+    const windCounts = publicWindCards.concat(card).reduce((counts, item) => {
+      counts[item.wind] = (counts[item.wind] || 0) + 1;
+      return counts;
+    }, {});
+    if (Object.values(windCounts).filter((count) => count >= 2).length >= 3) {
+      danger += threatPointsForRule("three-wind-pairs", openCardCount, card, playerIndex);
+    }
+    if (Object.values(windCounts).filter((count) => count >= 3).length >= 2) {
+      danger += threatPointsForRule("two-wind-threes", openCardCount, card, playerIndex);
+    }
+    return danger;
+  }
+
   const sameAnimalCount = publicPool.filter((item) => item.animal === card.animal).length;
   const sameElementCount = publicPool.filter((item) => item.element === card.element).length;
   const sideAnimalSet = new Set([previousAnimal(card.animal), nextAnimal(card.animal)]);
@@ -3930,14 +4232,14 @@ function estimatePublicDiscardDanger(card, publicPool, openCardCount = 0) {
 
   const sameElementPool = publicPool.filter((item) => item.element === card.element).concat(card);
   if (sameElementPool.length >= GAME_CONFIG.winningHandSize && bestMonthParityProgress(sameElementPool, 1) >= GAME_CONFIG.winningHandSize) {
-    danger += threatPointsForRule("six-run", openCardCount, card);
+    danger += threatPointsForRule("six-run", openCardCount, card, playerIndex);
   }
 
   let elementFamilyDanger = 0;
   if (sameElementCount >= 5) {
     elementFamilyDanger = Math.max(
       elementFamilyDanger,
-      threatPointsForRule("same-element", openCardCount, card) * (1 + (sameElementCount - 5) * 0.35)
+      threatPointsForRule("same-element", openCardCount, card, playerIndex) * (1 + (sameElementCount - 5) * 0.35)
     );
   }
   danger += elementFamilyDanger;
@@ -3947,7 +4249,7 @@ function estimatePublicDiscardDanger(card, publicPool, openCardCount = 0) {
     allSixColorsPresent(colorsMonthsPool) &&
     bestMonthParityProgress(colorsMonthsPool, 1) >= GAME_CONFIG.winningHandSize
   ) {
-    danger += threatPointsForRule("polarity-five-elements", openCardCount, card) * 2;
+    danger += threatPointsForRule("polarity-five-elements", openCardCount, card, playerIndex) * 2;
   }
 
   for (let start = 0; start < ZODIAC_ORDER.length; start += 1) {
@@ -3960,47 +4262,47 @@ function estimatePublicDiscardDanger(card, publicPool, openCardCount = 0) {
       animal === card.animal || publicPool.some((item) => item.animal === animal)
     ));
     if (monthComplete) {
-      danger += threatPointsForRule("zodiac-run", openCardCount, card);
+      danger += threatPointsForRule("zodiac-run", openCardCount, card, playerIndex);
     }
     const elementComplete = windowAnimals.every((animal) => (
       animal === card.animal || publicPool.some((item) => item.animal === animal && item.element === card.element)
     ));
     if (elementComplete) {
-      danger += threatPointsForRule("zodiac-run-element", openCardCount, card);
+      danger += threatPointsForRule("zodiac-run-element", openCardCount, card, playerIndex);
     }
   }
 
   const hasSixColorsWithCard = allSixColorsPresent(publicPool.concat(card));
 
   if (sameAnimalCount >= GAME_CONFIG.winningHandSize - 1 && hasSixColorsWithCard) {
-    danger += threatPointsForRule("four-with-neighbors", openCardCount, card) * 1.5;
+    danger += threatPointsForRule("four-with-neighbors", openCardCount, card, playerIndex) * 1.5;
   } else if (sameAnimalCount >= 4 && sideAnimalCount >= 1 && hasSixColorsWithCard) {
-    danger += threatPointsForRule("four-with-neighbors", openCardCount, card) * 1.5;
+    danger += threatPointsForRule("four-with-neighbors", openCardCount, card, playerIndex) * 1.5;
   }
 
   const previousCount = publicPool.filter((item) => item.animal === previousAnimal(card.animal)).length;
   const nextCount = publicPool.filter((item) => item.animal === nextAnimal(card.animal)).length;
   if (sameAnimalCount >= 3 && (previousCount >= 2 || nextCount >= 2) && hasSixColorsWithCard) {
-    danger += threatPointsForRule("four-plus-two-side", openCardCount, card) * 1.3;
+    danger += threatPointsForRule("four-plus-two-side", openCardCount, card, playerIndex) * 1.3;
   }
   if (sameAnimalCount >= 3 && previousCount >= 1 && nextCount >= 1 && hasSixColorsWithCard) {
-    danger += threatPointsForRule("four-plus-split-sides", openCardCount, card) * 1.2;
+    danger += threatPointsForRule("four-plus-split-sides", openCardCount, card, playerIndex) * 1.2;
   }
 
   [previousAnimal(card.animal), nextAnimal(card.animal)].forEach((coreAnimal) => {
     const coreCount = publicPool.filter((item) => item.animal === coreAnimal).length;
     if (coreCount >= 5 && hasSixColorsWithCard) {
-      danger += threatPointsForRule("four-with-neighbors", openCardCount, card) * 0.75;
+      danger += threatPointsForRule("four-with-neighbors", openCardCount, card, playerIndex) * 0.75;
     }
     if (coreCount >= 4 && sameAnimalCount >= 1 && hasSixColorsWithCard) {
-      danger += threatPointsForRule("four-plus-two-side", openCardCount, card);
+      danger += threatPointsForRule("four-plus-two-side", openCardCount, card, playerIndex);
     }
     const oppositeSideAnimal = coreAnimal === previousAnimal(card.animal)
       ? previousAnimal(coreAnimal)
       : nextAnimal(coreAnimal);
     const oppositeSideCount = publicPool.filter((item) => item.animal === oppositeSideAnimal).length;
     if (coreCount >= 4 && oppositeSideCount >= 1 && sameAnimalCount >= 1 && hasSixColorsWithCard) {
-      danger += threatPointsForRule("four-plus-split-sides", openCardCount, card);
+      danger += threatPointsForRule("four-plus-split-sides", openCardCount, card, playerIndex);
     }
   });
 
@@ -4018,7 +4320,7 @@ function estimatePublicDiscardDanger(card, publicPool, openCardCount = 0) {
       }
     }
     if (consecutivePairRuns >= 1) {
-      danger += threatPointsForRule("three-animal-pairs", openCardCount, card) * Math.min(2, consecutivePairRuns);
+      danger += threatPointsForRule("three-animal-pairs", openCardCount, card, playerIndex) * Math.min(2, consecutivePairRuns);
     }
   }
 
@@ -4026,12 +4328,12 @@ function estimatePublicDiscardDanger(card, publicPool, openCardCount = 0) {
     .filter((animal) => publicPool.filter((item) => item.animal === animal).length >= 3)
     .length;
   if (sameAnimalCount >= 2 && consecutiveTripleAnimals >= 1) {
-    danger += threatPointsForRule("two-animal-threes", openCardCount, card) * Math.min(2, consecutiveTripleAnimals);
+    danger += threatPointsForRule("two-animal-threes", openCardCount, card, playerIndex) * Math.min(2, consecutiveTripleAnimals);
   }
 
   const roundMonth = getRoundMonthTarget();
   if (roundMonth && card.animal === roundMonth && sameAnimalCount >= 5) {
-    danger += threatPointsForRule("ending-digit-ladder", openCardCount, card) * 2;
+    danger += threatPointsForRule("ending-digit-ladder", openCardCount, card, playerIndex) * 2;
   }
 
   return danger;
@@ -4057,16 +4359,20 @@ function estimateOpponentCardInterest(playerIndex, card) {
   const signals = AI_CONFIG.opponentSignals;
   const openCards = player.openCards;
   const discards = player.discards;
+  const groupKey = cardGroupKey(card);
 
-  const openAnimalMatches = openCards.filter((item) => item.animal === card.animal).length;
+  const openAnimalMatches = openCards.filter((item) => cardGroupKey(item) === groupKey).length;
   const openElementMatches = openCards.filter((item) => item.element === card.element).length;
-  const openNeighborMatches = openCards.filter((item) => (
-    previousAnimal(item.animal) === card.animal || nextAnimal(item.animal) === card.animal
-  )).length;
+  const openNeighborMatches = isMonthCard(card)
+    ? openCards.filter((item) => (
+      isMonthCard(item) && (previousAnimal(item.animal) === card.animal || nextAnimal(item.animal) === card.animal)
+    )).length
+    : 0;
   const openColors = new Set(openCards.map((item) => item.element));
-  const openMonths = new Set(openCards.map((item) => item.animal));
+  const openMonths = new Set(openCards.filter(isMonthCard).map((item) => item.animal));
+  const openWinds = new Set(openCards.filter(isWindCard).map((item) => item.wind));
 
-  const discardAnimalMatches = discards.filter((item) => item.animal === card.animal).length;
+  const discardAnimalMatches = discards.filter((item) => cardGroupKey(item) === groupKey).length;
   const discardElementMatches = discards.filter((item) => item.element === card.element).length;
 
   let signal = 1;
@@ -4077,8 +4383,9 @@ function estimateOpponentCardInterest(playerIndex, card) {
   if (openCards.length) {
     signal += openCards.length * signals.sixColorOpenPressure;
     if (!openColors.has(card.element)) signal += signals.sixColorNewColorBonus;
-    if (!openMonths.has(card.animal)) signal += signals.sixColorNewMonthBonus;
-    if (openColors.size >= 4 || openMonths.size >= 4) signal += signals.sixColorNearBonus;
+    if (isMonthCard(card) && !openMonths.has(card.animal)) signal += signals.sixColorNewMonthBonus;
+    if (isWindCard(card) && !openWinds.has(card.wind)) signal += signals.sixColorNewMonthBonus;
+    if (openColors.size >= 4 || openMonths.size >= 4 || openWinds.size >= 3) signal += signals.sixColorNearBonus;
   }
 
   signal -= Math.min(
@@ -4099,7 +4406,7 @@ function estimateOpponentCardInterest(playerIndex, card) {
 }
 
 function estimateOpponentDiscardDanger(playerIndex, card, publicPool) {
-  const baseDanger = estimatePublicDiscardDanger(card, publicPool, getPlayer(playerIndex).openCards.length);
+  const baseDanger = estimatePublicDiscardDanger(card, publicPool, getPlayer(playerIndex).openCards.length, playerIndex);
   const interest = estimateOpponentCardInterest(playerIndex, card);
   return {
     playerIndex,
@@ -4135,9 +4442,10 @@ function estimateOpponentClaimPressure(playerIndex, discarderIndex, card, public
   }
 
   const interest = estimateOpponentCardInterest(playerIndex, card);
-  const sameAnimalOpen = player.openCards.filter((item) => item.animal === card.animal).length;
-  const sameAnimalDiscards = player.discards.filter((item) => item.animal === card.animal).length;
-  const unseenSameAnimal = publicPool.filter((item) => item.animal === card.animal).length;
+  const groupKey = cardGroupKey(card);
+  const sameAnimalOpen = player.openCards.filter((item) => cardGroupKey(item) === groupKey).length;
+  const sameAnimalDiscards = player.discards.filter((item) => cardGroupKey(item) === groupKey).length;
+  const unseenSameAnimal = publicPool.filter((item) => cardGroupKey(item) === groupKey).length;
   const visibleLeaderPoints = Math.max(...state.players.map((entry) => entry.points));
   const isLeader = player.points === visibleLeaderPoints;
   const isDealer = player.seat === "East";
@@ -4199,18 +4507,19 @@ function rankLookaheadDraws(playerIndex, concealedHand, openCards, publicDrawPoo
   return publicDrawPool
     .map((drawCard) => {
       const fullHand = getFullHand(playerIndex, concealedHand.concat(drawCard), openCards);
-      const winningLayouts = findValidWinningLayouts(fullHand, openCards.length, openCards);
+      const winningLayouts = findValidWinningLayouts(fullHand, openCards.length, openCards, playerIndex);
       if (winningLayouts.length) {
         return {
           drawCard,
           priority: 100000 + totalLayoutPoints(
-            chooseBestLayout(winningLayouts, openCards.length) || [],
-            openCards.length
+            chooseBestLayout(winningLayouts, openCards.length, playerIndex) || [],
+            openCards.length,
+            playerIndex
           ),
         };
       }
 
-      const shape = evaluateHandShape(fullHand, openCards.length);
+      const shape = evaluateHandShape(fullHand, openCards.length, playerIndex);
       const focus = evaluateRuleFocus(shape);
       return {
         drawCard,
@@ -4229,7 +4538,7 @@ function rankLookaheadDraws(playerIndex, concealedHand, openCards, publicDrawPoo
 }
 
 function selectLookaheadDraws(playerIndex, concealedHand, openCards, publicDrawPool) {
-  const shape = evaluateHandShape(getFullHand(playerIndex, concealedHand, openCards), openCards.length);
+  const shape = evaluateHandShape(getFullHand(playerIndex, concealedHand, openCards), openCards.length, playerIndex);
   if (
     publicDrawPool.length <= AI_CONFIG.lookaheadExactPoolMax ||
     shape.bestDistance <= AI_CONFIG.lookaheadExactDistance
@@ -4272,12 +4581,13 @@ function evaluateLookaheadContinuation(
     const winningLayouts = findValidWinningLayouts(
       getFullHand(playerIndex, simulatedConcealed, openCards),
       openCards.length,
-      openCards
+      openCards,
+      playerIndex
     );
     let futureScore = 0;
 
     if (winningLayouts.length) {
-      const points = totalLayoutPoints(chooseBestLayout(winningLayouts, openCards.length) || [], openCards.length);
+      const points = totalLayoutPoints(chooseBestLayout(winningLayouts, openCards.length, playerIndex) || [], openCards.length, playerIndex);
       futureScore = AI_CONFIG.lookaheadImmediateWinBase + points * AI_CONFIG.lookaheadImmediateWinPoint;
     } else {
       const futureChoice = chooseAIDiscardWithContext(
@@ -4310,7 +4620,7 @@ function evaluateFutureHand(
   context = PUBLIC_AI_CONTEXT
 ) {
   const fullHand = getFullHand(playerIndex, concealedHand, openCards);
-  const shape = evaluateHandShape(fullHand, openCards.length);
+  const shape = evaluateHandShape(fullHand, openCards.length, playerIndex);
   const focus = evaluateRuleFocus(shape);
   const strategy = evaluateStrategyProfile(playerIndex);
   const weights = AI_CONFIG.discardWeights;
@@ -4457,7 +4767,7 @@ function evaluateAIDiscardOptions(
   const weights = AI_CONFIG.discardWeights;
   const strategy = evaluateStrategyProfile(playerIndex);
   const baselineFullHand = getFullHand(playerIndex, concealedHand, openCards);
-  const baselineShape = evaluateHandShape(baselineFullHand, openCards.length);
+  const baselineShape = evaluateHandShape(baselineFullHand, openCards.length, playerIndex);
   const baselineFocus = evaluateRuleFocus(baselineShape);
 
   return concealedHand.map((card) => {
@@ -4573,7 +4883,7 @@ function chooseAISelfKanWithContext(playerIndex, context = PUBLIC_AI_CONTEXT) {
   const player = getPlayer(playerIndex);
   const claimState = buildSelfKanState(playerIndex, player.hand, player.openCards);
   if (!claimState) return null;
-  if (!lockedOpenCardsCanWin(claimState.nextOpenCards)) return null;
+  if (!lockedOpenCardsCanWin(claimState.nextOpenCards, playerIndex)) return null;
 
   const baseline = evaluateFutureHand(playerIndex, player.hand, player.openCards, [], context);
   const bestDiscard = chooseAIDiscardWithContext(
@@ -4614,7 +4924,7 @@ function chooseAIAnimalClaimWithContext(playerIndex, card, type, context = PUBLI
   const player = getPlayer(playerIndex);
   const claimState = buildAnimalClaimState(playerIndex, card, type, player.hand, player.openCards);
   if (!claimState) return null;
-  if (!lockedOpenCardsCanWin(claimState.nextOpenCards)) return null;
+  if (!lockedOpenCardsCanWin(claimState.nextOpenCards, playerIndex)) return null;
 
   const baseline = evaluateFutureHand(playerIndex, player.hand, player.openCards, [card], context);
   const bestDiscard = chooseAIDiscardWithContext(
@@ -4678,7 +4988,7 @@ function chooseAIChiWithContext(playerIndex, card, context = PUBLIC_AI_CONTEXT) 
 
   const baseline = evaluateFutureHand(playerIndex, player.hand, player.openCards, [card], context);
   const claimedOpenCards = player.openCards.concat(card);
-  if (!lockedOpenCardsCanWin(claimedOpenCards)) return null;
+  if (!lockedOpenCardsCanWin(claimedOpenCards, playerIndex)) return null;
   const bestDiscard = chooseAIDiscardWithContext(
     playerIndex,
     player.hand,
@@ -4720,7 +5030,7 @@ function applySelfKan(playerIndex, choice = buildSelfKanState(playerIndex)) {
   state.lastDiscard = null;
   state.lastDrawnCardId = player.hand.some((card) => card.id === state.lastDrawnCardId) ? state.lastDrawnCardId : null;
   state.selectedCardId = null;
-  logEvent(`${player.name} declares self-kan on ${choice.animal}.`);
+  logEvent(`${player.name} declares self-kan on ${claimGroupLabel(choice.claimGroup[0])}.`);
 
   if (player.isHuman) {
     state.phase = "human-discard";
@@ -4802,8 +5112,8 @@ function cardById(id) {
 function claimWin(playerIndex, type, layouts, sourceCard = null, discarderIndex = null) {
   if (state.phase === "finished") return;
   const openCardCount = getPlayer(playerIndex).openCards.length;
-  const scoringLayout = chooseBestLayout(layouts, openCardCount);
-  const { basePoints, bonusPoints, points } = getLayoutPointBreakdown(scoringLayout || [], openCardCount);
+  const scoringLayout = chooseBestLayout(layouts, openCardCount, playerIndex);
+  const { basePoints, bonusPoints, points } = getLayoutPointBreakdown(scoringLayout || [], openCardCount, playerIndex);
   const settlement = settleWin(playerIndex, type, points, discarderIndex);
   clearTimeout(state.timer);
   state.phase = "finished";
@@ -4872,6 +5182,111 @@ function chiPlayerIndexFor(discarderIndex) {
 
 function canPlayerChi(playerIndex) {
   return getPlayer(playerIndex).hand.length > 0;
+}
+
+function beginDiscardClaimWindow(playerIndex, card) {
+  state.pendingClaim = null;
+  state.phase = "check-ron";
+  render();
+  setTimeout(() => resolveRon(playerIndex, card), GAME_CONFIG.ronCheckDelayMs);
+}
+
+function beginPostOpenClaimWindow(playerIndex, card) {
+  state.pendingClaim = null;
+  state.phase = "check-kan";
+  render();
+  setTimeout(() => resolveKan(playerIndex, card), GAME_CONFIG.ronCheckDelayMs);
+}
+
+function chooseAIHomeWindOpenCard(playerIndex, context = PUBLIC_AI_CONTEXT) {
+  const player = getPlayer(playerIndex);
+  if (!player?.hand.length) return null;
+
+  const baseline = evaluateFutureHand(playerIndex, player.hand, player.openCards, [], context);
+  const candidates = player.hand
+    .map((card) => {
+      const nextHand = removeCardById(player.hand, card.id).next;
+      const nextOpenCards = sortCardsForDisplay(player.openCards.concat(card));
+      if (!lockedOpenCardsCanWin(nextOpenCards, playerIndex)) return null;
+      return {
+        card,
+        nextHand,
+        nextOpenCards,
+        future: evaluateFutureHand(playerIndex, nextHand, nextOpenCards, [], context),
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      if (b.future.score !== a.future.score) return b.future.score - a.future.score;
+      if (a.future.shape.bestDistance !== b.future.shape.bestDistance) {
+        return a.future.shape.bestDistance - b.future.shape.bestDistance;
+      }
+      return b.card.id - a.card.id;
+    });
+
+  const best = candidates[0];
+  if (!best) return null;
+
+  const improvesDistance = best.future.shape.bestDistance < baseline.shape.bestDistance;
+  const improvesWins = best.future.drawStats.winningDraws > baseline.drawStats.winningDraws;
+  const improvesPoints = best.future.drawStats.bestWinningPoints > baseline.drawStats.bestWinningPoints;
+  const improvesScore = best.future.score >= baseline.score + 10;
+  const gainsGear = player.openCards.length < 3;
+  return (improvesDistance || improvesWins || improvesPoints || improvesScore || gainsGear) ? best.card : null;
+}
+
+function finalizeHomeWindOpen(playerIndex, discardedCard, openedCard = null) {
+  const player = getPlayer(playerIndex);
+  if (openedCard) {
+    player.status = `Opened ${formatCardShort(openedCard)} after discarding home wind.`;
+    logEvent(`${formatPlayerTag(playerIndex)} opens ${formatCardShort(openedCard)} after discarding home wind.`);
+  } else {
+    player.status = "Skipped home wind open.";
+    logEvent(`${formatPlayerTag(playerIndex)} skips the home wind open.`);
+  }
+  state.call = "Open";
+  beginPostOpenClaimWindow(playerIndex, discardedCard);
+}
+
+function maybeHandleHomeWindDiscard(playerIndex, discardedCard) {
+  const player = getPlayer(playerIndex);
+  if (!cardHomeWindMatchesPlayer(discardedCard, playerIndex) || !player.hand.length) {
+    return false;
+  }
+
+  if (player.isHuman) {
+    state.phase = "human-home-wind-open";
+    state.pendingClaim = {
+      playerIndex,
+      type: "home-wind-open",
+      sourceCard: discardedCard,
+    };
+    player.status = `Discarded home wind. Open 1 concealed card or pass.`;
+    sound.prompt();
+    render();
+    return true;
+  }
+
+  state.phase = "ai-thinking";
+  state.pendingClaim = {
+    playerIndex,
+    type: "home-wind-open",
+    sourceCard: discardedCard,
+  };
+  render();
+  setTimeout(() => {
+    const openCard = chooseAIHomeWindOpenCard(playerIndex, decisionContextForPlayer(playerIndex, BRUTAL_AI_CONTEXT));
+    if (openCard) {
+      const removal = removeCardById(player.hand, openCard.id);
+      player.hand = sortCardsForDisplay(removal.next);
+      player.openCards = sortCardsForDisplay(player.openCards.concat(removal.removed));
+      setOpenClaimType([removal.removed], "open");
+      finalizeHomeWindOpen(playerIndex, discardedCard, removal.removed);
+      return;
+    }
+    finalizeHomeWindOpen(playerIndex, discardedCard, null);
+  }, GAME_CONFIG.aiThinkDelayMs);
+  return true;
 }
 
 function applyAnimalClaim(type, playerIndex, card, discarderIndex) {
@@ -5060,6 +5475,9 @@ function advanceTurn() {
 function resolveRon(discarderIndex, card) {
   const ronThreats = exactRonThreats(discarderIndex, card);
   if (!ronThreats.length) {
+    if (maybeHandleHomeWindDiscard(discarderIndex, card)) {
+      return;
+    }
     resolveKan(discarderIndex, card);
     return;
   }
@@ -5098,10 +5516,9 @@ function discardCard(playerIndex, cardId, note = "") {
   };
   state.call = "Discard";
   logEvent(`${formatPlayerTag(playerIndex)} discards ${formatCardShort(result.removed)}.${note ? ` ${note}` : ""}`);
-  state.phase = "check-ron";
   sound.discard();
   render();
-  setTimeout(() => resolveRon(playerIndex, result.removed), GAME_CONFIG.ronCheckDelayMs);
+  beginDiscardClaimWindow(playerIndex, result.removed);
 }
 
 function beginTurn() {
@@ -5119,7 +5536,7 @@ function beginTurn() {
   logEvent(`${formatPlayerTag(state.currentTurn)} draws from the wall.`);
   sound.draw();
 
-  const winningLayouts = findValidWinningLayouts(getFullHand(state.currentTurn), player.openCards.length, player.openCards);
+  const winningLayouts = findValidWinningLayouts(getFullHand(state.currentTurn), player.openCards.length, player.openCards, state.currentTurn);
   if (winningLayouts.length) {
     if (player.isHuman) {
       state.phase = "human-tsumo";
@@ -5201,6 +5618,19 @@ function declareHumanKan() {
   applySelfKan(HUMAN_PLAYER_INDEX, selfKanChoice);
 }
 
+function declareHumanHomeWindOpen(cardId) {
+  if (state.phase !== "human-home-wind-open") return;
+  if (!state.pendingClaim || state.pendingClaim.type !== "home-wind-open") return;
+  const player = getPlayer(HUMAN_PLAYER_INDEX);
+  const result = removeCardById(player.hand, cardId);
+  if (!result.removed) return;
+  player.hand = sortCardsForDisplay(result.next);
+  player.openCards = sortCardsForDisplay(player.openCards.concat(result.removed));
+  setOpenClaimType([result.removed], "open");
+  state.selectedCardId = null;
+  finalizeHomeWindOpen(HUMAN_PLAYER_INDEX, state.pendingClaim.sourceCard, result.removed);
+}
+
 function declareHumanPon() {
   if (state.phase === "finished") return;
   if (!state.pendingClaim || state.pendingClaim.type !== "pon") return;
@@ -5224,6 +5654,14 @@ function declareHumanChi() {
 
 function passHumanClaim() {
   if (!state.pendingClaim) return;
+  if (state.pendingClaim.type === "home-wind-open") {
+    const sourceCard = state.pendingClaim.sourceCard;
+    state.pendingClaim = null;
+    state.selectedCardId = null;
+    sound.pass();
+    finalizeHomeWindOpen(HUMAN_PLAYER_INDEX, sourceCard, null);
+    return;
+  }
   if (state.pendingClaim.type === "tsumo") {
     const player = getPlayer(state.pendingClaim.playerIndex);
     state.pendingClaim = null;
@@ -5252,6 +5690,9 @@ function passHumanClaim() {
     }
 
     render();
+    if (maybeHandleHomeWindDiscard(discarderIndex, sourceCard)) {
+      return;
+    }
     resolveKan(discarderIndex, sourceCard);
     return;
   }
@@ -5390,19 +5831,24 @@ function describeSetRule(rule) {
   const descriptions = {
     "six-run": "1 color across all odd months or all even months.",
     "same-element": "All 6 cards share 1 color.",
-    "polarity-five-elements": "All odd months or all even months, with 6 different colors.",
+    "polarity-five-elements": "All odd months or all even months, with 6 different colors and 6 different months.",
     "zodiac-run": "6 different consecutive months. Open cards, if any, must stay consecutive.",
+    "any-wind": "All 6 cards are wind cards, with all 6 colors.",
     "zodiac-run-element": "1 color across 6 consecutive months.",
-    "four-with-neighbors": "5 of 1 month + 1 side month, or 6 of the same month, with all 6 colors.",
+    "four-with-neighbors": "5 of 1 month + 1 side month, or 6 of the same month, with all 6 colors. Also scores as 6 of the same guest wind.",
     "four-plus-two-side": "4 of 1 month + 2 matching cards from the previous or next month, with all 6 colors.",
     "four-plus-split-sides": "4 of 1 month + 1 previous + 1 next, with all 6 colors.",
+    "compass-pair": "N, S, E, W plus either a month pair or a 2-month sequence, with all 6 colors.",
     "three-animal-pairs": "3 pairs across 3 consecutive months.",
+    "three-wind-pairs": "3 wind pairs across 3 different winds.",
     "three-animal-pairs-three-elements": "3 pairs across 3 months, using at most 2 colors.",
     "three-animal-pairs-balance": "3 pairs across 3 months, all odd or all even.",
     "two-animal-threes": "3 cards of 1 month + 3 cards of a consecutive month.",
+    "two-wind-threes": "3 cards of 1 wind + 3 cards of another wind.",
     "two-animal-threes-two-elements": "3 cards of 1 month + 3 cards of another month, using at most 3 colors.",
     "two-animal-threes-polarity": "3 cards of 1 month + 3 cards of another month, all odd or all even.",
-    "ending-digit-ladder": "All 6 cards are the current round month. Unavailable in sudden death.",
+    "ending-digit-ladder": "All 6 cards are the current round month, or all 6 cards are your home wind.",
+    "mono-compass": "N, S, E, W plus a 2-month sequence, all in 1 color.",
   };
   return descriptions[rule.id] || `${rule.size} cards following ${rule.label}.`;
 }
@@ -5479,7 +5925,7 @@ function renderSouthCallPanel() {
       stateEl.textContent = state.winners.includes(HUMAN_PLAYER_INDEX) ? "WIN" : "END";
     }
   } else if (callOpen) {
-    stateEl.textContent = state.pendingClaim.type.toUpperCase();
+    stateEl.textContent = state.pendingClaim.type === "home-wind-open" ? "OPEN" : state.pendingClaim.type.toUpperCase();
   } else if (humanTurn) {
     stateEl.textContent = "TURN";
   } else {
@@ -5505,23 +5951,14 @@ function renderInspector() {
   }
 
   container.innerHTML = renderCardMarkup(card);
-  title.textContent = `${card.animal}`;
-
-  [
-    card.element,
-    card.animal,
-  ].forEach((value) => {
-    const pill = document.createElement("span");
-    pill.className = "pill";
-    pill.textContent = value;
-    pills.appendChild(pill);
-  });
+  title.textContent = cardDisplayName(card);
 }
 
 function getHumanActionState() {
   const handOpen = state.phase !== "finished";
   const claim = state.pendingClaim;
   const isHumanClaim = Boolean(claim && isHumanIndex(claim.playerIndex));
+  const canHomeWindOpen = handOpen && isHumanClaim && claim.type === "home-wind-open";
   const selfKanState = (
     handOpen &&
     state.phase === "human-discard" &&
@@ -5534,9 +5971,10 @@ function getHumanActionState() {
   const canSelfKan = Boolean(selfKanState);
   const canPon = handOpen && isHumanClaim && claim.type === "pon";
   const canChi = handOpen && isHumanClaim && claim.type === "chi";
-  const canPass = handOpen && (canTsumo || canRon || canKan || canPon || canChi);
+  const canPass = handOpen && (canHomeWindOpen || canTsumo || canRon || canKan || canPon || canChi);
   return {
     handOpen,
+    canHomeWindOpen,
     selfKanState,
     canTsumo,
     canRon,
@@ -5633,6 +6071,15 @@ function getHumanDiscardableCards() {
   return human.hand.slice();
 }
 
+function getHumanHomeWindOpenCards() {
+  const human = getHumanPlayer();
+  if (!human) return [];
+  if (state.phase !== "human-home-wind-open") return [];
+  if (state.currentTurn !== HUMAN_PLAYER_INDEX) return [];
+  if (state.pendingClaim?.type !== "home-wind-open") return [];
+  return human.hand.slice();
+}
+
 function getHumanFreshDrawCard() {
   if (state.phase !== "human-discard") return null;
   if (state.currentTurn !== HUMAN_PLAYER_INDEX) return null;
@@ -5704,6 +6151,8 @@ function renderCenter() {
     centerTitle.textContent = "Sudden Death";
   } else if (state.phase === "finished") {
     centerTitle.textContent = "Draw";
+  } else if (state.pendingClaim?.type === "home-wind-open" && isHumanIndex(state.pendingClaim.playerIndex)) {
+    centerTitle.textContent = "Open";
   } else if (state.pendingClaim?.type === "ron" && isHumanIndex(state.pendingClaim.playerIndex)) {
     centerTitle.textContent = "Ron";
   } else if (state.pendingClaim?.type === "kan" && isHumanIndex(state.pendingClaim.playerIndex)) {
@@ -5886,7 +6335,7 @@ function renderActions() {
   const passButton = document.getElementById("passButton");
   const winButton = document.getElementById("openWinButton");
   const assistButton = document.getElementById("toggleAssistButton");
-  const { canTsumo, canRon, canKan, canSelfKan, canPon, canChi, canPass, selfKanState } = getHumanActionState();
+  const { canHomeWindOpen, canTsumo, canRon, canKan, canSelfKan, canPon, canChi, canPass, selfKanState } = getHumanActionState();
   const claimHint = getHumanClaimHint();
   const hasWinningView = (state.phase === "finished" && state.pendingClaim && state.winner !== null)
     || Boolean(state.matchSummary)
@@ -5936,12 +6385,14 @@ function renderActions() {
       : ` · ${state.pendingClaim.sourceCard.chinese}`;
     const detailText = claimHint.detail ? ` · ${claimHint.detail}` : "";
     hint.textContent = `Hint: ${claimHint.label}${sourceText}${detailText}`;
+  } else if (canHomeWindOpen) {
+    hint.textContent = "Home wind discard: open 1 concealed card or Pass";
   } else if (canRon) {
     hint.textContent = `Ron: ${state.pendingClaim.sourceCard.chinese} · Enter or R`;
   } else if (canKan) {
     hint.textContent = `Kan: ${state.pendingClaim.sourceCard.chinese} · Enter or K`;
   } else if (canSelfKan) {
-    hint.textContent = `Self Kan: ${selfKanState?.animal || ""} · Enter or K`;
+    hint.textContent = `Self Kan: ${claimGroupLabel(selfKanState?.claimGroup?.[0])} · Enter or K`;
   } else if (canPon) {
     hint.textContent = `Pon: ${state.pendingClaim.sourceCard.chinese} · Enter or P`;
   } else if (canChi) {
@@ -5962,6 +6413,10 @@ function renderHumanHand() {
     state.phase === "human-discard" &&
     state.currentTurn === HUMAN_PLAYER_INDEX &&
     state.pendingClaim?.type !== "tsumo";
+  const canHomeWindOpen =
+    state.phase === "human-home-wind-open" &&
+    state.currentTurn === HUMAN_PLAYER_INDEX &&
+    state.pendingClaim?.type === "home-wind-open";
   const suggestedCardId = canDiscard && state.assistEnabled ? chooseAIDiscard(HUMAN_PLAYER_INDEX)?.card.id ?? null : null;
   const handCards = [
     ...human.hand.map((card) => ({ card, kind: "concealed" })),
@@ -5974,6 +6429,7 @@ function renderHumanHand() {
     const isOpenClaim = kind !== "concealed";
     const isArrived = state.lastDrawnCardId === card.id;
     const isDiscardable = canDiscard && !isOpenClaim;
+    const isOpenSelectable = canHomeWindOpen && !isOpenClaim;
     const openClaimLabel = ({
       chi: "Chi Card",
       pon: "Pon Card",
@@ -5982,19 +6438,11 @@ function renderHumanHand() {
     })[kind] || "Open Card";
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `hand-card${state.selectedCardId === card.id ? " selected" : ""}${suggestedCardId === card.id ? " suggested" : ""}${isDiscardable ? "" : " locked"}${isOpenClaim ? " open-claimed" : ""}${isArrived ? " arrived" : ""}`;
+    button.className = `hand-card${state.selectedCardId === card.id ? " selected" : ""}${suggestedCardId === card.id ? " suggested" : ""}${(isDiscardable || isOpenSelectable) ? "" : " locked"}${isOpenClaim ? " open-claimed" : ""}${isArrived ? " arrived" : ""}`;
     button.innerHTML = `
       ${renderCardMarkup(card)}
-      <div class="hand-copy">
-        <div class="hand-title">${card.animal}</div>
-        <div class="hand-subtitle">${card.label}</div>
-        ${isArrived ? `<div class="hand-arrival-badge">New</div>` : ""}
-        ${isOpenClaim ? `<div class="hand-claim-badge">${openClaimLabel}</div><div class="hand-claim-note">Open claim · cannot discard</div>` : ""}
-        <div class="hand-tags">
-          <span class="hand-tag">${card.element}</span>
-          <span class="hand-tag">${card.animal}</span>
-        </div>
-      </div>
+      ${isArrived ? `<div class="hand-arrival-badge">New</div>` : ""}
+      ${isOpenClaim ? `<div class="hand-claim-badge">${openClaimLabel}</div><div class="hand-claim-note">Open claim · cannot discard</div>` : ""}
     `;
     button.addEventListener("mouseenter", (event) => {
       showInspectPopup(card, button, event.clientX, event.clientY);
@@ -6009,6 +6457,8 @@ function renderHumanHand() {
     button.addEventListener("blur", hideInspectPopup);
     if (isDiscardable) {
       button.addEventListener("click", () => onHumanDiscard(card.id));
+    } else if (isOpenSelectable) {
+      button.addEventListener("click", () => declareHumanHomeWindOpen(card.id));
     }
     container.appendChild(button);
   });
@@ -6085,7 +6535,7 @@ function renderPossibleWall() {
   }
 
   ZODIAC_ORDER.forEach((animal) => {
-    const monthCards = possibleCards.filter((card) => card.animal === animal);
+    const monthCards = possibleCards.filter((card) => isMonthCard(card) && card.animal === animal);
     if (!monthCards.length) return;
 
     const group = document.createElement("div");
@@ -6094,6 +6544,25 @@ function renderPossibleWall() {
       <strong>Month ${animal} · ${monthCards.length}</strong>
       <div class="discard-cards">
         ${monthCards.map((card) => `
+          <button class="discard-detail-card" type="button" data-inspect="${card.id}" aria-label="Possible ${card.label}">
+            ${renderCardMarkup(card)}
+          </button>
+        `).join("")}
+      </div>
+    `;
+    container.appendChild(group);
+  });
+
+  WIND_SYMBOLS.forEach((wind) => {
+    const windCards = possibleCards.filter((card) => isWindCard(card) && card.wind === wind);
+    if (!windCards.length) return;
+
+    const group = document.createElement("div");
+    group.className = "discard-group";
+    group.innerHTML = `
+      <strong>${WIND_NAMES[wind]} · ${windCards.length}</strong>
+      <div class="discard-cards">
+        ${windCards.map((card) => `
           <button class="discard-detail-card" type="button" data-inspect="${card.id}" aria-label="Possible ${card.label}">
             ${renderCardMarkup(card)}
           </button>
@@ -6158,17 +6627,17 @@ function renderRules() {
     },
     {
       title: "Claims",
-      body: "Discard claims resolve in this order: Ron, Kan, Pon, Chi. Chi is not a sequence claim here. It simply lets only the next player take the discard as 1 open card. On your own turn, if 5 cards of one month are concealed in your hand, you may self-kan to open them and then discard.",
+      body: "Discard claims resolve in this order: Ron, Kan, Pon, Chi. Pon and Kan match by month for month cards and by wind for wind cards. Chi is not a sequence claim here. It simply lets only the next player take the discard as 1 open card. On your own turn, 5 concealed cards of the same month or the same wind may self-kan.",
     },
     {
       title: "Gear",
       body: "Open cards unlock and scale sets: 3pt needs 3 open cards. 6pt sets score 3 with 2 open cards and 6 with 3+. 9pt sets score 3 with 1 open card, 6 with 2, and 9 with 3+. 12pt sets score 6 below 4, 9 with 4, and 12 with 5. 15pt sets score 9 below 4, 12 with 4, and 15 with 5.",
     },
     {
-      title: "Round Bonus",
+      title: "Bonuses",
       body: roundMonth
-        ? `This round targets month ${roundMonth}. If a winning 6-card hand contains month ${roundMonth}, it gains +${GAME_CONFIG.roundBonusPoints} once.`
-        : `Sudden death has no month bonus. During rounds 1 to ${GAME_CONFIG.matchRounds}, a winning hand with the round month gains +${GAME_CONFIG.roundBonusPoints} once.`,
+        ? `This round targets month ${roundMonth}. A winning hand containing month ${roundMonth} gains +${GAME_CONFIG.roundBonusPoints}. A winning hand containing your home wind gains +${GAME_CONFIG.homeWindBonusPoints}. Home wind discards may also open 1 concealed card after ron checks and before kan, pon, or chi.`
+        : `Sudden death has no round month bonus. A winning hand containing your home wind still gains +${GAME_CONFIG.homeWindBonusPoints}. A home wind discard may still open 1 concealed card after ron checks and before kan, pon, or chi.`,
     },
     {
       title: "Settlement",
@@ -6413,6 +6882,14 @@ window.addEventListener("keydown", (event) => {
   }
 
   if (!anyOverlayOpen() && Number.isInteger(discardIndex) && discardIndex >= 0 && discardIndex < 6) {
+    const openableCards = getHumanHomeWindOpenCards();
+    const openCard = openableCards[discardIndex];
+    if (openCard) {
+      event.preventDefault();
+      declareHumanHomeWindOpen(openCard.id);
+      return;
+    }
+
     const discardableCards = getHumanDiscardableCards();
     const card = discardableCards[discardIndex];
     if (card) {
@@ -6423,6 +6900,11 @@ window.addEventListener("keydown", (event) => {
   }
 
   if (isEnter) {
+    if (actionState.canHomeWindOpen) {
+      event.preventDefault();
+      passHumanClaim();
+      return;
+    }
     if (triggerPrimaryClaim()) {
       event.preventDefault();
     }

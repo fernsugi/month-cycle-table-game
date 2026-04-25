@@ -4,7 +4,7 @@ This document describes the finished rules used by the current version of the ga
 
 ## 1. Overview
 
-Month Cycle Table is a 4-player draw-discard card game built around a 72-card custom deck.
+Month Cycle Table is a 4-player draw-discard card game built around a 96-card custom deck.
 
 Core flow:
 
@@ -19,13 +19,17 @@ The game is built around:
 
 - `Month`: `1` to `12`
 - `Color`: `G`, `R`, `Y`, `K`, `B`, `W`
-- each card's unique month-color identity
+- `Wind`: `N`, `S`, `E`, `W`
+- each month-color card has a unique month-color identity
+- each wind-color card has a unique wind-color identity and no month
 
 ## 2. Components
 
-The deck has `72` unique cards.
+The deck has `96` unique cards.
 
-Each card has:
+### 2.1 Month Cards (72 cards)
+
+Each month card has:
 
 - a month from `1` to `12`
 - a color: `G`, `R`, `Y`, `K`, `B`, or `W`
@@ -36,7 +40,17 @@ Deck structure:
 - the first `60` cards use the original five colors: `G`, `R`, `Y`, `K`, `B`
 - the final `12` cards are white cards
 - each month appears exactly `6` times in the deck
-- each color appears exactly `12` times in the deck
+- each color appears exactly `12` times among month cards
+
+### 2.2 Wind Cards (24 cards)
+
+Each wind card has:
+
+- a wind: `N` (North), `S` (South), `E` (East), or `W` (West)
+- a color: `G`, `R`, `Y`, `K`, `B`, or `W`
+- **no month**
+
+Wind cards participate in color-based requirements but cannot satisfy month-based requirements.
 
 ## 3. Players, Seats, and Dealer
 
@@ -52,6 +66,13 @@ At the start of a new match:
 - all players begin with `18` points
 - a random dealer is chosen
 - that dealer becomes `East`
+
+**Seat wind (home wind):**
+
+- East player's home wind is `E`
+- South player's home wind is `S`
+- West player's home wind is `W`
+- North player's home wind is `N`
 
 Dealer rule:
 
@@ -79,9 +100,9 @@ Early match end:
 
 At the start of each hand:
 
-- shuffle all `72` cards
+- shuffle all `96` cards
 - deal `5` cards to each player
-- the remaining `52` cards become the wall
+- the remaining `76` cards become the wall
 - East takes the first turn
 
 ## 6. Hand Structure
@@ -151,40 +172,77 @@ Because `chi` opens exactly one visible card, it is the smallest way to build ge
 
 ### 8.3 Pon
 
-`Pon` is month-based.
+`Pon` is month-based for month cards and wind-based for wind cards.
 
-Rules:
+Rules for month cards:
 
 - you may `pon` only if you already have exactly `3` cards of the same month as the discard across your concealed and open cards
 - all of those same-month cards, plus the claimed discard, become open
 - after `pon`, you must discard one concealed card
 
-In practice, `pon` creates an open month block of `4` visible cards.
+Rules for wind cards:
+
+- you may `pon` only if you already have exactly `3` cards of the same wind as the discard across your concealed and open cards
+- all of those same-wind cards, plus the claimed discard, become open
+- after `pon`, you must discard one concealed card
+
+In practice, `pon` creates an open block of `4` visible cards.
 
 ### 8.4 Kan
 
-`Kan` is also month-based.
+`Kan` is also month-based for month cards and wind-based for wind cards.
 
-Rules:
+Rules for month cards:
 
 - you may `kan` only if you already have exactly `4` cards of the same month as the discard across your concealed and open cards
 - all of those same-month cards, plus the claimed discard, become open
 - after `kan`, you must discard one concealed card
 
-In practice, `kan` creates an open month block of `5` visible cards.
+Rules for wind cards:
+
+- you may `kan` only if you already have exactly `4` cards of the same wind as the discard across your concealed and open cards
+- all of those same-wind cards, plus the claimed discard, become open
+- after `kan`, you must discard one concealed card
+
+In practice, `kan` creates an open block of `5` visible cards.
 
 ### 8.5 Self Kan
 
 On your own turn, you may also declare a `self kan`.
 
-Rules:
+Rules for month cards:
 
 - if your concealed hand contains `5` cards of the same month, you may open them immediately as a `kan`
 - after `self kan`, you must discard `1` concealed card
 
-In practice, `self kan` converts a concealed 5-card month into an open 5-card month block without needing an opponent discard.
+Rules for wind cards:
 
-## 9. Winning
+- if your concealed hand contains `5` cards of the same wind, you may open them immediately as a `kan`
+- after `self kan`, you must discard `1` concealed card
+
+In practice, `self kan` converts a concealed 5-card block into an open 5-card block without needing an opponent discard.
+
+## 9. Wind Discard Rules
+
+### 9.1 Home Wind Discard
+
+When you discard your **home wind** (the wind matching your seat):
+
+- `ron` is checked first
+- if no player wins by `ron`, you **may** choose to move one concealed card from your hand to your open area
+- if you do, that opened card is placed face-up before `kan`, `pon`, or `chi` respond to the discarded wind
+- opponents may claim the discarded wind card via `ron`, `kan`, `pon`, or `chi`
+- opponents **may not** claim the card you just opened
+- if you have no concealed cards other than the wind you are discarding, you may skip the optional open
+
+### 9.2 Guest Wind Discard
+
+When you discard a wind card that is **not** your home wind:
+
+- the discard proceeds normally
+- no additional effects apply
+
+## 10. Winning
 
 There are two win methods:
 
@@ -199,7 +257,26 @@ If a 6-card hand matches more than one pattern:
 - from the remaining valid patterns, apply any gear-based point reduction
 - use the highest-point result after gear is applied
 
-## 10. Gear Rule
+### 10.1 Wind Card Pattern Restrictions
+
+Wind cards have **no month**. Therefore, wind cards cannot be used in any pattern that requires month properties, including:
+
+- Skip
+- Run
+- Triple Pair
+- Twin Tone Pairs
+- Parity Pairs
+- Twin Triples
+- Tri Tone Triples
+- Parity Triples
+- Escort
+- Split Escort
+- Mono Skip
+- Mono Run
+
+Wind cards **can** be used in `Mono` (all same color), `Crown`, `Grand Crown`, and all wind-specific patterns listed in Section 15.
+
+## 11. Gear Rule
 
 Gear is based on the literal number of visible open cards in your open area. Some higher-value sets can still score with lower gear, but they score as a smaller point tier until you have enough open cards.
 
@@ -233,8 +310,9 @@ Examples:
 - two `chi` claims give `2` open cards
 - one `pon` usually gives `4` open cards
 - one `kan` usually gives `5` open cards
+- a home wind discard with optional open gives `1` open card
 
-## 11. Round Bonus
+## 12. Round Bonus
 
 Each round has a target month equal to the round number.
 
@@ -257,9 +335,20 @@ Important:
 - it can raise a `15pt` hand to `18pt`
 - sudden death rounds do not have a numbered month target
 
-## 12. Settlement
+## 13. Home Wind Bonus
 
-### 12.1 Tsumo
+If your winning 6-card hand contains your **home wind** (the wind matching your seat), you gain `+3` points once.
+
+Important:
+
+- the bonus applies only once per winning hand
+- it applies to both `tsumo` and `ron`
+- it stacks with the round month bonus
+- a `15pt` hand with both bonuses scores `21pt`
+
+## 14. Settlement
+
+### 14.1 Tsumo
 
 On `tsumo`:
 
@@ -273,74 +362,83 @@ Examples:
 - `3pt` tsumo: each opponent pays `1`
 - `12pt` tsumo: each opponent pays `4`
 - `18pt` tsumo: each opponent pays `6`
+- `21pt` tsumo: each opponent pays `7`
 
-### 12.2 Ron
+### 14.2 Ron
 
 On `ron`:
 
 - the discarder pays the full value
 - the winner gains the full value
 
-### 12.3 Multiple Ron
+### 14.3 Multiple Ron
 
 If multiple players `ron` the same discard:
 
 - each winner scores separately
 - the discarder pays each winner in full
 
-## 13. Winning Patterns
+## 15. Winning Patterns
 
 All patterns below use exactly `6` cards.
 
-### 13.1 3-point patterns
+### 15.1 3-point patterns
 
 | Pattern | Requirement | Gear |
 | --- | --- | --- |
 | Mono | All 6 cards share one color | At least 3 open cards |
 | Skip | All 6 cards are all odd months or all even months, all 6 months are different, and all 6 colors are different | At least 3 open cards |
 | Run | Six different months in order; if any of those cards are open, the open months must also be consecutive within the run | At least 3 open cards |
+| Wind | All 6 cards are wind cards, with all 6 colors present | At least 3 open cards |
 
-### 13.2 6-point patterns
+### 15.2 6-point patterns
 
 | Pattern | Requirement | Gear |
 | --- | --- | --- |
 | Triple Pair | 3 pairs from 3 consecutive months | 2 open cards scores 3pt; 3+ open cards scores 6pt |
+| Wind Pairs | 3 pairs from 3 different winds | 2 open cards scores 3pt; 3+ open cards scores 6pt |
 | Twin Tone Pairs | 3 pairs from 3 different months, using at most 2 colors total | 2 open cards scores 3pt; 3+ open cards scores 6pt |
 | Parity Pairs | 3 pairs from 3 different months, all odd or all even | 2 open cards scores 3pt; 3+ open cards scores 6pt |
 
-### 13.3 9-point patterns
+### 15.3 9-point patterns
 
 | Pattern | Requirement | Gear |
 | --- | --- | --- |
 | Twin Triples | 3 cards of one month and 3 cards of a consecutive month | 1 open card scores 3pt; 2 open cards scores 6pt; 3+ open cards scores 9pt |
+| Wind Triples | 3 cards of one wind and 3 cards of another wind | 1 open card scores 3pt; 2 open cards scores 6pt; 3+ open cards scores 9pt |
 | Tri Tone Triples | 3 cards of one month and 3 cards of another month, using at most 3 colors total | 1 open card scores 3pt; 2 open cards scores 6pt; 3+ open cards scores 9pt |
 | Parity Triples | 3 cards of one month and 3 cards of another month, all odd or all even | 1 open card scores 3pt; 2 open cards scores 6pt; 3+ open cards scores 9pt |
 
-### 13.4 12-point patterns
+### 15.4 12-point patterns
 
 | Pattern | Requirement | Gear |
 | --- | --- | --- |
-| Crown | 5 of one month plus 1 neighboring month, or 6 of one month, with all 6 colors present | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
+| Crown | Either: 5 of one month plus 1 neighboring month with all 6 colors present; or 6 of one month with all 6 colors present; or 6 of the same guest wind | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
 | Escort | 4 of one month plus 2 matching cards from either the previous or next month, with all 6 colors present | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
 | Split Escort | 4 of one month plus 1 previous and 1 next month, with all 6 colors present | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
+| Compass | N, S, E, W plus either 1 pair or 2 cards in sequence, with all 6 colors present | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
 
-### 13.5 15-point patterns
+### 15.5 15-point patterns
 
 | Pattern | Requirement | Gear |
 | --- | --- | --- |
 | Mono Skip | All 6 cards share one color and are all odd months or all even months | 0-3 open cards scores 9pt; 4 open cards scores 12pt; 5 open cards scores 15pt |
 | Mono Run | Six different months in order, all sharing one color | 0-3 open cards scores 9pt; 4 open cards scores 12pt; 5 open cards scores 15pt |
-| Round Crown | All 6 cards are the current round month | 0-3 open cards scores 9pt; 4 open cards scores 12pt; 5 open cards scores 15pt |
+| Grand Crown | Either: all 6 cards are the current round month; or all 6 cards are your home wind | 0-3 open cards scores 9pt; 4 open cards scores 12pt; 5 open cards scores 15pt |
+| Mono Compass | N, S, E, W plus 2 cards in sequence, all sharing one color | 0-3 open cards scores 9pt; 4 open cards scores 12pt; 5 open cards scores 15pt |
 
 Notes on the 15-point patterns:
 
 - `Skip` means all odd months or all even months, with all 6 colors and all 6 months different.
 - `Run` means a 6-month consecutive run.
 - `Mono Skip` means a `Skip` played in a single color lane.
-- `Round Crown` means collecting all 6 cards of the round's target month. In sudden death there is no target month, so this pattern is unavailable.
+- `Grand Crown` means collecting all 6 cards of the round's target month, or all 6 cards of your seat wind. In sudden death there is no target month, so only the home wind branch is available.
+- `Crown` on the wind side means all 6 cards are the same guest wind. If all 6 cards are your home wind instead, that is `Grand Crown`.
+- `Compass` uses all four winds plus either a month pair or a 2-month sequence, with all 6 colors represented.
+- `Mono Compass` uses all four winds plus a 2-month sequence, all in a single color.
 - Only `Run` requires any open cards inside that pattern to form a consecutive block of months within the completed run.
 
-## 14. End of Hand
+## 16. End of Hand
 
 A hand ends when:
 
@@ -354,7 +452,7 @@ If the wall is exhausted:
 - no one scores
 - dealer rotates normally unless East had won before the draw, which did not happen
 
-## 15. End of Match
+## 17. End of Match
 
 The match ends when one of these happens:
 
@@ -367,9 +465,11 @@ If round `12` ends tied for first:
 - no one wins the match yet
 - play continues in sudden death rounds until the tie breaks
 
-## 16. Practical Notes
+## 18. Practical Notes
 
 - Odd/even patterns use the card's hidden deck position parity. Each month contains both odd and even cards.
 - The month labels are numeric `1` to `12`.
 - The color labels are abbreviated: `G`, `R`, `Y`, `K`, `B`, `W`.
+- The wind labels are abbreviated: `N`, `S`, `E`, `W`.
 - Open-card count matters a lot because of gear. A beautiful hand may still be invalid if it does not meet the required visible open count for its point tier.
+- Wind cards have no month and therefore cannot satisfy any pattern requirement that references months, months being consecutive, or month parity.
