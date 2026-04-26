@@ -1647,36 +1647,36 @@ const GAME_CONFIG = {
   logLimit: 6,
 };
 
-// ID 128
+// ID 234
 const AI_CONFIG = {
   discardWeights: {
-    winningDraw: 171.2650379929202,
-    winningPoint: 11.77915648859496,
-    bestWinningPoint: 14.811174736182876,
+    winningDraw: 112.23411895132607,
+    winningPoint: 17.78592658137901,
+    bestWinningPoint: 18.598661950234124,
     nearReadyDraw: 28,
     distanceGainDraw: 13,
     focusImproveDraw: 9,
     shapeSupport: 8,
     nearRule: 15,
-    distancePenalty: 58.32155829687191,
-    focusPrimary: 13.829618728039303,
+    distancePenalty: 32.26087250159985,
+    focusPrimary: 32.788774702414386,
     focusSecondary: 7,
     focusGap: 4,
-    windAffinity: 1.0843808021573946,
+    windAffinity: 2.103030951165744,
     readyBonus: 120,
     oneAwayBonus: 56,
     openPressureBonus: 18,
-    publicDangerPenalty: 3.432550767186073,
-    maxOpponentDangerPenalty: 2.0424548911970497,
-    claimPressurePenalty: 0.6128660983810591,
+    publicDangerPenalty: 2.770242682822452,
+    maxOpponentDangerPenalty: 1.681049128896255,
+    claimPressurePenalty: 0.8300618756060452,
     maxClaimPressurePenalty: 0.35,
     lookaheadAverage: 0.08,
     lookaheadPeak: 0.04,
     exactResponsePenalty: 1,
   },
-  chiThreshold: 148.4376923142747,
-  ponThreshold: 62,
-  kanThreshold: 149.0225590637087,
+  chiThreshold: 108.91364555846125,
+  ponThreshold: 66.62098420483176,
+  kanThreshold: 132.95695634224484,
   lookaheadCandidateBeam: 8,
   lookaheadRecursiveBeam: 4,
   lookaheadDrawSample: 14,
@@ -1686,29 +1686,29 @@ const AI_CONFIG = {
   lookaheadImmediateWinBase: 840,
   lookaheadImmediateWinPoint: 68,
   strategy: {
-    dealerAggression: 0.10479516139232734,
-    openCardAggression: 0.05443956722727626,
+    dealerAggression: 0.182376601959489,
+    openCardAggression: 0.02174582151856923,
     exposedOpponentPressure: 0.05,
-    trailingAggressionPerPoint: 0.02415548290705123,
+    trailingAggressionPerPoint: 0.02376223179237133,
     maxTrailingAggression: 0.4,
-    leadingDefensePerPoint: 0.04115949635690296,
+    leadingDefensePerPoint: 0.02857459991341329,
     maxLeadingDefense: 0.24,
-    claimBiasPerPoint: 0.03108825131289649,
+    claimBiasPerPoint: 0.024249832224726504,
     maxClaimBias: 0.5,
-    leadRiskBrakePerPoint: 0.006350355577549015,
+    leadRiskBrakePerPoint: 0.004755548398821026,
     maxLeadRiskBrake: 0.12,
   },
   windStrategy: {
-    homeWindCard: 13.026419776529988,
-    homeWindStack: 10.758891025059658,
-    sameWindPair: 7.519272762699266,
-    sameWindTriple: 16.82406897241024,
+    homeWindCard: 15.729299269984761,
+    homeWindStack: 6.36097433422747,
+    sameWindPair: 8.991228644843497,
+    sameWindTriple: 13.849385099824184,
     sameWindNearCrown: 42,
     distinctWind: 7,
-    compassCoverage: 20.814411245115163,
-    monoCompassCoverage: 6.745587167513811,
+    compassCoverage: 12.74225232985679,
+    monoCompassCoverage: 5.025454742888677,
     allWindMass: 8,
-    openWindGear: 6.807000040554996,
+    openWindGear: 3.258847211946981,
     openHomeWindGear: 18,
   },
   opponentSignals: {
@@ -1730,10 +1730,21 @@ const AI_CONFIG = {
     dealerPressure: 0.08,
     trailingPointFactor: 0.015,
     maxTrailingPressure: 0.18,
-    homeWindDanger: 25.02355121723406,
-    openSameWindDanger: 10.57382971670073,
-    openCompassDanger: 26.2177770789992,
+    homeWindDanger: 13.472162506651944,
+    openSameWindDanger: 17.741872009624462,
+    openCompassDanger: 22.366976298201138,
     openMonoCompassDanger: 42,
+    minVisibleThreat: 0.8,
+    maxVisibleThreat: 2.8,
+    visibleThreatBase: 0.82,
+    openCardThreatStep: 0.18,
+    openStructureThreat: 0.16,
+    visibleTwoAwayThreat: 0.62,
+    visibleReadyThreat: 1.38,
+    visibleCompletionBase: 48,
+    visibleCompletionWait: 16,
+    visibleCompletionPoint: 4.5,
+    dominantThreatBias: 0.72,
   },
   claimSignals: {
     nextChiBase: 18,
@@ -1749,10 +1760,10 @@ const AI_CONFIG = {
     discardMonthRelief: 0.16,
     maxDiscardRelief: 0.58,
     hiddenNeedFactors: [1.18, 0.92, 0.58, 0.28, 0.12],
-    windPonMultiplier: 0.8633676746480715,
-    windKanMultiplier: 0.9363966429986846,
-    homeWindSetClaimMultiplier: 1.0307128028336923,
-    windChiMultiplier: 0.5112361238404132,
+    windPonMultiplier: 1.7587733299196344,
+    windKanMultiplier: 1.3239733929970976,
+    homeWindSetClaimMultiplier: 1.285463256499588,
+    windChiMultiplier: 0.2205134405758494,
     windChiOpenSupport: 0.18,
     windChiCompassSupport: 0.28,
   },
@@ -1882,7 +1893,7 @@ const BRUTAL_AI_CONTEXT = Object.freeze({
 });
 
 const FAST_TUNING_AI_CONTEXT = Object.freeze({
-  useHiddenIntel: true,
+  useHiddenIntel: false,
   lookaheadDepth: 0,
   exactResponseDepth: 0,
   allowExactHiddenResponse: false,
@@ -1891,7 +1902,7 @@ const FAST_TUNING_AI_CONTEXT = Object.freeze({
 
 const ACCURATE_TUNING_AI_CONTEXT = Object.freeze({
   ...BRUTAL_AI_CONTEXT,
-  allowExactHiddenResponse: true,
+  allowExactHiddenResponse: false,
 });
 
 const TABLE_CONFIG = {
@@ -2459,6 +2470,19 @@ function twoMonthPairProgress(cards) {
   return Math.min(2, Math.max(0, ...Object.values(monthCounts)));
 }
 
+function countCardsBy(cards, keyFn) {
+  return cards.reduce((counts, card) => {
+    const key = keyFn(card);
+    if (!key) return counts;
+    counts[key] = (counts[key] || 0) + 1;
+    return counts;
+  }, {});
+}
+
+function maxCountFromCounts(counts) {
+  return Math.max(0, ...Object.values(counts));
+}
+
 function parityOfCard(card) {
   return card.id % 2 === 0 ? "even" : "odd";
 }
@@ -2867,23 +2891,23 @@ const SET_RULES = [
       const otherCards = cards.filter(isMonthCard);
       if (windCards.length !== 4 || otherCards.length !== 2) return false;
       if (new Set(windCards.map((card) => card.wind)).size !== 4) return false;
-      if (!allSixColorsPresent(cards)) return false;
+      if (new Set(windCards.map((card) => card.element)).size !== 1) return false;
       const sameMonthPair = otherCards[0].month === otherCards[1].month;
       const sequence = monthsFormRun(otherCards.map((card) => card.month), 2);
       return sameMonthPair || sequence;
     },
     describe(cards) {
+      const compassElement = cards.filter(isWindCard)[0]?.element || "?";
       const sequence = cards.filter(isMonthCard).map((card) => card.month).sort((a, b) => Number(a) - Number(b));
       const isPair = sequence.length === 2 && sequence[0] === sequence[1];
       return isPair
-        ? `N, S, E, W plus a ${sequence[0]} pair, with all six colors present.`
-        : `N, S, E, W plus the ${sequence.join("-")} sequence, with all six colors present.`;
+        ? `${compassElement} N, S, E, W plus a ${sequence[0]} pair.`
+        : `${compassElement} N, S, E, W plus the ${sequence.join("-")} sequence.`;
     },
     distance(cards) {
-      const windProgress = windCompassProgress(cards.filter(isWindCard));
+      const windProgress = maxSameElementWindCoverage(cards.filter(isWindCard));
       const pairOrSequenceProgress = Math.max(twoMonthPairProgress(cards), twoMonthSequenceProgress(cards));
-      const colorGap = Math.max(0, ALL_ELEMENTS.length - countPresentColors(cards, ALL_ELEMENTS));
-      return Math.max(GAME_CONFIG.winningHandSize - (windProgress + pairOrSequenceProgress), colorGap);
+      return GAME_CONFIG.winningHandSize - (windProgress + pairOrSequenceProgress);
     },
   },
   // The Three Gates: three distinct month pairs in balance.
@@ -4399,8 +4423,8 @@ function estimatePublicDiscardDanger(card, publicPool, openCardCount = 0, player
         );
       }
     }
-    if (!openWindCoverage.has(card.wind) && openWindCoverage.size >= 2) {
-      danger += opponentSignals.openCompassDanger * (openWindCoverage.size - 1);
+    if (!openMonoWindCoverage.has(card.wind) && openMonoWindCoverage.size >= 2) {
+      danger += opponentSignals.openCompassDanger * (openMonoWindCoverage.size - 1);
     }
     if (!openMonoWindCoverage.has(card.wind) && openMonoWindCoverage.size >= 2) {
       danger += opponentSignals.openMonoCompassDanger * (openMonoWindCoverage.size - 1);
@@ -4419,7 +4443,7 @@ function estimatePublicDiscardDanger(card, publicPool, openCardCount = 0, player
         playerIndex
       ) * 1.5;
     }
-    if (WIND_SYMBOLS.every((wind) => wind === card.wind || windCoverage.has(wind))) {
+    if (WIND_SYMBOLS.every((wind) => wind === card.wind || monoWindCoverage.has(wind))) {
       danger += threatPointsForRule("compass-pair", openCardCount, card, playerIndex) * (pairOrSequenceProgress >= 2 ? 1.2 : 0.75);
     }
     if (WIND_SYMBOLS.every((wind) => wind === card.wind || monoWindCoverage.has(wind))) {
@@ -4620,26 +4644,130 @@ function estimateOpponentCardInterest(playerIndex, card) {
   return Math.max(signals.minSignal, Math.min(signal, signals.maxSignal));
 }
 
+function estimateOpponentThreatState(playerIndex) {
+  const player = getPlayer(playerIndex);
+  const signals = AI_CONFIG.opponentSignals;
+  const openCards = player.openCards;
+  const discards = player.discards;
+  const openMonthCards = openCards.filter(isMonthCard);
+  const openWindCards = openCards.filter(isWindCard);
+  const openGroupCounts = countCardsBy(openCards, cardGroupKey);
+  const openElementCounts = countCardsBy(openCards, (card) => card.element);
+  const discardGroupCounts = countCardsBy(discards, cardGroupKey);
+
+  const sameGroupMax = maxCountFromCounts(openGroupCounts);
+  const sameElementMax = maxCountFromCounts(openElementCounts);
+  const distinctColors = new Set(openCards.map((card) => card.element)).size;
+  const distinctMonths = new Set(openMonthCards.map((card) => card.month)).size;
+  const distinctWinds = new Set(openWindCards.map((card) => card.wind)).size;
+  const monthRunPressure = openMonthCards.length >= 2
+    ? bestMonthRunProgress(openMonthCards, Math.min(openMonthCards.length, 4), 1)
+    : 0;
+  const monoWindCoverage = maxSameElementWindCoverage(openWindCards);
+  const visibleOpenCanStillWin = openCards.length >= 4 && lockedOpenCardsCanWin(openCards, playerIndex);
+  const visibleReady = visibleOpenCanStillWin && openCards.length >= GAME_CONFIG.winningHandSize - 1;
+  const visibleTwoAway = visibleOpenCanStillWin && openCards.length === GAME_CONFIG.winningHandSize - 2;
+  const commitmentRelief = Object.keys(openGroupCounts).reduce((sum, key) => (
+    sum + Math.min(2, discardGroupCounts[key] || 0)
+  ), 0);
+
+  let threat = signals.visibleThreatBase + openCards.length * signals.openCardThreatStep;
+  threat += Math.max(0, sameGroupMax - 1) * signals.openStructureThreat * 1.25;
+  threat += Math.max(0, sameElementMax - 2) * signals.openStructureThreat * 0.7;
+  threat += Math.max(0, distinctColors - 2) * signals.openStructureThreat * 0.45;
+  threat += Math.max(0, distinctMonths - 1) * signals.openStructureThreat * 0.4;
+  threat += Math.max(0, distinctWinds - 1) * signals.openStructureThreat * 0.7;
+  threat += Math.max(0, monthRunPressure - 1) * signals.openStructureThreat * 0.35;
+  threat += Math.max(0, monoWindCoverage - 1) * signals.openStructureThreat * 0.45;
+
+  if (visibleTwoAway) threat += signals.visibleTwoAwayThreat;
+  if (visibleReady) threat += signals.visibleReadyThreat;
+  if (player.seat === "East") threat += 0.08;
+  if (state.points[playerIndex] < Math.max(...state.points)) threat += 0.06;
+
+  threat -= Math.min(0.42, commitmentRelief * 0.07);
+  threat = Math.max(signals.minVisibleThreat, Math.min(signals.maxVisibleThreat, threat));
+
+  return {
+    playerIndex,
+    visibleReady,
+    visibleTwoAway,
+    threatWeight: threat,
+    hotness: Math.max(0, Math.min(1, (threat - 1) / Math.max(0.01, signals.maxVisibleThreat - 1))),
+    sameGroupMax,
+    sameElementMax,
+    distinctColors,
+    distinctMonths,
+    distinctWinds,
+  };
+}
+
+function estimateVisibleCompletionDanger(playerIndex, card, publicPool, threatState = estimateOpponentThreatState(playerIndex)) {
+  const signals = AI_CONFIG.opponentSignals;
+  const openCards = getPlayer(playerIndex).openCards;
+  const completionSize = GAME_CONFIG.winningHandSize - openCards.length;
+  if (!threatState.visibleReady && !threatState.visibleTwoAway) return 0;
+  if (completionSize <= 0 || completionSize > 2) return 0;
+
+  if (completionSize === 1) {
+    const layouts = findValidWinningLayouts(openCards.concat(card), openCards.length, openCards, playerIndex);
+    if (!layouts.length) return 0;
+    const bestLayout = chooseBestLayout(layouts, openCards.length, playerIndex);
+    const points = totalLayoutPoints(bestLayout || [], openCards.length, playerIndex);
+    return signals.visibleCompletionBase + points * signals.visibleCompletionPoint;
+  }
+
+  const remainingPool = publicPool.filter((item) => item.id !== card.id);
+  let validWaits = 0;
+  let bestPoints = 0;
+
+  remainingPool.forEach((otherCard) => {
+    const layouts = findValidWinningLayouts(openCards.concat(card, otherCard), openCards.length, openCards, playerIndex);
+    if (!layouts.length) return;
+    validWaits += 1;
+    const bestLayout = chooseBestLayout(layouts, openCards.length, playerIndex);
+    bestPoints = Math.max(bestPoints, totalLayoutPoints(bestLayout || [], openCards.length, playerIndex));
+  });
+
+  if (!validWaits) return 0;
+  return (
+    signals.visibleCompletionBase +
+    validWaits * signals.visibleCompletionWait +
+    bestPoints * signals.visibleCompletionPoint
+  );
+}
+
 function estimateOpponentDiscardDanger(playerIndex, card, publicPool) {
   const baseDanger = estimatePublicDiscardDanger(card, publicPool, getPlayer(playerIndex).openCards.length, playerIndex);
   const interest = estimateOpponentCardInterest(playerIndex, card);
+  const threatState = estimateOpponentThreatState(playerIndex);
+  const visibleCompletionDanger = estimateVisibleCompletionDanger(playerIndex, card, publicPool, threatState);
   return {
     playerIndex,
     baseDanger,
     interest,
-    danger: baseDanger * interest,
+    threatState,
+    visibleCompletionDanger,
+    danger: baseDanger * interest * threatState.threatWeight + visibleCompletionDanger,
   };
 }
 
 function estimateDiscardDangerProfile(discarderIndex, card, publicPool) {
+  const dominantThreatBias = AI_CONFIG.opponentSignals.dominantThreatBias;
   const detail = opponentsInRonOrder(discarderIndex)
     .map((playerIndex) => estimateOpponentDiscardDanger(playerIndex, card, publicPool));
   const total = detail.reduce((sum, entry) => sum + entry.danger, 0);
+  const weightedTotal = detail.reduce((sum, entry) => (
+    sum + entry.danger * (1 + entry.threatState.hotness * dominantThreatBias)
+  ), 0);
+  const dominantMax = detail.reduce((best, entry) => (
+    Math.max(best, entry.danger * (1 + entry.threatState.hotness * (dominantThreatBias + 0.35)))
+  ), 0);
   return {
     detail,
     total,
-    average: detail.length ? total / detail.length : 0,
-    max: detail.reduce((best, entry) => Math.max(best, entry.danger), 0),
+    average: detail.length ? weightedTotal / detail.length : 0,
+    max: dominantMax,
   };
 }
 
@@ -6864,7 +6992,7 @@ function describeSetRule(rule) {
     "four-with-neighbors": "5 of 1 month + 1 side month, or 6 of the same month, with all 6 colors. Also scores as 6 of the same guest wind.",
     "four-plus-two-side": "4 of 1 month + 2 matching cards from the previous or next month, with all 6 colors.",
     "four-plus-split-sides": "4 of 1 month + 1 previous + 1 next, with all 6 colors.",
-    "compass-pair": "N, S, E, W plus either a month pair or a 2-month sequence, with all 6 colors.",
+    "compass-pair": "Four same-color N, S, E, W plus either any month pair or any 2-month sequence.",
     "three-month-pairs": "3 pairs across 3 consecutive months.",
     "three-wind-pairs": "3 wind pairs across 3 different winds.",
     "three-month-pairs-three-elements": "3 pairs across 3 months, using at most 2 colors.",

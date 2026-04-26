@@ -416,7 +416,7 @@ All patterns below use exactly `6` cards.
 | Crown | Either: 5 of one month plus 1 neighboring month with all 6 colors present; or 6 of one month with all 6 colors present; or 6 of the same guest wind | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
 | Escort | 4 of one month plus 2 matching cards from either the previous or next month, with all 6 colors present | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
 | Split Escort | 4 of one month plus 1 previous and 1 next month, with all 6 colors present | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
-| Compass | N, S, E, W plus either 1 pair or 2 cards in sequence, with all 6 colors present | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
+| Compass | Four same-color N, S, E, W plus either any month pair or any 2-card month sequence | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
 
 ### 15.5 15-point patterns
 
@@ -434,7 +434,7 @@ Notes on the 15-point patterns:
 - `Mono Skip` means a `Skip` played in a single color lane.
 - `Grand Crown` means collecting all 6 cards of the round's target month, or all 6 cards of your seat wind. In sudden death there is no target month, so only the home wind branch is available.
 - `Crown` on the wind side means all 6 cards are the same guest wind. If all 6 cards are your home wind instead, that is `Grand Crown`.
-- `Compass` uses all four winds plus either a month pair or a 2-month sequence, with all 6 colors represented.
+- `Compass` uses all four winds in one color plus either any month pair or any 2-month sequence.
 - `Mono Compass` uses all four winds plus a 2-month sequence, all in a single color.
 - Only `Run` requires any open cards inside that pattern to form a consecutive block of months within the completed run.
 

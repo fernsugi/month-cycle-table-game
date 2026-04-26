@@ -5,8 +5,8 @@ const fs = require("fs");
 const path = require("path");
 const { performance } = require("perf_hooks");
 
-const ROOT_DIR = path.resolve(__dirname, "..");
-const INDEX_HTML = path.join(ROOT_DIR, "index.html");
+const ROOT_DIR = __dirname;
+const INDEX_HTML = path.join(ROOT_DIR, "release", "index.html");
 
 const DEFAULT_OPTIONS = {
   generations: 4,
@@ -66,7 +66,7 @@ function parseArgs(argv) {
 function printHelp() {
   console.log(`
 Usage:
-  node scripts/ai-tuner.js [options]
+  node ai-tuner.js [options]
 
 Common options:
   --generations=8
@@ -82,13 +82,13 @@ Common options:
   --json
 
 Fast example:
-  node scripts/ai-tuner.js --generations=2 --populationSize=8 --matchesPerGeneration=4 --roundsPerMatch=4
+  node ai-tuner.js --generations=2 --populationSize=8 --matchesPerGeneration=4 --roundsPerMatch=4
 
 Longer example:
-  node scripts/ai-tuner.js --generations=8 --populationSize=24 --matchesPerGeneration=32 --roundsPerMatch=8 --finalMatches=64 --out=ai-tuning-result.json
+  node ai-tuner.js --generations=8 --populationSize=24 --matchesPerGeneration=32 --roundsPerMatch=8 --finalMatches=64 --out=ai-tuning-result.json
 
 Validate saved leaderboard:
-  node scripts/ai-tuner.js --validate=ai-tuning-result.json --accurate --validationMatches=12 --roundsPerMatch=4
+  node ai-tuner.js --validate=ai-tuning-result.json --accurate --validationMatches=12 --roundsPerMatch=4
 `.trim());
 }
 
