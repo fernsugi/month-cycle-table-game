@@ -37,8 +37,7 @@ Each month card has:
 Deck structure:
 
 - months repeat every `12` cards
-- the first `60` cards use the original five colors: `G`, `R`, `Y`, `K`, `B`
-- the final `12` cards are white cards
+- the `72` month cards cover all `12` months across all `6` colors: `G`, `R`, `Y`, `K`, `B`, `W`
 - each month appears exactly `6` times in the deck
 - each color appears exactly `12` times among month cards
 
@@ -274,7 +273,7 @@ Wind cards have **no month**. Therefore, wind cards cannot be used in any patter
 - Mono Skip
 - Mono Run
 
-Wind cards **can** be used in `Mono` (all same color), `Crown`, `Grand Crown`, and all wind-specific patterns listed in Section 15.
+Wind cards **can** be used in `Mono` (all same color), `Axis`, `Grand Axis`, `Tempest`, `Grand Tempest`, and all wind-specific patterns listed in Section 15.
 
 ## 11. Gear Rule
 
@@ -397,6 +396,7 @@ All patterns below use exactly `6` cards.
 | --- | --- | --- |
 | Triple Pair | 3 pairs from 3 consecutive months | 2 open cards scores 3pt; 3+ open cards scores 6pt |
 | Wind Pairs | 3 pairs from 3 different winds | 2 open cards scores 3pt; 3+ open cards scores 6pt |
+| Axis | Either: 2 of your seat wind plus 4 of the current round month; or 4 of your seat wind plus 2 of the current round month | 2 open cards scores 3pt; 3+ open cards scores 6pt |
 | Twin Tone Pairs | 3 pairs from 3 different months, using at most 2 colors total | 2 open cards scores 3pt; 3+ open cards scores 6pt |
 | Parity Pairs | 3 pairs from 3 different months, all odd or all even | 2 open cards scores 3pt; 3+ open cards scores 6pt |
 
@@ -406,6 +406,7 @@ All patterns below use exactly `6` cards.
 | --- | --- | --- |
 | Twin Triples | 3 cards of one month and 3 cards of a consecutive month | 1 open card scores 3pt; 2 open cards scores 6pt; 3+ open cards scores 9pt |
 | Wind Triples | 3 cards of one wind and 3 cards of another wind | 1 open card scores 3pt; 2 open cards scores 6pt; 3+ open cards scores 9pt |
+| Grand Axis | 3 of your seat wind plus 3 of the current round month | 1 open card scores 3pt; 2 open cards scores 6pt; 3+ open cards scores 9pt |
 | Tri Tone Triples | 3 cards of one month and 3 cards of another month, using at most 3 colors total | 1 open card scores 3pt; 2 open cards scores 6pt; 3+ open cards scores 9pt |
 | Parity Triples | 3 cards of one month and 3 cards of another month, all odd or all even | 1 open card scores 3pt; 2 open cards scores 6pt; 3+ open cards scores 9pt |
 
@@ -413,7 +414,8 @@ All patterns below use exactly `6` cards.
 
 | Pattern | Requirement | Gear |
 | --- | --- | --- |
-| Crown | Either: 5 of one month plus 1 neighboring month with all 6 colors present; or 6 of one month with all 6 colors present; or 6 of the same guest wind | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
+| Crown | Either: 5 of one month plus 1 neighboring month with all 6 colors present; or 6 of one month with all 6 colors present | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
+| Tempest | All 6 cards are the same wind, as long as it is not your seat wind | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
 | Escort | 4 of one month plus 2 matching cards from either the previous or next month, with all 6 colors present | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
 | Split Escort | 4 of one month plus 1 previous and 1 next month, with all 6 colors present | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
 | Compass | Four same-color N, S, E, W plus either any month pair or any 2-card month sequence | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
@@ -424,7 +426,8 @@ All patterns below use exactly `6` cards.
 | --- | --- | --- |
 | Mono Skip | All 6 cards share one color and are all odd months or all even months | 0-3 open cards scores 9pt; 4 open cards scores 12pt; 5 open cards scores 15pt |
 | Mono Run | Six different months in order, all sharing one color | 0-3 open cards scores 9pt; 4 open cards scores 12pt; 5 open cards scores 15pt |
-| Grand Crown | Either: all 6 cards are the current round month; or all 6 cards are your home wind | 0-3 open cards scores 9pt; 4 open cards scores 12pt; 5 open cards scores 15pt |
+| Grand Crown | All 6 cards are the current round month | 0-3 open cards scores 9pt; 4 open cards scores 12pt; 5 open cards scores 15pt |
+| Grand Tempest | All 6 cards are your seat wind | 0-3 open cards scores 9pt; 4 open cards scores 12pt; 5 open cards scores 15pt |
 | Mono Compass | N, S, E, W plus 2 cards in sequence, all sharing one color | 0-3 open cards scores 9pt; 4 open cards scores 12pt; 5 open cards scores 15pt |
 
 Notes on the 15-point patterns:
@@ -432,8 +435,11 @@ Notes on the 15-point patterns:
 - `Skip` means all odd months or all even months, with all 6 colors and all 6 months different.
 - `Run` means a 6-month consecutive run.
 - `Mono Skip` means a `Skip` played in a single color lane.
-- `Grand Crown` means collecting all 6 cards of the round's target month, or all 6 cards of your seat wind. In sudden death there is no target month, so only the home wind branch is available.
-- `Crown` on the wind side means all 6 cards are the same guest wind. If all 6 cards are your home wind instead, that is `Grand Crown`.
+- `Grand Crown` means collecting all 6 cards of the round's target month. In sudden death there is no target month, so `Grand Crown` is unavailable.
+- `Axis` means mixing your seat wind with the round's target month in a `2+4` or `4+2` split.
+- `Grand Axis` means a `3+3` split between your seat wind and the round's target month.
+- `Tempest` means all 6 cards are the same wind, as long as it is not your seat wind.
+- `Grand Tempest` means all 6 cards are your seat wind.
 - `Compass` uses all four winds in one color plus either any month pair or any 2-month sequence.
 - `Mono Compass` uses all four winds plus a 2-month sequence, all in a single color.
 - Only `Run` requires any open cards inside that pattern to form a consecutive block of months within the completed run.

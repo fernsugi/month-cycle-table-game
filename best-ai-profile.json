@@ -1,0 +1,50 @@
+{
+  "id": 216,
+  "name": "AI-216",
+  "source": "ai-tuning-validation.json",
+  "type": "validated-winner",
+  "overrides": {
+    "chiThreshold": 74.45641393708968,
+    "ponThreshold": 73.78644835352043,
+    "kanThreshold": 120.77706462717168,
+    "discardWeights": {
+      "winningDraw": 112.6833288747019,
+      "winningPoint": 24.001069047572095,
+      "bestWinningPoint": 12.330327932585437,
+      "distancePenalty": 36.246064375035246,
+      "focusPrimary": 27.994050001437625,
+      "publicDangerPenalty": 6.475317005372888,
+      "maxOpponentDangerPenalty": 2.0054247881133165,
+      "claimPressurePenalty": 1.1704928012100613,
+      "windAffinity": 0.6876832315602346
+    },
+    "strategy": {
+      "dealerAggression": 0.13599884953562547,
+      "openCardAggression": 0.03234357744689703,
+      "trailingAggressionPerPoint": 0.015042971698129317,
+      "leadingDefensePerPoint": 0.013243809279995996,
+      "claimBiasPerPoint": 0.008554624461517096,
+      "leadRiskBrakePerPoint": 0.0067834407065942015
+    },
+    "windStrategy": {
+      "homeWindCard": 9.908109504502288,
+      "homeWindStack": 10.747519041755849,
+      "sameWindPair": 6.839877923840287,
+      "sameWindTriple": 16.071796913094225,
+      "compassCoverage": 9.267249301107977,
+      "monoCompassCoverage": 3.318934702285695,
+      "openWindGear": 2.9450647663830654
+    },
+    "opponentSignals": {
+      "homeWindDanger": 6.82762133037198,
+      "openSameWindDanger": 15.533871382552752,
+      "openCompassDanger": 10.199396312349034
+    },
+    "claimSignals": {
+      "windChiMultiplier": 0.2313906358341643,
+      "windPonMultiplier": 1.0011412925909073,
+      "windKanMultiplier": 1.864370004266446,
+      "homeWindSetClaimMultiplier": 1.0279812127071528
+    }
+  }
+}
