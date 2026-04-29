@@ -34,6 +34,8 @@ Each month card has:
 - a month from `1` to `12`
 - a color: `G`, `R`, `Y`, `K`, `B`, or `W`
 
+Month order is linear and does not wrap. Month `12` and month `1` are not neighboring or consecutive.
+
 Deck structure:
 
 - months repeat every `12` cards
@@ -473,8 +475,9 @@ If round `12` ends tied for first:
 
 ## 18. Practical Notes
 
-- Odd/even patterns use the card's hidden deck position parity. Each month contains both odd and even cards.
+- Odd/even patterns use the visible month number parity.
 - The month labels are numeric `1` to `12`.
+- Month order does not wrap; month `12` and month `1` are not neighbors.
 - The color labels are abbreviated: `G`, `R`, `Y`, `K`, `B`, `W`.
 - The wind labels are abbreviated: `N`, `S`, `E`, `W`.
 - Open-card count matters a lot because of gear. A beautiful hand may still be invalid if it does not meet the required visible open count for its point tier.
