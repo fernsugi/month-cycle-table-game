@@ -594,7 +594,7 @@
       );
     }
     if (opt.type === "chi") return bestAfterDiscard > before && Math.random() < 0.75;
-    if (opt.type === "pon") return bestAfterDiscard >= before || openCount(p) <= 1;
+    if (opt.type === "pon") return openCount(p) ? bestAfterDiscard > before : bestAfterDiscard >= before;
     return false;
   }
 
