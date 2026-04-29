@@ -142,7 +142,7 @@
     {
       title:"Home Wind",
       lines:[
-        "Your seat wind is shown near your name.",
+        "Your seat wind is shown on the table header.",
         "If you discard your own wind, you may open 1 hand card.",
         "Tap any hand card to open it, or press Skip.",
         "Use this when you need more gear for a future win."
@@ -215,7 +215,7 @@
       title:"More 12-Point Wins",
       lines:[
         "Split Escort: 4 of one month plus 1 previous, 1 next, all colors.",
-        "Compass: same-color N, S, E, W plus a month pair or sequence.",
+        "Compass: same-color N, S, E, W plus any month pair or sequence.",
         "12-point wins score 6 with 0-3 gear.",
         "They score 9 with 4 gear, or 12 with 5 gear."
       ]
@@ -233,18 +233,18 @@
       title:"More 15-Point Wins",
       lines:[
         "Grand Tempest: all 6 cards are your own seat wind.",
-        "Mono Compass: same-color N, S, E, W plus a 2-month sequence.",
+        "Mono Compass: all 6 cards one color, with N, S, E, W and a sequence.",
         "15-point wins score 9 with 0-3 gear.",
         "They score 12 with 4 gear, or 15 with 5 gear."
       ]
     },
     {
-      title:"Bonuses",
+      title:"Winning Bonuses",
       lines:[
-        "The popup shows the winning pattern and cards.",
-        "If your win contains the round target month, gain +3 points.",
-        "If your win contains your own seat wind, gain +3 points.",
-        "Both bonuses can happen together."
+        "When winning, the round target month gives +3 points.",
+        "When winning, your own seat wind gives +3 points.",
+        "Both bonuses can happen together.",
+        "The match ends after round 12 or when a player runs out of points; ties go to Sudden Death."
       ]
     },
     {
@@ -719,8 +719,7 @@
   }
 
   function afterHand(dealNow = false) {
-    const busted = game.players.some(p => p.points <= 0);
-    if (busted || (game.round >= 12 && !game.sudden && soleLeader())) return endMatch();
+    if (matchShouldEnd()) return endMatch();
     if (game.round >= 12 && !game.sudden) game.sudden = true;
     else if (!game.sudden) game.round++;
     if (dealNow) {
@@ -738,8 +737,14 @@
     return game.players.filter(p => p.points === high).length === 1;
   }
 
+  function matchShouldEnd() {
+    const busted = game.players.some(p => p.points <= 0);
+    return busted || (game.round >= 12 && soleLeader());
+  }
+
   function endMatch() {
     game.mode = "gameOver";
+    game.lastResults = [];
     const sorted = game.players.slice().sort((a,b) => b.points - a.points);
     game.message = `${sorted[0].name} wins the match`;
     game.sub = game.players.map(p => `${p.name} ${p.points}`).join("  ");
@@ -1345,7 +1350,7 @@
     }
     if (game.mode === "result") {
       resultPanel();
-      drawButton(DESIGN_W/2 - 145, 872, 290, 68, "DEAL NEXT", "#ffe07b", "next");
+      drawButton(DESIGN_W/2 - 145, 872, 290, 68, matchShouldEnd() ? "NEXT" : "DEAL NEXT", "#ffe07b", "next");
     }
     if (game.mode === "userTurn") {
       const selfKan = game.awaiting && game.awaiting.type === "selfKan";
@@ -1402,7 +1407,7 @@
     if (result && result.cards && result.cards.length) {
       ctx.fillStyle = "#8dfff1";
       ctx.font = "900 17px Georgia,serif";
-      ctx.fillText(`${game.players[result.player].name}'s winning hand`, DESIGN_W/2, 468);
+      ctx.fillText(result.player === 0 ? "Your winning hand" : `${game.players[result.player].name}'s winning hand`, DESIGN_W/2, 468);
       const cw = 74, ch = 104, gap = 8;
       const start = DESIGN_W/2 - (result.cards.length * cw + (result.cards.length - 1) * gap) / 2;
       for (let i = 0; i < result.cards.length; i++) {
