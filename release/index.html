@@ -1199,6 +1199,7 @@
         const y = z.y + row * z.step;
         const c = p.discards[k];
         drawCard(c, x, y, cw, ch, 0, true, .98);
+        // drawDiscardBadge(c, x, y, cw, ch); NOTE: Commented-out for aesthetic, redesign if really needed to put back the badge on discarded cards
         if (game.lastDiscard === c && game.lastDiscarder === i) {
           ctx.strokeStyle = "#ffec72";
           ctx.lineWidth = 3;
@@ -1573,10 +1574,31 @@
     else if (assets.ready) {
       const sx = SHEET.margin + card.col * (SHEET.cw + SHEET.gap);
       const sy = SHEET.margin + card.row * (SHEET.ch + SHEET.gap);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
       ctx.drawImage(assets.sheet, sx, sy, SHEET.cw, SHEET.ch, 0, 0, w, h);
     } else {
       fallbackCard(card, 0,0,w,h);
     }
+    ctx.restore();
+  }
+
+  function drawDiscardBadge(card, x, y, w, h) {
+    const col = COLORS[card.color];
+    const label = card.type === "month" ? String(card.month) : card.wind;
+    const whiteCard = col.key === "white";
+    ctx.save();
+    ctx.fillStyle = whiteCard ? "rgba(247,243,223,.94)" : "rgba(5,7,9,.88)";
+    roundedRect(x + 3, y + 3, Math.min(28, w - 6), 17, 5);
+    ctx.fill();
+    ctx.strokeStyle = whiteCard ? "#10171c" : col.main;
+    ctx.lineWidth = 1.25;
+    ctx.stroke();
+    ctx.fillStyle = whiteCard ? "#10171c" : col.main;
+    ctx.font = `900 ${label.length > 1 ? 10 : 12}px Georgia,serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(label, x + 3 + Math.min(28, w - 6) / 2, y + 12);
     ctx.restore();
   }
 
