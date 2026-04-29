@@ -10,7 +10,7 @@ The deck contains 72 month cards and 24 wind cards. Month cards belong to a numb
 
 Play in the browser on GitHub Pages:
 
-https://fernsugi.github.io/month-cycle-table-game
+https://fernsugi.itch.io/month-cycle-table
 
 Open `index.html` in a modern browser to play locally.
 
