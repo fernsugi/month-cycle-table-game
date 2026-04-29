@@ -5,3 +5,4 @@ __MACOSX/
 node_modules/
 .env
 .env.*
+__pycache__/generate_cards.cpython-314.pyc
