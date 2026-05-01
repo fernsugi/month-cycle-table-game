@@ -284,13 +284,13 @@ Gear is based on the literal number of visible open cards in your open area. Som
 Current gear requirements:
 
 - `3pt` requires at least `3` open cards
-- `6pt` requires at least `2` open cards
-  - with exactly `2` open cards, it scores `3pt`
-  - with `3` or more open cards, it scores the full `6pt`
-- `9pt` requires at least `1` open card
-  - with exactly `1` open card, it scores `3pt`
-  - with exactly `2` open cards, it scores `6pt`
-  - with `3` or more open cards, it scores the full `9pt`
+- `6pt` requires at least `3` open cards
+  - with exactly `3` open cards, it scores `3pt`
+  - with `4` or more open cards, it scores the full `6pt`
+- `9pt` requires at least `3` open cards
+  - with exactly `3` open cards, it scores `3pt`
+  - with exactly `4` open cards, it scores `6pt`
+  - with `5` open cards, it scores the full `9pt`
 - `12pt` is always valid, but gear changes the score
   - with `0` to `3` open cards, it scores `6pt`
   - with exactly `4` open cards, it scores `9pt`
@@ -396,21 +396,21 @@ All patterns below use exactly `6` cards.
 
 | Pattern | Requirement | Gear |
 | --- | --- | --- |
-| Triple Pair | 3 pairs from 3 consecutive months | 2 open cards scores 3pt; 3+ open cards scores 6pt |
-| Wind Pairs | 3 pairs from 3 different winds | 2 open cards scores 3pt; 3+ open cards scores 6pt |
-| Axis | Either: 2 of your seat wind plus 4 of the current round month; or 4 of your seat wind plus 2 of the current round month | 2 open cards scores 3pt; 3+ open cards scores 6pt |
-| Twin Tone Pairs | 3 pairs from 3 different months, using at most 2 colors total | 2 open cards scores 3pt; 3+ open cards scores 6pt |
-| Parity Pairs | 3 pairs from 3 different months, all odd or all even | 2 open cards scores 3pt; 3+ open cards scores 6pt |
+| Triple Pair | 3 pairs from 3 consecutive months | 3 open cards scores 3pt; 4+ open cards scores 6pt |
+| Wind Pairs | 3 pairs from 3 different winds | 3 open cards scores 3pt; 4+ open cards scores 6pt |
+| Axis | Either: 2 of your seat wind plus 4 of the current round month; or 4 of your seat wind plus 2 of the current round month | 3 open cards scores 3pt; 4+ open cards scores 6pt |
+| Twin Tone Pairs | 3 pairs from 3 different months, using at most 2 colors total | 3 open cards scores 3pt; 4+ open cards scores 6pt |
+| Parity Pairs | 3 pairs from 3 different months, all odd or all even | 3 open cards scores 3pt; 4+ open cards scores 6pt |
 
 ### 15.3 9-point patterns
 
 | Pattern | Requirement | Gear |
 | --- | --- | --- |
-| Twin Triples | 3 cards of one month and 3 cards of a consecutive month | 1 open card scores 3pt; 2 open cards scores 6pt; 3+ open cards scores 9pt |
-| Wind Triples | 3 cards of one wind and 3 cards of another wind | 1 open card scores 3pt; 2 open cards scores 6pt; 3+ open cards scores 9pt |
-| Grand Axis | 3 of your seat wind plus 3 of the current round month | 1 open card scores 3pt; 2 open cards scores 6pt; 3+ open cards scores 9pt |
-| Tri Tone Triples | 3 cards of one month and 3 cards of another month, using at most 3 colors total | 1 open card scores 3pt; 2 open cards scores 6pt; 3+ open cards scores 9pt |
-| Parity Triples | 3 cards of one month and 3 cards of another month, all odd or all even | 1 open card scores 3pt; 2 open cards scores 6pt; 3+ open cards scores 9pt |
+| Twin Triples | 3 cards of one month and 3 cards of a consecutive month | 3 open cards scores 3pt; 4 open cards scores 6pt; 5 open cards scores 9pt |
+| Wind Triples | 3 cards of one wind and 3 cards of another wind | 3 open cards scores 3pt; 4 open cards scores 6pt; 5 open cards scores 9pt |
+| Grand Axis | 3 of your seat wind plus 3 of the current round month | 3 open cards scores 3pt; 4 open cards scores 6pt; 5 open cards scores 9pt |
+| Tri Tone Triples | 3 cards of one month and 3 cards of another month, using at most 3 colors total | 3 open cards scores 3pt; 4 open cards scores 6pt; 5 open cards scores 9pt |
+| Parity Triples | 3 cards of one month and 3 cards of another month, all odd or all even | 3 open cards scores 3pt; 4 open cards scores 6pt; 5 open cards scores 9pt |
 
 ### 15.4 12-point patterns
 

@@ -169,7 +169,7 @@
     {
       title:"6-Point Wins",
       lines:[
-        "These patterns usually look like 3 pairs. They need 2 gear.",
+        "These patterns usually look like 3 pairs. They need 3 gear.",
         "Triple Pair: 3 month pairs, and the months are consecutive.",
         "Wind Pairs: 3 pairs, each pair from a different wind.",
         "Axis: 2 seat winds plus 4 round target months, or the reverse."
@@ -180,14 +180,14 @@
       lines:[
         "Twin Tone Pairs: 3 month pairs using only 1 or 2 colors.",
         "Parity Pairs: 3 month pairs that are all odd or all even.",
-        "With only 2 gear, a 6-point pattern scores 3.",
-        "With 3 or more gear, it scores the full 6."
+        "With 3 gear, a 6-point pattern scores 3.",
+        "With 4 or more gear, it scores the full 6."
       ]
     },
     {
       title:"9-Point Wins",
       lines:[
-        "These patterns usually look like two triples. They need 1 gear.",
+        "These patterns usually look like two triples. They need 3 gear.",
         "Twin Triples: 3 of one month and 3 of a neighbor month.",
         "Wind Triples: 3 of one wind and 3 of another wind.",
         "Grand Axis: 3 seat winds plus 3 round target month cards."
@@ -198,8 +198,8 @@
       lines:[
         "Tri Tone Triples: two month triples using at most 3 colors.",
         "Parity Triples: two month triples, all odd or all even.",
-        "With 1 gear, a 9-point pattern scores 3.",
-        "With 2 gear it scores 6; with 3 or more it scores 9."
+        "With 3 gear, a 9-point pattern scores 3.",
+        "With 4 gear it scores 6; with 5 gear it scores 9."
       ]
     },
     {
@@ -260,8 +260,8 @@
       title:"Exact Gear Scoring",
       lines:[
         "3pt: needs 3+ gear, scores 3.",
-        "6pt: needs 2+ gear. 2 gear scores 3; 3+ gear scores 6.",
-        "9pt: needs 1+ gear. 1 gear scores 3; 2 scores 6; 3+ scores 9.",
+        "6pt: needs 3+ gear. 3 gear scores 3; 4+ gear scores 6.",
+        "9pt: needs 3+ gear. 3 gear scores 3; 4 scores 6; 5 scores 9.",
         "12pt: 0-3 gear scores 6; 4 scores 9; 5 scores 12."
       ]
     },
@@ -497,7 +497,7 @@
   function discardCard(pi, index, automatic) {
     const p = game.players[pi];
     if (index < 0 || index >= p.concealed.length) return;
-    if (pi === 0) handHoverBlockedUntil = performance.now() + 520;
+    if (pi === 0) handHoverBlockedUntil = performance.now() + 900;
     const card = p.concealed.splice(index, 1)[0];
     p.discards.push(card);
     game.lastDiscard = card;
@@ -766,8 +766,8 @@
   function applyGear(p, open) {
     let score = null;
     if (p.base === 3) score = open >= 3 ? 3 : null;
-    if (p.base === 6) score = open >= 2 ? (open === 2 ? 3 : 6) : null;
-    if (p.base === 9) score = open >= 1 ? (open === 1 ? 3 : open === 2 ? 6 : 9) : null;
+    if (p.base === 6) score = open >= 3 ? (open === 3 ? 3 : 6) : null;
+    if (p.base === 9) score = open >= 3 ? (open === 3 ? 3 : open === 4 ? 6 : 9) : null;
     if (p.base === 12) score = open <= 3 ? 6 : open === 4 ? 9 : 12;
     if (p.base === 15) score = open <= 3 ? 9 : open === 4 ? 12 : 15;
     if (score == null) return null;
@@ -1806,7 +1806,7 @@
       game.awaiting = null;
       return resolveMeldClaims(game.lastDiscard, game.lastDiscarder);
     }
-    handHoverBlockedUntil = performance.now() + 420;
+    handHoverBlockedUntil = performance.now() + 900;
     p.open.push(p.concealed.splice(index, 1)[0]);
     sortHand(p.open);
     bigCall("HOME OPEN", 0, "#ffe07b");
