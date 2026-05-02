@@ -416,6 +416,9 @@
     const human = game.players[0];
     return !!human && openCount(human) >= 5;
   }
+  function autoSkipsOptionalCalls() {
+    return game.autoPlay || forcedAutoDiscard();
+  }
 
   function beginTurn(pi) {
     if (game.mode === "gameOver") return;
@@ -569,7 +572,7 @@
       return;
     }
     const discardKey = groupKey(card);
-    if (discarder === 0 && !game.autoPlay && canMatchOpen(game.players[0], discardKey)) {
+    if (discarder === 0 && !autoSkipsOptionalCalls() && canMatchOpen(game.players[0], discardKey)) {
       game.awaiting = { type:"matchOpen", card, discarder, key:discardKey };
       game.mode = "matchOpen";
       game.message = "Match open";
@@ -613,7 +616,7 @@
     }
     options.sort((a,b) => a.priority - b.priority);
     const userOpts = options.filter(o => o.player === 0);
-    const playableUserOpts = game.autoPlay ? [] : userOpts;
+    const playableUserOpts = autoSkipsOptionalCalls() ? [] : userOpts;
     if (playableUserOpts.length) {
       pauseAuto();
       game.claim = { card:game.lastDiscard, discarder, options:playableUserOpts, all:options };
@@ -623,7 +626,7 @@
       playSfx("claim");
       return;
     }
-    const claimCandidates = game.autoPlay ? options.filter(o => o.player !== 0) : options;
+    const claimCandidates = autoSkipsOptionalCalls() ? options.filter(o => o.player !== 0) : options;
     const ai = claimCandidates.find(o => shouldAiClaim(o, card));
     if (ai) return delay(() => takeClaim(ai.player, ai.type, card, discarder), 460);
     advanceTurn();
@@ -2106,7 +2109,7 @@
     if (a === "tsumo" && game.awaiting) return declareWin([0], null, "TSUMO", [game.awaiting.win]);
     if (a === "passTsumo") {
       game.awaiting = null;
-      if (game.autoPlay) {
+      if (autoSkipsOptionalCalls()) {
         game.mode = "play";
         game.message = "AUTO discard";
         game.sub = "Running until a call";
