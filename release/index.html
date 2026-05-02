@@ -1387,7 +1387,7 @@
       const x = start + i * (cw + gap);
       if (pointer.x >= x && pointer.x <= x + cw && pointer.y >= y - 24 && pointer.y <= y + ch) {
         const card = p.concealed[i];
-        if (pointer.kind !== "touch") {
+        if (pointer.kind !== "touch" || discardHint.card) {
           discardHint = { card, until:now + 140, candidate:card, since:discardHint.since };
           return card;
         }
