@@ -35,7 +35,7 @@
   const ctx = canvas.getContext("2d", { alpha:false });
 
   const assets = { sheet:new Image(), ready:false };
-  assets.sheet.onload = () => { assets.ready = true; flash("Cards Ready", "#ffe07b", 30); };
+  assets.sheet.onload = () => { assets.ready = true; };
   assets.sheet.onerror = () => flash("Sprite sheet missing: using drawn cards", "#ff6680", 80);
   assets.sheet.src = "all_96_cards_sheet.png";
 
@@ -309,12 +309,14 @@
     helpReturn:"title",
     seenTenpai:false,
     lastResults:[],
+    autoPlay:false,
   };
 
   function initMatch() {
     game.round = 1;
     game.sudden = false;
     game.dealer = Math.floor(Math.random() * 4);
+    game.autoPlay = false;
     game.players = [
       { name:"You", ai:false, points:18 },
       { name:"Akari", ai:true, points:18 },
@@ -344,6 +346,7 @@
         open:[],
         discards:[],
         tenpai:false,
+        waitCards:[],
         close:false,
         riichiGlow:false,
       });
@@ -394,6 +397,24 @@
       ((a.month || 20 + WINDS.indexOf(a.wind)) - (b.month || 20 + WINDS.indexOf(b.wind))) ||
       a.color - b.color);
   }
+  function playerVerb(p, firstPerson, thirdPerson) {
+    return `${p.name} ${p.name === "You" ? firstPerson : thirdPerson}`;
+  }
+  function pauseAuto() {
+    if (!game.autoPlay) return;
+    game.autoPlay = false;
+    flash("AUTO PAUSED", "#8dfff1", 44);
+  }
+  function autoBlockedByDecision() {
+    return game.mode === "userClaim" ||
+      game.mode === "userRon" ||
+      game.mode === "userTsumo" ||
+      game.mode === "homeOpen";
+  }
+  function forcedAutoDiscard() {
+    const human = game.players[0];
+    return !!human && openCount(human) >= 5;
+  }
 
   function beginTurn(pi) {
     if (game.mode === "gameOver") return;
@@ -404,7 +425,7 @@
     p.concealed.push(card);
     sortHand(p.concealed);
     game.currentDraw = card;
-    game.message = `${p.name} draws`;
+    game.message = playerVerb(p, "draw", "draws");
     game.sub = `${game.wall.length} cards in wall`;
     playSfx("draw");
     updateTenpai();
@@ -412,6 +433,7 @@
     const win = bestWin(p, totalCards(p), "tsumo");
     if (win) {
       if (p.ai) return delay(() => declareWin([pi], null, "TSUMO", [win]), 760);
+      pauseAuto();
       game.awaiting = { type:"tsumo", win };
       game.mode = "userTsumo";
       flash("TSUMO READY", "#fff1a8", 80);
@@ -423,7 +445,8 @@
     if (p.ai && selfKan && Math.random() < 0.55) {
       return delay(() => claimSelfKan(pi, selfKan), 520);
     }
-    if (!p.ai && selfKan) {
+    if (!p.ai && selfKan && !game.autoPlay) {
+      pauseAuto();
       game.awaiting = { type:"selfKan", group:selfKan };
       game.mode = "userTurn";
       flash("KAN READY", "#88d7ff", 45);
@@ -432,6 +455,12 @@
 
     if (!p.ai) {
       if (openCount(p) >= 5) return delay(() => autoDiscardHuman(), 580);
+      if (game.autoPlay) {
+        game.mode = "play";
+        game.message = "AUTO discard";
+        game.sub = p.tenpai ? "TENPAI wait shown" : "Running until a call";
+        return delay(() => autoDiscardHuman(), 420);
+      }
       game.mode = "userTurn";
       game.message = "Your discard";
       game.sub = p.tenpai ? "TENPAI - choose carefully" : "Tap a card, then Discard";
@@ -497,13 +526,13 @@
   function discardCard(pi, index, automatic) {
     const p = game.players[pi];
     if (index < 0 || index >= p.concealed.length) return;
-    if (pi === 0) handHoverBlockedUntil = performance.now() + 900;
+    if (pi === 0) handHoverBlockedUntil = performance.now() + 650;
     const card = p.concealed.splice(index, 1)[0];
     p.discards.push(card);
     game.lastDiscard = card;
     game.lastDiscarder = pi;
     game.currentDraw = null;
-    game.message = `${p.name} discards ${cardLabel(card)}`;
+    game.message = `${playerVerb(p, "discard", "discards")} ${cardLabel(card)}`;
     game.sub = automatic ? "Auto discard" : "Claims open";
     ripple(discardCenterX(pi), discardCenterY(pi), COLORS[card.color].main);
     playSfx("discard");
@@ -523,6 +552,7 @@
     }
     if (ron.length) {
       if (ron.includes(0)) {
+        pauseAuto();
         game.awaiting = { type:"ron", winners:ron, wins, discarder };
         game.mode = "userRon";
         flash("RON AVAILABLE", "#ffec72", 80);
@@ -541,8 +571,8 @@
     }
     if (card.type === "wind" && game.players[discarder].seat === card.wind && game.players[discarder].ai) {
       const p = game.players[discarder];
-      if (p.concealed.length && openCount(p) < 5 && Math.random() < 0.5) {
-        const idx = chooseDiscardIndex(p);
+      const idx = chooseAiHomeOpenIndex(p);
+      if (idx >= 0 && Math.random() < 0.65) {
         p.open.push(p.concealed.splice(idx, 1)[0]);
         sortHand(p.open);
         bigCall("HOME OPEN", discarder, "#8dfff1");
@@ -565,15 +595,18 @@
     }
     options.sort((a,b) => a.priority - b.priority);
     const userOpts = options.filter(o => o.player === 0);
-    if (userOpts.length) {
-      game.claim = { card:game.lastDiscard, discarder, options:userOpts, all:options };
+    const playableUserOpts = game.autoPlay ? [] : userOpts;
+    if (playableUserOpts.length) {
+      pauseAuto();
+      game.claim = { card:game.lastDiscard, discarder, options:playableUserOpts, all:options };
       game.mode = "userClaim";
       game.message = "Claim window";
-      game.sub = userOpts.map(o => o.type.toUpperCase()).join(" / ");
+      game.sub = playableUserOpts.map(o => o.type.toUpperCase()).join(" / ");
       playSfx("claim");
       return;
     }
-    const ai = options.find(o => shouldAiClaim(o, card));
+    const claimCandidates = game.autoPlay ? options.filter(o => o.player !== 0) : options;
+    const ai = claimCandidates.find(o => shouldAiClaim(o, card));
     if (ai) return delay(() => takeClaim(ai.player, ai.type, card, discarder), 460);
     advanceTurn();
   }
@@ -581,21 +614,50 @@
   function shouldAiClaim(opt, card) {
     const p = game.players[opt.player];
     if (!canTakeClaim(p, opt.type, card)) return false;
-    if (opt.type === "kan") return true;
     const before = countWinningDraws(p, totalCards(p), 18);
     const state = simulatedClaimState(p, opt.type, card);
-    if (!state || state.concealed.length === 0) return opt.type !== "chi";
-    let bestAfterDiscard = 0;
+    const bestAfterDiscard = bestWaitsAfterClaimDiscard(p, state);
+    if (bestAfterDiscard <= 0) return false;
+    if (opt.type === "chi") return bestAfterDiscard > before && Math.random() < 0.75;
+    if (opt.type === "pon" || opt.type === "kan") return bestAfterDiscard >= before;
+    return false;
+  }
+
+  function bestWaitsAfterClaimDiscard(p, state) {
+    if (!state || state.concealed.length === 0) return 0;
+    let best = 0;
     for (let i = 0; i < state.concealed.length; i++) {
       const concealed = state.concealed.slice(0, i).concat(state.concealed.slice(i + 1));
-      bestAfterDiscard = Math.max(
-        bestAfterDiscard,
+      best = Math.max(
+        best,
         countWinningDraws({ ...p, concealed, open:state.open }, concealed.concat(state.open), 18)
       );
     }
-    if (opt.type === "chi") return bestAfterDiscard > before && Math.random() < 0.75;
-    if (opt.type === "pon") return openCount(p) ? bestAfterDiscard > before : bestAfterDiscard >= before;
-    return false;
+    return best;
+  }
+
+  function chooseAiHomeOpenIndex(p) {
+    if (!p || !p.concealed.length || openCount(p) >= 5) return -1;
+    const before = countWinningDraws(p, totalCards(p), 18);
+    let best = -1, bestWaits = 0, bestFit = -Infinity;
+    for (let i = 0; i < p.concealed.length; i++) {
+      const concealed = p.concealed.slice();
+      const open = p.open.slice();
+      const card = concealed.splice(i, 1)[0];
+      open.push(card);
+      if (open.length > 5) continue;
+      const waits = countWinningDraws({ ...p, concealed, open }, concealed.concat(open), 18);
+      if (waits <= 0 || waits < before) continue;
+      const fit = open.filter(c => groupKey(c) === groupKey(card)).length * 2 +
+        (card.month === currentRoundMonth() ? 1 : 0) +
+        (card.wind === p.seat ? 1 : 0);
+      if (waits > bestWaits || (waits === bestWaits && fit > bestFit)) {
+        best = i;
+        bestWaits = waits;
+        bestFit = fit;
+      }
+    }
+    return best;
   }
 
   function takeClaim(pi, type, card, discarder) {
@@ -681,6 +743,7 @@
   }
 
   function declareWin(winners, discarder, method, wins) {
+    game.autoPlay = false;
     game.mode = "result";
     game.lastResults = [];
     for (let wi = 0; wi < winners.length; wi++) {
@@ -710,6 +773,7 @@
   }
 
   function endHandDraw() {
+    game.autoPlay = false;
     game.mode = "result";
     game.message = "Exhaustive Draw";
     game.sub = "No score";
@@ -745,7 +809,7 @@
   function endMatch() {
     game.mode = "gameOver";
     const sorted = game.players.slice().sort((a,b) => b.points - a.points);
-    game.message = `${sorted[0].name} wins the match`;
+    game.message = `${playerVerb(sorted[0], "win", "wins")} the match`;
     game.sub = game.players.map(p => `${p.name} ${p.points}`).join("  ");
     playSfx(sorted[0].ai ? "draw" : "win");
   }
@@ -878,14 +942,28 @@
     return n;
   }
 
+  function winningDrawCards(player, fiveCards, max = 30) {
+    const waits = [];
+    const seen = new Set(fiveCards.map(c => c.id));
+    for (const c of buildDeck()) {
+      if (seen.has(c.id)) continue;
+      if (bestWin(player, fiveCards.concat(c), "draw")) waits.push(c);
+      if (waits.length >= max) break;
+    }
+    sortHand(waits);
+    return waits;
+  }
+
   function updateTenpai() {
     for (const p of game.players) {
-      if (totalCards(p).length === 5) {
-        const waits = countWinningDraws(p, totalCards(p), 30);
-        p.tenpai = waits > 0;
-        p.close = waits > 0 || nearShape(p);
+      const cards = totalCards(p);
+      if (cards.length === 5) {
+        p.waitCards = winningDrawCards(p, cards, 30);
+        p.tenpai = p.waitCards.length > 0;
+        p.close = p.waitCards.length > 0 || nearShape(p);
       } else {
         p.tenpai = false;
+        p.waitCards = [];
         p.close = nearShape(p);
       }
     }
@@ -1020,6 +1098,7 @@
     for (let i=0;i<4;i++) renderPlayer(i, now);
     renderDiscards();
     renderOpenAreas();
+    renderWaitCards(now);
     renderHumanHand(now);
     renderHud(now);
     renderPrompts(now);
@@ -1275,6 +1354,43 @@
     }
   }
 
+  function renderWaitCards(now) {
+    const p = game.players[0];
+    const waits = (p && p.tenpai && p.waitCards) ? p.waitCards : [];
+    if (!waits.length) return;
+    const cardW = 34, cardH = 46, gap = 5, perRow = 8;
+    const shown = waits.slice(0, waits.length > 16 ? 15 : 16);
+    const extra = waits.length - shown.length;
+    const rows = Math.ceil((shown.length + (extra > 0 ? 1 : 0)) / perRow);
+    const x = 218, y = rows > 1 ? 950 : 986;
+    const blink = 0.52 + Math.sin(now / 190) * 0.32;
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.fillStyle = `rgba(255,236,114,${0.55 + blink * 0.45})`;
+    ctx.font = "900 15px Georgia,serif";
+    ctx.fillText("WAIT", x + 45, y + (rows > 1 ? 49 : 34));
+
+    const cardStartX = x + 88;
+    const cardStartY = y + (rows > 1 ? 10 : 9);
+    const cells = shown.concat(extra > 0 ? [null] : []);
+    for (let i = 0; i < cells.length; i++) {
+      const col = i % perRow;
+      const row = Math.floor(i / perRow);
+      const cx = cardStartX + col * (cardW + gap);
+      const cy = cardStartY + row * (cardH + 4);
+      if (cells[i]) {
+        drawCard(cells[i], cx, cy, cardW, cardH, 0, true, .66);
+      } else {
+        ctx.save();
+        ctx.fillStyle = "rgba(255,241,168,.5)";
+        ctx.font = "900 13px Georgia,serif";
+        ctx.fillText(`+${extra}`, cx + cardW / 2, cy + cardH / 2 + 5);
+        ctx.restore();
+      }
+    }
+    ctx.restore();
+  }
+
   function renderHumanHand(now) {
     const p = game.players[0];
     const count = p.concealed.length;
@@ -1492,7 +1608,32 @@
   function drawGameUtilityButtons() {
     drawSoundToggle();
     drawIconButton(76, 1212, 54, "?", "help", "#ffe07b");
+    drawAutoButton();
     drawIconButton(652, 1212, 54, "HOME", "home", "#8dfff1");
+  }
+
+  function drawAutoButton() {
+    const x = 144, y = 1212, s = 54;
+    const forced = forcedAutoDiscard();
+    const on = !!game.autoPlay || forced;
+    const color = on ? "#ffec72" : "#68737a";
+    const hot = pointer.x >= x && pointer.x <= x + s && pointer.y >= y && pointer.y <= y + s;
+    ctx.save();
+    ctx.shadowColor = color;
+    ctx.shadowBlur = hot ? 18 : on ? 16 : 6;
+    ctx.fillStyle = on ? "rgba(77,61,18,.94)" : "rgba(16,20,22,.92)";
+    roundedRect(x, y, s, s, 13);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = on ? 2.5 : 2;
+    ctx.stroke();
+    ctx.fillStyle = color;
+    ctx.textAlign = "center";
+    ctx.font = "900 14px Georgia,serif";
+    ctx.fillText("AUTO", x + s / 2, y + 31);
+    ctx.restore();
+    buttons.push({ x, y, w:s, h:s, action:"auto" });
   }
 
   function drawSoundToggle() {
@@ -1580,6 +1721,31 @@
     } else {
       fallbackCard(card, 0,0,w,h);
     }
+    if (faceUp && isHumanKeyCard(card)) shineCard(0, 0, w, h, performance.now(), card.col || card.row || 0);
+    ctx.restore();
+  }
+
+  function isHumanKeyCard(card) {
+    const human = game.players[0];
+    return !!human && ((currentRoundMonth() && card.month === currentRoundMonth()) || card.wind === human.seat);
+  }
+
+  function shineCard(x, y, w, h, now, phase = 0) {
+    const speedScale = Math.max(0.45, Math.min(1, w / 96));
+    const travel = (now / 10 * speedScale + phase * 70) % (w + h + 120);
+    const bandX = x - h * 0.8 - 70 + travel;
+    ctx.save();
+    roundedRect(x + 2, y + 2, w - 4, h - 4, 8);
+    ctx.clip();
+    ctx.globalCompositeOperation = "lighter";
+    const g = ctx.createLinearGradient(bandX - 44, y + h + 20, bandX + 92, y - 20);
+    g.addColorStop(0, "rgba(255,255,255,0)");
+    g.addColorStop(0.42, "rgba(255,245,175,.02)");
+    g.addColorStop(0.5, "rgba(255,255,230,.28)");
+    g.addColorStop(0.58, "rgba(255,245,175,.02)");
+    g.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(x - 60, y - 20, w + 120, h + 40);
     ctx.restore();
   }
 
@@ -1736,6 +1902,23 @@
       if (!game.muted) playSfx("claim");
       return;
     }
+    if (a === "auto") {
+      if (forcedAutoDiscard()) return;
+      if (!game.autoPlay && autoBlockedByDecision()) {
+        flash("CALL FIRST", "#ffec72", 42);
+        return;
+      }
+      game.autoPlay = !game.autoPlay;
+      flash(game.autoPlay ? "AUTO ON" : "AUTO OFF", game.autoPlay ? "#ffec72" : "#8dfff1", 42);
+      if (game.autoPlay && game.mode === "userTurn") {
+        if (game.awaiting && game.awaiting.type === "selfKan") game.awaiting = null;
+        game.mode = "play";
+        game.message = "AUTO discard";
+        game.sub = "Running until a call";
+        delay(() => autoDiscardHuman(), 220);
+      }
+      return;
+    }
     if (a === "help") {
       game.helpReturn = game.mode;
       game.helpPage = 0;
@@ -1757,6 +1940,7 @@
       return;
     }
     if (a === "home") {
+      game.autoPlay = false;
       game.mode = "title";
       game.message = "Month Cycle Table";
       game.sub = "Touch to begin";
@@ -1806,7 +1990,7 @@
       game.awaiting = null;
       return resolveMeldClaims(game.lastDiscard, game.lastDiscarder);
     }
-    handHoverBlockedUntil = performance.now() + 900;
+    handHoverBlockedUntil = performance.now() + 650;
     p.open.push(p.concealed.splice(index, 1)[0]);
     sortHand(p.open);
     bigCall("HOME OPEN", 0, "#ffe07b");
