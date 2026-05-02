@@ -41,9 +41,9 @@
 
   let dpr = 1, scale = 1, ox = 0, oy = 0;
   let lastTime = performance.now();
-  let pointer = { x:0, y:0, down:false };
+  let pointer = { x:0, y:0, down:false, kind:"mouse", downAt:0 };
   let handHoverBlockedUntil = 0;
-  let discardHint = { card:null, until:0 };
+  let discardHint = { card:null, until:0, candidate:null, since:0 };
   let buttons = [];
   let handRects = [];
   let particles = [];
@@ -1371,7 +1371,10 @@
 
   function hoveredHumanHandCard() {
     const now = performance.now();
-    if (game.mode !== "userTurn" || now < handHoverBlockedUntil) return null;
+    if (game.mode !== "userTurn" || now < handHoverBlockedUntil) {
+      discardHint = { card:null, until:0, candidate:null, since:0 };
+      return null;
+    }
     const p = game.players[0];
     if (!p || !p.concealed) return null;
     const count = p.concealed.length;
@@ -1383,11 +1386,21 @@
     for (let i = 0; i < count; i++) {
       const x = start + i * (cw + gap);
       if (pointer.x >= x && pointer.x <= x + cw && pointer.y >= y - 24 && pointer.y <= y + ch) {
-        discardHint = { card:p.concealed[i], until:now + 140 };
-        return p.concealed[i];
+        const card = p.concealed[i];
+        if (pointer.kind !== "touch") {
+          discardHint = { card, until:now + 140, candidate:card, since:discardHint.since };
+          return card;
+        }
+        if (!pointer.down) return null;
+        if (discardHint.candidate !== card) discardHint = { card:null, until:0, candidate:card, since:now };
+        if (now - discardHint.since < 180) return null;
+        discardHint = { card, until:now + 140, candidate:card, since:discardHint.since };
+        return card;
       }
     }
-    return discardHint.card && now < discardHint.until ? discardHint.card : null;
+    if (discardHint.card && now < discardHint.until) return discardHint.card;
+    discardHint = { card:null, until:0, candidate:null, since:0 };
+    return null;
   }
 
   function renderDiscardMatchHints(now) {
@@ -2002,16 +2015,18 @@
     e.preventDefault();
     ensureAudio();
     const p = toGamePoint(e.touches ? e.touches[0] : e);
-    pointer.x = p.x; pointer.y = p.y; pointer.down = true;
+    pointer.x = p.x; pointer.y = p.y; pointer.down = true; pointer.kind = e.touches ? "touch" : "mouse"; pointer.downAt = performance.now();
   }
   function pointerMove(e) {
     const p = toGamePoint(e.touches ? e.touches[0] : e);
+    pointer.kind = e.touches ? "touch" : "mouse";
     pointer.x = p.x; pointer.y = p.y;
   }
   function pointerUp(e) {
     e.preventDefault();
     const p = toGamePoint(e.changedTouches ? e.changedTouches[0] : e);
-    pointer.x = p.x; pointer.y = p.y; pointer.down = false;
+    pointer.x = p.x; pointer.y = p.y; pointer.down = false; pointer.kind = e.changedTouches ? "touch" : pointer.kind;
+    if (pointer.kind === "touch") discardHint = { card:null, until:0, candidate:null, since:0 };
     clickSpark(p.x, p.y);
     handleTap(p.x, p.y);
   }
