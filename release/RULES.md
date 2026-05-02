@@ -236,7 +236,26 @@ When you discard your **home wind** (the wind matching your seat):
 - opponents **may not** claim the card you just opened
 - if you have no concealed cards other than the wind you are discarding, you may skip the optional open
 
-### 9.2 Guest Wind Discard
+### 9.2 Matching Card Discard
+
+When you discard a card and still have another concealed card with the same group:
+
+- same group means the same month number for month cards
+- same group means the same wind for wind cards
+- `ron` is checked first
+- if no player wins by `ron`, you **may** choose to move one matching concealed card from your hand to your open area
+- only a matching concealed card may be opened this way
+- the opened matching card is placed face-up before `kan`, `pon`, or `chi` respond to the discarded card
+- opponents may claim the discarded card via `ron`, `kan`, `pon`, or `chi`
+- opponents **may not** claim the card you just opened
+
+Examples:
+
+- if you discard a month `7` and still hold another month `7`, you may open one held month `7`
+- if you discard `N` and still hold another `N`, you may open one held `N`
+- if you discard a month `7`, you may not open a month `5`
+
+### 9.3 Guest Wind Discard
 
 When you discard a wind card that is **not** your home wind:
 
@@ -312,6 +331,7 @@ Examples:
 - one `pon` usually gives `4` open cards
 - one `kan` usually gives `5` open cards
 - a home wind discard with optional open gives `1` open card
+- a matching-card discard with optional open gives `1` open card
 
 ## 12. Round Bonus
 

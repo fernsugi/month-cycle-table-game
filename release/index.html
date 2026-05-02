@@ -140,11 +140,11 @@
       ]
     },
     {
-      title:"Home Wind",
+      title:"Home Wind / Matching Card",
       lines:[
         "Your seat wind is shown on the table header.",
         "If you discard your own wind, you may open 1 hand card.",
-        "Tap any hand card to open it, or press Skip.",
+        "If you discard a card and still hold the same month or wind, you may open that matching card.",
         "Use this when you need more gear for a future win."
       ]
     },
@@ -409,7 +409,8 @@
     return game.mode === "userClaim" ||
       game.mode === "userRon" ||
       game.mode === "userTsumo" ||
-      game.mode === "homeOpen";
+      game.mode === "homeOpen" ||
+      game.mode === "matchOpen";
   }
   function forcedAutoDiscard() {
     const human = game.players[0];
@@ -433,7 +434,6 @@
     const win = bestWin(p, totalCards(p), "tsumo");
     if (win) {
       if (p.ai) return delay(() => declareWin([pi], null, "TSUMO", [win]), 760);
-      pauseAuto();
       game.awaiting = { type:"tsumo", win };
       game.mode = "userTsumo";
       flash("TSUMO READY", "#fff1a8", 80);
@@ -552,7 +552,6 @@
     }
     if (ron.length) {
       if (ron.includes(0)) {
-        pauseAuto();
         game.awaiting = { type:"ron", winners:ron, wins, discarder };
         game.mode = "userRon";
         flash("RON AVAILABLE", "#ffec72", 80);
@@ -569,6 +568,15 @@
       game.sub = "Open one concealed card or skip";
       return;
     }
+    const discardKey = groupKey(card);
+    if (discarder === 0 && !game.autoPlay && canMatchOpen(game.players[0], discardKey)) {
+      game.awaiting = { type:"matchOpen", card, discarder, key:discardKey };
+      game.mode = "matchOpen";
+      game.message = "Match open";
+      game.sub = "Open another matching card or skip";
+      return;
+    }
+    let aiOpenedAfterDiscard = false;
     if (card.type === "wind" && game.players[discarder].seat === card.wind && game.players[discarder].ai) {
       const p = game.players[discarder];
       const idx = chooseAiHomeOpenIndex(p);
@@ -576,6 +584,16 @@
         p.open.push(p.concealed.splice(idx, 1)[0]);
         sortHand(p.open);
         bigCall("HOME OPEN", discarder, "#8dfff1");
+        aiOpenedAfterDiscard = true;
+      }
+    }
+    if (!aiOpenedAfterDiscard && game.players[discarder].ai) {
+      const p = game.players[discarder];
+      const idx = chooseAiMatchOpenIndex(p, discardKey);
+      if (idx >= 0 && Math.random() < 0.7) {
+        p.open.push(p.concealed.splice(idx, 1)[0]);
+        sortHand(p.open);
+        bigCall("MATCH OPEN", discarder, "#ffe07b");
       }
     }
     resolveMeldClaims(card, discarder);
@@ -625,12 +643,14 @@
 
   function bestWaitsAfterClaimDiscard(p, state) {
     if (!state || state.concealed.length === 0) return 0;
+    const dead = visibleDeadIds(p);
+    for (const c of state.open) dead.delete(c.id);
     let best = 0;
     for (let i = 0; i < state.concealed.length; i++) {
       const concealed = state.concealed.slice(0, i).concat(state.concealed.slice(i + 1));
       best = Math.max(
         best,
-        countWinningDraws({ ...p, concealed, open:state.open }, concealed.concat(state.open), 18)
+        countWinningDraws({ ...p, concealed, open:state.open }, concealed.concat(state.open), 18, dead)
       );
     }
     return best;
@@ -646,9 +666,42 @@
       const card = concealed.splice(i, 1)[0];
       open.push(card);
       if (open.length > 5) continue;
-      const waits = countWinningDraws({ ...p, concealed, open }, concealed.concat(open), 18);
+      const dead = visibleDeadIds(p);
+      for (const c of open) dead.delete(c.id);
+      const waits = countWinningDraws({ ...p, concealed, open }, concealed.concat(open), 18, dead);
       if (waits <= 0 || waits < before) continue;
       const fit = open.filter(c => groupKey(c) === groupKey(card)).length * 2 +
+        (card.month === currentRoundMonth() ? 1 : 0) +
+        (card.wind === p.seat ? 1 : 0);
+      if (waits > bestWaits || (waits === bestWaits && fit > bestFit)) {
+        best = i;
+        bestWaits = waits;
+        bestFit = fit;
+      }
+    }
+    return best;
+  }
+
+  function canMatchOpen(p, key) {
+    return !!p && openCount(p) < 5 && p.concealed.some(c => groupKey(c) === key);
+  }
+
+  function chooseAiMatchOpenIndex(p, key) {
+    if (!canMatchOpen(p, key)) return -1;
+    const before = countWinningDraws(p, totalCards(p), 18);
+    let best = -1, bestWaits = 0, bestFit = -Infinity;
+    for (let i = 0; i < p.concealed.length; i++) {
+      if (groupKey(p.concealed[i]) !== key) continue;
+      const concealed = p.concealed.slice();
+      const open = p.open.slice();
+      const card = concealed.splice(i, 1)[0];
+      open.push(card);
+      if (open.length > 5) continue;
+      const dead = visibleDeadIds(p);
+      for (const c of open) dead.delete(c.id);
+      const waits = countWinningDraws({ ...p, concealed, open }, concealed.concat(open), 18, dead);
+      if (waits <= 0 || waits < before) continue;
+      const fit = open.filter(c => groupKey(c) === key).length * 2 +
         (card.month === currentRoundMonth() ? 1 : 0) +
         (card.wind === p.seat ? 1 : 0);
       if (waits > bestWaits || (waits === bestWaits && fit > bestFit)) {
@@ -931,22 +984,37 @@
     return false;
   }
 
-  function countWinningDraws(player, fiveCards, max) {
+  function visibleDeadIds(player) {
+    const own = new Set(player ? totalCards(player).map(c => c.id) : []);
+    const dead = new Set();
+    for (const p of game.players) {
+      if (!p) continue;
+      for (const c of p.discards || []) dead.add(c.id);
+      for (const c of p.open || []) {
+        if (!own.has(c.id)) dead.add(c.id);
+      }
+    }
+    return dead;
+  }
+
+  function countWinningDraws(player, fiveCards, max, deadIds = visibleDeadIds(player)) {
     let n = 0;
     const seen = new Set(fiveCards.map(c => c.id));
     for (const c of buildDeck()) {
       if (seen.has(c.id)) continue;
+      if (deadIds && deadIds.has(c.id)) continue;
       if (bestWin(player, fiveCards.concat(c), "draw")) n++;
       if (n >= max) return n;
     }
     return n;
   }
 
-  function winningDrawCards(player, fiveCards, max = 30) {
+  function winningDrawCards(player, fiveCards, max = 30, deadIds = visibleDeadIds(player)) {
     const waits = [];
     const seen = new Set(fiveCards.map(c => c.id));
     for (const c of buildDeck()) {
       if (seen.has(c.id)) continue;
+      if (deadIds && deadIds.has(c.id)) continue;
       if (bestWin(player, fiveCards.concat(c), "draw")) waits.push(c);
       if (waits.length >= max) break;
     }
@@ -1100,6 +1168,7 @@
     renderOpenAreas();
     renderWaitCards(now);
     renderHumanHand(now);
+    renderDiscardMatchHints(now);
     renderHud(now);
     renderPrompts(now);
     drawGameUtilityButtons();
@@ -1290,6 +1359,50 @@
     }
   }
 
+  function hoveredHumanHandCard() {
+    if (game.mode !== "userTurn" || performance.now() < handHoverBlockedUntil) return null;
+    const p = game.players[0];
+    if (!p || !p.concealed) return null;
+    const count = p.concealed.length;
+    const cw = count > 6 ? 86 : 96;
+    const ch = cw * 1.4;
+    const gap = count > 6 ? 5 : 8;
+    const start = DESIGN_W/2 - (count*cw + (count-1)*gap)/2;
+    const y = 1060;
+    for (let i = 0; i < count; i++) {
+      const x = start + i * (cw + gap);
+      if (pointer.x >= x && pointer.x <= x + cw && pointer.y >= y - 24 && pointer.y <= y + ch) return p.concealed[i];
+    }
+    return null;
+  }
+
+  function renderDiscardMatchHints(now) {
+    const hoverCard = hoveredHumanHandCard();
+    if (!hoverCard) return;
+    const key = groupKey(hoverCard);
+    const pulse = 0.58 + Math.sin(now / 180) * 0.18;
+    ctx.save();
+    ctx.strokeStyle = `rgba(141,255,241,${pulse})`;
+    ctx.lineWidth = 2.5;
+    for (let i = 0; i < 4; i++) {
+      const p = game.players[i];
+      const z = discardZone(i);
+      const cw = z.cardW, ch = z.cardH;
+      for (let k = 0; k < p.discards.length; k++) {
+        const c = p.discards[k];
+        if (groupKey(c) !== key) continue;
+        const col = Math.floor(k / z.stack);
+        const row = k % z.stack;
+        const x = z.x + col * (cw + 7);
+        const y = z.y + row * z.step;
+        drawCard(c, x, y, cw, ch, 0, true, .98);
+        roundedRect(x - 3, y - 3, cw + 6, ch + 6, 6);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
   function renderCenterStatus(now) {
     ctx.save();
     ctx.translate(DESIGN_W/2, 590);
@@ -1402,23 +1515,32 @@
     const allowHover = performance.now() >= handHoverBlockedUntil;
     for (let i=0;i<count;i++) {
       const x = start + i*(cw+gap);
-      const canAct = allowHover && (game.mode === "userTurn" || game.mode === "homeOpen");
+      const c = p.concealed[i];
+      const canOpen = game.mode !== "matchOpen" || (game.awaiting && groupKey(c) === game.awaiting.key);
+      const canAct = allowHover && (game.mode === "userTurn" || game.mode === "homeOpen" || (game.mode === "matchOpen" && canOpen));
       const hot = canAct && pointer.x >= x && pointer.x <= x + cw && pointer.y >= y - 24 && pointer.y <= y + ch;
       const lift = hot ? -20 : 0;
-      const c = p.concealed[i];
       const glow = p.tenpai ? (Math.sin(now/120)+1)/2 : 0;
       if (glow || hot) {
         ctx.save();
         ctx.globalAlpha = hot ? .34 : .15 + glow*.16;
-        ctx.fillStyle = hot ? (game.mode === "homeOpen" ? "#ffe07b" : "#8dfff1") : "#ffec72";
+        ctx.fillStyle = hot ? (game.mode === "homeOpen" || game.mode === "matchOpen" ? "#ffe07b" : "#8dfff1") : "#ffec72";
         roundedRect(x-4,y+lift-4,cw+8,ch+8,10);
         ctx.fill();
         ctx.restore();
       }
       drawCard(c, x, y+lift, cw, ch, 0, true, 1);
+      if (game.mode === "matchOpen" && canOpen) {
+        ctx.save();
+        ctx.strokeStyle = "#ffe07b";
+        ctx.lineWidth = 3;
+        roundedRect(x - 4, y + lift - 4, cw + 8, ch + 8, 10);
+        ctx.stroke();
+        ctx.restore();
+      }
       if (hot) {
         ctx.save();
-        ctx.strokeStyle = game.mode === "homeOpen" ? "#ffe07b" : "#8dfff1";
+        ctx.strokeStyle = game.mode === "homeOpen" || game.mode === "matchOpen" ? "#ffe07b" : "#8dfff1";
         ctx.lineWidth = 3;
         roundedRect(x-3, y+lift-3, cw+6, ch+6, 10);
         ctx.stroke();
@@ -1499,6 +1621,10 @@
     if (game.mode === "homeOpen") {
       modal("Home wind", "Tap a hand card to open it as gear");
       drawButton(DESIGN_W/2 - 75, 824, 150, 62, "SKIP", "#8dfff1", "homeSkip");
+    }
+    if (game.mode === "matchOpen") {
+      modal("Match open", "Tap a matching hand card to open it as gear");
+      drawButton(DESIGN_W/2 - 75, 824, 150, 62, "SKIP", "#8dfff1", "matchSkip");
     }
   }
 
@@ -1886,6 +2012,14 @@
         }
       }
     }
+    if (game.mode === "matchOpen") {
+      for (const r of handRects) {
+        if (x >= r.x && x <= r.x+r.w && y >= r.y && y <= r.y+r.h) {
+          playSfx("button");
+          return matchOpenCard(r.index);
+        }
+      }
+    }
     if (game.mode === "userTurn") {
       for (const r of handRects) {
         if (x >= r.x && x <= r.x+r.w && y >= r.y && y <= r.y+r.h) {
@@ -1958,6 +2092,12 @@
     if (a === "tsumo" && game.awaiting) return declareWin([0], null, "TSUMO", [game.awaiting.win]);
     if (a === "passTsumo") {
       game.awaiting = null;
+      if (game.autoPlay) {
+        game.mode = "play";
+        game.message = "AUTO discard";
+        game.sub = "Running until a call";
+        return delay(() => autoDiscardHuman(), 220);
+      }
       game.mode = "userTurn";
       game.message = "Tsumo passed";
       game.sub = "Discard one card";
@@ -1987,6 +2127,10 @@
       game.awaiting = null;
       return resolveMeldClaims(game.lastDiscard, game.lastDiscarder);
     }
+    if (a === "matchSkip") {
+      game.awaiting = null;
+      return resolveMeldClaims(game.lastDiscard, game.lastDiscarder);
+    }
   }
 
   function homeOpenCard(index) {
@@ -1999,6 +2143,21 @@
     p.open.push(p.concealed.splice(index, 1)[0]);
     sortHand(p.open);
     bigCall("HOME OPEN", 0, "#ffe07b");
+    playSfx("chi");
+    game.awaiting = null;
+    return resolveMeldClaims(game.lastDiscard, game.lastDiscarder);
+  }
+
+  function matchOpenCard(index) {
+    const p = game.players[0];
+    const key = game.awaiting && game.awaiting.key;
+    if (!p || !key || openCount(p) >= 5 || index < 0 || index >= p.concealed.length || groupKey(p.concealed[index]) !== key) {
+      return;
+    }
+    handHoverBlockedUntil = performance.now() + 650;
+    p.open.push(p.concealed.splice(index, 1)[0]);
+    sortHand(p.open);
+    bigCall("MATCH OPEN", 0, "#ffe07b");
     playSfx("chi");
     game.awaiting = null;
     return resolveMeldClaims(game.lastDiscard, game.lastDiscarder);
