@@ -1400,6 +1400,20 @@
         ctx.stroke();
       }
     }
+    for (let i = 0; i < 4; i++) {
+      const p = game.players[i];
+      const z = openZone(i);
+      const cw = z.cardW, ch = z.cardH;
+      for (let k = 0; k < p.open.length; k++) {
+        const c = p.open[k];
+        if (groupKey(c) !== key) continue;
+        const x = z.x + k * z.step;
+        const y = z.y;
+        drawCard(c, x, y, cw, ch, 0, true, .97);
+        roundedRect(x - 3, y - 3, cw + 6, ch + 6, 6);
+        ctx.stroke();
+      }
+    }
     ctx.restore();
   }
 
