@@ -304,6 +304,7 @@
     awaiting:null,
     claim:null,
     lockUntil:0,
+    runToken:0,
     handNo:0,
     muted:false,
     helpPage:0,
@@ -314,6 +315,8 @@
   };
 
   function initMatch() {
+    game.runToken++;
+    game.lockUntil = 0;
     game.round = 1;
     game.sudden = false;
     game.dealer = Math.floor(Math.random() * 4);
@@ -362,7 +365,7 @@
     game.sub = WIND_NAMES[game.players[0].seat] + " seat";
     burst(DESIGN_W/2, DESIGN_H/2, "#ffe07b", 64, 3.2);
     playSfx("start");
-    setTimeout(() => beginTurn(game.turn), 520);
+    delay(() => beginTurn(game.turn), 520);
   }
 
   function buildDeck() {
@@ -1065,7 +1068,14 @@
   }
   function cardLabel(c) { return c.type === "month" ? `${COLORS[c.color].code}${c.month}` : `${COLORS[c.color].code}${c.wind}`; }
 
-  function delay(fn, ms) { game.lockUntil = performance.now() + ms; setTimeout(fn, ms); }
+  function delay(fn, ms) {
+    const token = game.runToken;
+    game.lockUntil = performance.now() + ms;
+    setTimeout(() => {
+      if (token !== game.runToken || game.mode === "title") return;
+      fn();
+    }, ms);
+  }
 
   function flash(text, color, life) {
     floats.push({ text, x:DESIGN_W/2, y:DESIGN_H/2, vy:-0.45, life, max:life, size:42, color, align:"center" });
@@ -1554,11 +1564,12 @@
     const start = DESIGN_W/2 - (count*cw + (count-1)*gap)/2;
     const y = 1060;
     const allowHover = performance.now() >= handHoverBlockedUntil;
+    const allowPointerHover = pointer.kind !== "touch" || pointer.down;
     for (let i=0;i<count;i++) {
       const x = start + i*(cw+gap);
       const c = p.concealed[i];
       const canOpen = game.mode !== "matchOpen" || (game.awaiting && groupKey(c) === game.awaiting.key);
-      const canAct = allowHover && (game.mode === "userTurn" || game.mode === "homeOpen" || (game.mode === "matchOpen" && canOpen));
+      const canAct = allowHover && allowPointerHover && (game.mode === "userTurn" || game.mode === "homeOpen" || (game.mode === "matchOpen" && canOpen));
       const hot = canAct && pointer.x >= x && pointer.x <= x + cw && pointer.y >= y - 24 && pointer.y <= y + ch;
       const lift = hot ? -20 : 0;
       const glow = p.tenpai ? (Math.sin(now/120)+1)/2 : 0;
@@ -2122,6 +2133,8 @@
       return;
     }
     if (a === "home") {
+      game.runToken++;
+      game.lockUntil = 0;
       game.autoPlay = false;
       game.mode = "title";
       game.message = "Month Cycle Table";
