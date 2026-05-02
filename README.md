@@ -8,7 +8,7 @@ The deck contains 72 month cards and 24 wind cards. Month cards belong to a numb
 
 ## Play
 
-Play in the browser on GitHub Pages:
+Play in the browser on itch.io:
 
 https://fernsugi.itch.io/month-cycle-table
 
@@ -18,31 +18,14 @@ The current package is designed for itch.io as a static HTML game. No build step
 
 ## What's Included
 
-- `index.html`: the playable game
-- `ai-tuner.js`: command-line AI self-play/tuning runner
-- `RULES.md`: the full text rules
+- `release/index.html`: the playable game itself
+- `release/all_96_cards_sheet.png`: the cards png
+- `release/RULES.md`: the full text rules
 - `month_cycle_table_rulebook.pdf`: printable/reference rulebook
-- `cover.png` and `gameplay.png`: itch.io page assets
-
-## AI Tuning
-
-Run a quick terminal tuning pass:
-
-```sh
-node ai-tuner.js --generations=2 --populationSize=8 --matchesPerGeneration=4 --roundsPerMatch=4
-```
-
-Run a longer pass and save the full JSON result:
-
-```sh
-node ai-tuner.js --generations=8 --populationSize=24 --matchesPerGeneration=32 --roundsPerMatch=8 --finalMatches=64 --out=ai-tuning-result.json
-```
-
-Use `--accurate` for slower, broader public-information evaluation after finding promising profiles.
 
 ## Rules
 
-This README gives only a high-level overview. For complete turn flow, claims, scoring, gear requirements, and winning patterns, read `RULES.md` or the PDF rulebook.
+This README gives only a high-level overview. For complete turn flow, claims, scoring, gear requirements, and winning patterns, read `release/RULES.md` or the PDF rulebook.
 
 ## License
 
