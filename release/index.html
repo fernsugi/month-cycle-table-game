@@ -43,6 +43,7 @@
   let lastTime = performance.now();
   let pointer = { x:0, y:0, down:false };
   let handHoverBlockedUntil = 0;
+  let discardHint = { card:null, until:0 };
   let buttons = [];
   let handRects = [];
   let particles = [];
@@ -1329,6 +1330,8 @@
   }
 
   function renderDiscards() {
+    const hintCard = hoveredHumanHandCard();
+    const hintKey = hintCard ? groupKey(hintCard) : null;
     for (let i=0;i<4;i++) {
       const p = game.players[i];
       const z = discardZone(i);
@@ -1349,13 +1352,17 @@
         const x = z.x + col * (cw + 7);
         const y = z.y + row * z.step;
         const c = p.discards[k];
-        drawCard(c, x, y, cw, ch, 0, true, .98);
+        const dim = hintKey && groupKey(c) !== hintKey;
+        drawCard(c, x, y, cw, ch, 0, true, dim ? .2 : .98);
         // drawDiscardBadge(c, x, y, cw, ch); NOTE: Commented-out for aesthetic, redesign if really needed to put back the badge on discarded cards
         if (game.lastDiscard === c && game.lastDiscarder === i) {
+          ctx.save();
+          ctx.globalAlpha = dim ? .2 : 1;
           ctx.strokeStyle = "#ffec72";
           ctx.lineWidth = 3;
           roundedRect(x-2,y-2,cw+4,ch+4,5);
           ctx.stroke();
+          ctx.restore();
         }
       }
       ctx.restore();
@@ -1363,7 +1370,8 @@
   }
 
   function hoveredHumanHandCard() {
-    if (game.mode !== "userTurn" || performance.now() < handHoverBlockedUntil) return null;
+    const now = performance.now();
+    if (game.mode !== "userTurn" || now < handHoverBlockedUntil) return null;
     const p = game.players[0];
     if (!p || !p.concealed) return null;
     const count = p.concealed.length;
@@ -1374,9 +1382,12 @@
     const y = 1060;
     for (let i = 0; i < count; i++) {
       const x = start + i * (cw + gap);
-      if (pointer.x >= x && pointer.x <= x + cw && pointer.y >= y - 24 && pointer.y <= y + ch) return p.concealed[i];
+      if (pointer.x >= x && pointer.x <= x + cw && pointer.y >= y - 24 && pointer.y <= y + ch) {
+        discardHint = { card:p.concealed[i], until:now + 140 };
+        return p.concealed[i];
+      }
     }
-    return null;
+    return discardHint.card && now < discardHint.until ? discardHint.card : null;
   }
 
   function renderDiscardMatchHints(now) {
