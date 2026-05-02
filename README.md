@@ -8,7 +8,7 @@ The deck contains 72 month cards and 24 wind cards. Month cards belong to a numb
 
 ## Play
 
-Play in the browser on itch.io:
+Free to play in the browser on itch.io:
 
 https://fernsugi.itch.io/month-cycle-table
 
