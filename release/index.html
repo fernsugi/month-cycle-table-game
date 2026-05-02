@@ -1520,19 +1520,19 @@
 
   function renderWaitCards(now) {
     const p = game.players[0];
-    const waits = (p && p.tenpai && p.waitCards) ? p.waitCards : [];
+    let waits = (p && p.tenpai && p.waitCards) ? p.waitCards : [];
     if (!waits.length) return;
-    const cardW = 34, cardH = 46, gap = 5, perRow = 8;
+    const cardW = 37, cardH = 50, gap = 5, perRow = 8;
     const shown = waits.slice(0, waits.length > 16 ? 15 : 16);
     const extra = waits.length - shown.length;
     const rows = Math.ceil((shown.length + (extra > 0 ? 1 : 0)) / perRow);
-    const x = 218, y = rows > 1 ? 950 : 986;
+    const x = 198, y = rows > 1 ? 941 : 979;
     const blink = 0.52 + Math.sin(now / 190) * 0.32;
     ctx.save();
     ctx.textAlign = "center";
     ctx.fillStyle = `rgba(255,236,114,${0.55 + blink * 0.45})`;
     ctx.font = "900 15px Georgia,serif";
-    ctx.fillText("WAIT", x + 45, y + (rows > 1 ? 49 : 34));
+    ctx.fillText("WAIT", x + 45, y + (rows > 1 ? 64 : 49));
 
     const cardStartX = x + 88;
     const cardStartY = y + (rows > 1 ? 10 : 9);
