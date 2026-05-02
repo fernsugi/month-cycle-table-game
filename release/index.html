@@ -1869,13 +1869,14 @@
   canvas.addEventListener("touchend", pointerUp, { passive:false });
 
   function handleTap(x,y) {
-    if (performance.now() < game.lockUntil) return;
     for (const b of buttons) {
       if (x >= b.x && x <= b.x+b.w && y >= b.y && y <= b.y+b.h) {
+        if (performance.now() < game.lockUntil && !canUseWhileLocked(b.action)) return;
         playSfx("button");
         return action(b.action);
       }
     }
+    if (performance.now() < game.lockUntil) return;
     if (game.mode === "between") return startHand();
     if (game.mode === "homeOpen") {
       for (const r of handRects) {
@@ -1893,6 +1894,10 @@
         }
       }
     }
+  }
+
+  function canUseWhileLocked(actionName) {
+    return ["sound", "help", "helpClose", "helpPrev", "helpNext", "auto"].includes(actionName);
   }
 
   function action(a) {
