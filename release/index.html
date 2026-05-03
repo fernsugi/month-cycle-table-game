@@ -747,7 +747,7 @@
   }
 
   function openCardsCanStillWin(player, open) {
-    if (!open || open.length < 3) return true;
+    if (!open || open.length < 2) return true;
     if (open.length > 6) return false;
     const ids = open.map(c => c.id).sort().join("|");
     const key = `${game.sudden ? "S" : game.round}:${player.seat}:${ids}`;
