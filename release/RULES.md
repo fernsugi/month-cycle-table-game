@@ -296,6 +296,20 @@ Wind cards have **no month**. Therefore, wind cards cannot be used in any patter
 
 Wind cards **can** be used in `Mono` (all same color), `Axis`, `Grand Axis`, `Tempest`, `Grand Tempest`, and all wind-specific patterns listed in Section 15.
 
+### 10.2 Exhaustive Draw: Full Gear
+
+`Full Gear` is checked only when the hand ends in an exhaustive draw.
+
+A player is eligible for `Full Gear` if:
+
+- they have exactly `5` open cards
+
+Settlement:
+
+- each non-eligible player pays each eligible player `1pt`
+- if no players are eligible, no one pays
+- if all players are eligible, the hand is a normal draw and no one pays
+
 ## 11. Gear Rule
 
 Gear is based on the literal number of visible open cards in your open area. Some higher-value sets can still score with lower gear, but they score as a smaller point tier until you have enough open cards.

@@ -242,9 +242,9 @@
     {
       title:"Winning Bonuses",
       lines:[
-        "When winning, the round target month gives +3 points.",
-        "When winning, your own seat wind gives +3 points.",
-        "Both bonuses can happen together.",
+        "When winning, having the round target month and your own seat wind each gives +3 points.",
+        "When draw, players with 5 gears receive 1 point from each player who does not have 5 gears.",
+        "If everyone has 5 gears or no one is eligible, the round is a normal draw and no one pays.",
         "The match ends after round 12 or when a player runs out of points; ties go to Sudden Death."
       ]
     },
@@ -835,11 +835,34 @@
   function endHandDraw() {
     game.autoPlay = false;
     game.mode = "result";
+    game.lastResults = [];
     game.message = "Exhaustive Draw";
-    game.sub = "No score";
+    const fullGear = settleFullGear();
+    game.sub = fullGear ? fullGear.summary : "No score";
     game.dealer = nextPlayer(game.dealer);
-    flash("DRAW", "#d7dbe0", 100);
-    playSfx("draw");
+    flash(fullGear ? "FULL GEAR" : "DRAW", fullGear ? "#ffe07b" : "#d7dbe0", 100);
+    playSfx(fullGear ? "claim" : "draw");
+  }
+
+  function settleFullGear() {
+    const eligible = [];
+    const payers = [];
+    for (let i = 0; i < game.players.length; i++) {
+      if (fullGearEligible(game.players[i])) eligible.push(i);
+      else payers.push(i);
+    }
+    if (!eligible.length || !payers.length) return null;
+    for (const i of eligible) game.players[i].points += payers.length;
+    for (const i of payers) game.players[i].points -= eligible.length;
+    return {
+      eligible,
+      payers,
+      summary:`Full Gear: ${eligible.map(i => game.players[i].name).join(", ")} +${payers.length}; others -${eligible.length}`
+    };
+  }
+
+  function fullGearEligible(p) {
+    return !!p && p.open.length === 5;
   }
 
   function afterHand(dealNow = false) {
@@ -1071,10 +1094,12 @@
   function delay(fn, ms) {
     const token = game.runToken;
     game.lockUntil = performance.now() + ms;
-    setTimeout(() => {
+    const run = () => {
       if (token !== game.runToken || game.mode === "title") return;
+      if (game.mode === "help") return setTimeout(run, 100);
       fn();
-    }, ms);
+    };
+    setTimeout(run, ms);
   }
 
   function flash(text, color, life) {
