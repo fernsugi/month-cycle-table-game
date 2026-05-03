@@ -423,7 +423,7 @@ All patterns below use exactly `6` cards.
 | --- | --- | --- |
 | Mono | All 6 cards share one color | At least 3 open cards |
 | Skip | All 6 cards are all odd months or all even months, all 6 months are different, and all 6 colors are different | At least 3 open cards |
-| Run | Six different months in order; if any of those cards are open, the open months must also be consecutive within the run | At least 3 open cards |
+| Run | Six consecutive months, all in different colors | At least 3 open cards |
 | Wind | All 6 cards are wind cards, with all 6 colors present | At least 3 open cards |
 
 ### 15.2 6-point patterns
@@ -454,7 +454,7 @@ All patterns below use exactly `6` cards.
 | Tempest | All 6 cards are the same wind, as long as it is not your seat wind | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
 | Escort | 4 of one month plus 2 matching cards from either the previous or next month, with all 6 colors present | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
 | Split Escort | 4 of one month plus 1 previous and 1 next month, with all 6 colors present | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
-| Compass | Four same-color N, S, E, W plus either any month pair or any 2-card month sequence | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
+| Compass | Either: four same-color N, S, E, W plus any month pair or 2-card month sequence; or four same-color consecutive months plus any 2 winds | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
 
 ### 15.5 15-point patterns
 
@@ -464,21 +464,20 @@ All patterns below use exactly `6` cards.
 | Mono Run | Six different months in order, all sharing one color | 0-3 open cards scores 9pt; 4 open cards scores 12pt; 5 open cards scores 15pt |
 | Grand Crown | All 6 cards are the current round month | 0-3 open cards scores 9pt; 4 open cards scores 12pt; 5 open cards scores 15pt |
 | Grand Tempest | All 6 cards are your seat wind | 0-3 open cards scores 9pt; 4 open cards scores 12pt; 5 open cards scores 15pt |
-| Mono Compass | N, S, E, W plus 2 cards in sequence, all sharing one color | 0-3 open cards scores 9pt; 4 open cards scores 12pt; 5 open cards scores 15pt |
+| Mono Compass | Either compass shape, with all 6 cards sharing one color | 0-3 open cards scores 9pt; 4 open cards scores 12pt; 5 open cards scores 15pt |
 
 Notes on the 15-point patterns:
 
 - `Skip` means all odd months or all even months, with all 6 colors and all 6 months different.
-- `Run` means a 6-month consecutive run.
+- `Run` means a 6-month consecutive run with all 6 colors present.
 - `Mono Skip` means a `Skip` played in a single color lane.
 - `Grand Crown` means collecting all 6 cards of the round's target month. In sudden death there is no target month, so `Grand Crown` is unavailable.
 - `Axis` means mixing your seat wind with the round's target month in a `2+4` or `4+2` split.
 - `Grand Axis` means a `3+3` split between your seat wind and the round's target month.
 - `Tempest` means all 6 cards are the same wind, as long as it is not your seat wind.
 - `Grand Tempest` means all 6 cards are your seat wind.
-- `Compass` uses all four winds in one color plus either any month pair or any 2-month sequence.
-- `Mono Compass` uses all four winds plus a 2-month sequence, all in a single color.
-- Only `Run` requires any open cards inside that pattern to form a consecutive block of months within the completed run.
+- `Compass` has two shapes. Wind Compass uses all four winds in one color plus either any month pair or any 2-month sequence. Month Compass uses four consecutive months in one color plus any 2 winds.
+- `Mono Compass` uses either Compass shape, but all 6 cards must share one color.
 
 ## 16. End of Hand
 

@@ -33,6 +33,13 @@
   const SHEET = { margin:20, gap:10, cw:375, ch:525 };
   const canvas = document.getElementById("game");
   const ctx = canvas.getContext("2d", { alpha:false });
+  configureCanvasQuality(ctx);
+  let deckTemplate = null;
+  const openPromiseCache = new Map();
+  const findPatternCache = new Map();
+  const bestWinCache = new Map();
+  let backgroundLayer = null;
+  let tableLayer = null;
 
   const assets = { sheet:new Image(), ready:false };
   assets.sheet.onload = () => { assets.ready = true; };
@@ -41,6 +48,7 @@
 
   let dpr = 1, scale = 1, ox = 0, oy = 0;
   let lastTime = performance.now();
+  let frameNow = 0;
   let pointer = { x:0, y:0, down:false, kind:"mouse", downAt:0 };
   let handHoverBlockedUntil = 0;
   let discardHint = { card:null, until:0, candidate:null, since:0 };
@@ -155,7 +163,7 @@
         "These are the entry patterns. They need 3 gear.",
         "Mono: all 6 cards are the same color.",
         "Skip: 6 different months, all odd or all even, all colors different.",
-        "Run: 6 different months in order; open Run cards must be consecutive."
+        "Run: 6 consecutive months, all different colors."
       ]
     },
     {
@@ -216,7 +224,7 @@
       title:"More 12-Point Wins",
       lines:[
         "Split Escort: 4 of one month plus 1 previous, 1 next, all colors different.",
-        "Compass: same-color N, S, E, W plus any month pair or sequence.",
+        "Compass: same-color N, S, E, W plus any month pair or 2-month sequence, or 4 same-color consecutive months plus any 2 winds.",
         "12-point wins score 6 with 0-3 gear.",
         "They score 9 with 4 gear, or 12 with 5 gear."
       ]
@@ -234,7 +242,7 @@
       title:"More 15-Point Wins",
       lines:[
         "Grand Tempest: all 6 cards are your own seat wind.",
-        "Mono Compass: all 6 cards one color, with N, S, E, W and a sequence.",
+        "Mono Compass uses either Compass shape, but every card must share one color.",
         "15-point wins score 9 with 0-3 gear.",
         "They score 12 with 4 gear, or 15 with 5 gear."
       ]
@@ -281,9 +289,14 @@
     dpr = Math.max(1, Math.min(2.5, window.devicePixelRatio || 1));
     canvas.width = Math.floor(innerWidth * dpr);
     canvas.height = Math.floor(innerHeight * dpr);
+    configureCanvasQuality(ctx);
     scale = Math.min(canvas.width / DESIGN_W, canvas.height / DESIGN_H);
     ox = (canvas.width - DESIGN_W * scale) / 2;
     oy = (canvas.height - DESIGN_H * scale) / 2;
+  }
+  function configureCanvasQuality(target) {
+    target.imageSmoothingEnabled = true;
+    target.imageSmoothingQuality = "high";
   }
   window.addEventListener("resize", fitCanvas);
   fitCanvas();
@@ -334,7 +347,10 @@
   function startHand() {
     if (game.mode === "gameOver" || game.mode === "title") return;
     game.handNo++;
-    game.wall = shuffle(buildDeck());
+    openPromiseCache.clear();
+    findPatternCache.clear();
+    bestWinCache.clear();
+    game.wall = shuffle(deckCards());
     game.lastDiscard = null;
     game.lastDiscarder = null;
     game.currentDraw = null;
@@ -365,10 +381,11 @@
     game.sub = WIND_NAMES[game.players[0].seat] + " seat";
     burst(DESIGN_W/2, DESIGN_H/2, "#ffe07b", 64, 3.2);
     playSfx("start");
-    delay(() => beginTurn(game.turn), 520);
+    delay(() => beginTurn(game.turn), 420);
   }
 
   function buildDeck() {
+    if (deckTemplate) return deckTemplate.slice();
     const deck = [];
     for (let ci = 0; ci < COLORS.length; ci++) {
       for (let m = 1; m <= 12; m++) {
@@ -379,7 +396,12 @@
         deck.push({ id:`${COLORS[ci].code}${w}`, type:"wind", color:ci, month:null, wind:w, col:12+wi, row:ci });
       }
     }
-    return deck;
+    deckTemplate = deck;
+    return deckTemplate.slice();
+  }
+  function deckCards() {
+    if (!deckTemplate) buildDeck();
+    return deckTemplate;
   }
 
   function shuffle(a) {
@@ -423,6 +445,13 @@
   function autoSkipsOptionalCalls() {
     return game.autoPlay || forcedAutoDiscard();
   }
+  function openChoiceHoverReady() {
+    clearDiscardMatchHint();
+    handHoverBlockedUntil = pointer.kind === "touch" ? performance.now() + 90 : 0;
+  }
+  function clearDiscardMatchHint() {
+    discardHint = { card:null, until:0, candidate:null, since:0 };
+  }
 
   function beginTurn(pi) {
     if (game.mode === "gameOver") return;
@@ -440,7 +469,7 @@
 
     const win = bestWin(p, totalCards(p), "tsumo");
     if (win) {
-      if (p.ai) return delay(() => declareWin([pi], null, "TSUMO", [win]), 760);
+      if (p.ai) return delay(() => declareWin([pi], null, "TSUMO", [win]), 580);
       game.awaiting = { type:"tsumo", win };
       game.mode = "userTsumo";
       flash("TSUMO READY", "#fff1a8", 80);
@@ -449,8 +478,8 @@
     }
 
     const selfKan = possibleSelfKan(p);
-    if (p.ai && selfKan && Math.random() < 0.55) {
-      return delay(() => claimSelfKan(pi, selfKan), 520);
+    if (p.ai && selfKan && shouldAiSelfKan(p, selfKan)) {
+      return delay(() => claimSelfKan(pi, selfKan), 400);
     }
     if (!p.ai && selfKan && !game.autoPlay) {
       pauseAuto();
@@ -461,18 +490,18 @@
     }
 
     if (!p.ai) {
-      if (openCount(p) >= 5) return delay(() => autoDiscardHuman(), 580);
+      if (openCount(p) >= 5) return delay(() => autoDiscardHuman(), 290);
       if (game.autoPlay) {
         game.mode = "play";
         game.message = "AUTO discard";
         game.sub = p.tenpai ? "TENPAI wait shown" : "Running until a call";
-        return delay(() => autoDiscardHuman(), 420);
+        return delay(() => autoDiscardHuman(), 250);
       }
       game.mode = "userTurn";
       game.message = "Your discard";
       game.sub = p.tenpai ? "TENPAI - choose carefully" : "Tap a card, then Discard";
     } else {
-      delay(() => aiDiscard(pi), 650);
+      delay(() => aiDiscard(pi), 390);
     }
   }
 
@@ -493,9 +522,9 @@
     sortHand(p.open);
     bigCall("SELF KAN", pi, "#77d7ff");
     playSfx("kan");
-    if (p.ai) delay(() => aiDiscard(pi), 700);
+    if (p.ai) delay(() => aiDiscard(pi), 420);
     else {
-      if (p.concealed.length) delay(() => autoDiscardHuman(), 720);
+      if (p.concealed.length) delay(() => autoDiscardHuman(), 290);
       else advanceTurn();
     }
   }
@@ -515,36 +544,464 @@
 
   function chooseDiscardIndex(p) {
     let best = -1, bestScore = -Infinity;
+    const profile = aiProfile(p);
+    const dead = visibleDeadIds(p);
     for (let i = 0; i < p.concealed.length; i++) {
       const c = p.concealed[i];
-      const after = p.concealed.slice(0, i).concat(p.concealed.slice(i+1), p.open);
-      const waits = countWinningDraws(p, after, 18);
-      const groups = after.filter(x => groupKey(x) === groupKey(c)).length;
-      const colorCount = after.filter(x => x.color === c.color).length;
-      let score = waits * 12 - groups * 3 - colorCount * 0.45;
-      if (c.type === "wind" && c.wind === p.seat) score += 0.6;
-      if (c.type === "month" && c.month === currentRoundMonth()) score += 0.7;
-      score += Math.random() * 0.6;
+      const concealed = p.concealed.slice(0, i).concat(p.concealed.slice(i + 1));
+      const discardDead = new Set(dead);
+      discardDead.add(c.id);
+      const plan = evaluateAiState(p, concealed, p.open, discardDead);
+      let score = plan.score - discardDanger(p, c) * profile.risk;
+      if (!p.ai && dealsIntoPublicRon(p, c)) score -= 10000;
+      score += discardReleaseValue(p, c, concealed.concat(p.open)) * 0.8;
+      if (game.currentDraw && game.currentDraw.id === c.id) score += 0.18;
+      if (plan.waits > 0 && isBonusCardFor(p, c)) score -= 0.85;
+      score += Math.random() * profile.noise;
       if (score > bestScore) { bestScore = score; best = i; }
     }
     return Math.max(0, best);
   }
 
+  function aiProfile(p) {
+    if (!p || !p.ai) return { call:0.76, risk:0.55, gear:0.78, noise:0.03 };
+    if (p.name === "Akari") return { call:0.78, risk:0.48, gear:0.78, noise:0.07 };
+    if (p.name === "Ren") return { call:0.62, risk:0.82, gear:0.55, noise:0.04 };
+    if (p.name === "Mika") return { call:0.9, risk:0.38, gear:1.05, noise:0.09 };
+    return { call:0.76, risk:0.55, gear:0.78, noise:0.05 };
+  }
+
+  function evaluateAiState(p, concealed, open, deadIds = visibleDeadIds(p)) {
+    const total = concealed.concat(open);
+    const sim = { ...p, concealed, open };
+    const wins = winningDrawAnalysis(sim, total, deadIds);
+    const shape = shapeScore(sim, total);
+    const gear = gearScore(sim, total);
+    const fullGear = fullGearEndgameScore(sim, wins.count);
+    const attack = attackPressure(sim);
+    const future = wins.count ? 0 : futureWaitHint(sim, concealed, open, deadIds);
+    const score = wins.count
+      ? wins.count * (24 + attack * 18) + wins.avg * (2.7 + attack) + wins.best * 1.2 + shape * 0.35 + gear + fullGear
+      : shape * 0.82 + gear + fullGear + future * (9 + attack * 5);
+    return { score, waits:wins.count, avg:wins.avg, best:wins.best, shape, gear, fullGear, future, attack };
+  }
+
+  function winningDrawAnalysis(player, fiveCards, deadIds = visibleDeadIds(player)) {
+    let count = 0, total = 0, best = 0;
+    const seen = new Set(fiveCards.map(c => c.id));
+    for (const c of deckCards()) {
+      if (seen.has(c.id)) continue;
+      if (deadIds && deadIds.has(c.id)) continue;
+      const win = bestWin(player, fiveCards.concat(c), "draw");
+      if (!win) continue;
+      count++;
+      total += win.total;
+      best = Math.max(best, win.total);
+    }
+    return { count, avg:count ? total / count : 0, best };
+  }
+
+  function shapeScore(player, cards) {
+    if (!cards.length) return 0;
+    const months = cards.filter(c => c.type === "month");
+    const winds = cards.filter(c => c.type === "wind");
+    const monthCounts = counts(months.map(c => c.month));
+    const windCounts = counts(winds.map(c => c.wind));
+    const colorCounts = counts(cards.map(c => c.color));
+    const mVals = Object.keys(monthCounts).map(Number).sort((a,b)=>a-b);
+    const colorDiversity = Object.keys(colorCounts).length;
+    let score = 0;
+    for (const v of vals(monthCounts)) score += v * v * 1.25 + (v >= 3 ? 2.4 : 0);
+    for (const v of vals(windCounts)) score += v * v * 1.15 + (v >= 3 ? 2.1 : 0);
+    for (const v of vals(colorCounts)) score += v >= 2 ? (v - 1) * 1.35 : 0;
+    const road = longestConsecutiveRun(mVals);
+    score += road * 1.35;
+    if (months.length >= 4 && road >= 4) score += colorDiversity * 0.8;
+    if (months.length >= 5 && colorDiversity >= 5) score += 2.6;
+    if (months.length === cards.length && colorDiversity === cards.length) score += 3.4;
+    score += parityCount(mVals, 0) >= 4 ? 2.1 : 0;
+    score += parityCount(mVals, 1) >= 4 ? 2.1 : 0;
+    score += consecutivePairGroups(monthCounts) * 1.8;
+    score += compassSeedScore(cards) * 1.5;
+    if (currentRoundMonth()) score += (monthCounts[currentRoundMonth()] || 0) * 2.2;
+    score += (windCounts[player.seat] || 0) * 2.0;
+    if (months.length === cards.length) score += 1.2;
+    if (winds.length === cards.length) score += 1.2;
+    return score;
+  }
+
+  function gearScore(player, cards) {
+    const open = openCount(player);
+    let score = open * 1.35;
+    if (open >= 3) score += 8;
+    if (open === 5) score += 4;
+    const highBaseSeed = vals(counts(cards.map(groupKey))).some(v => v >= 3) ||
+      compassSeedScore(cards) >= 2 ||
+      (currentRoundMonth() && cards.some(c => c.month === currentRoundMonth()) && cards.some(c => c.wind === player.seat));
+    if (highBaseSeed && open < 3) score -= (3 - open) * 2.6;
+    return score;
+  }
+
+  function fullGearEndgameScore(player, waits) {
+    const pressure = fullGearPressure(waits);
+    if (pressure <= 0) return 0;
+    const selfOpen = openCount(player);
+    let eligible = 0, allKnown = 0, opponentNear = 0;
+    for (const p of game.players) {
+      if (!p) continue;
+      const samePlayer = p === player || (p.name && p.name === player.name && p.seat === player.seat);
+      const open = samePlayer ? selfOpen : openCount(p);
+      if (open === 5) eligible++;
+      if (open >= 5) allKnown++;
+      if (!samePlayer && open === 4) opponentNear++;
+    }
+    const selfEligible = selfOpen === 5;
+    const drawValue = eligible > 0 && eligible < game.players.length
+      ? (selfEligible ? game.players.length - eligible : -eligible)
+      : 0;
+    const chase = selfEligible ? 0 : selfOpen === 4 ? 4.2 : selfOpen === 3 ? 1.2 : 0;
+    const denial = opponentNear * (selfEligible ? 0.25 : -0.75);
+    const allGearDrag = allKnown === game.players.length ? -2 : 0;
+    return (drawValue * 4.8 + chase + denial + allGearDrag) * pressure;
+  }
+
+  function fullGearPressure(waits) {
+    const wall = game.wall ? game.wall.length : 76;
+    const wallPressure = Math.max(0, Math.min(1, (30 - wall) / 22));
+    const waitPressure = waits === 0 ? 1 : waits <= 2 ? 0.68 : waits <= 5 ? 0.28 : 0.08;
+    const resultPressure = game.mode === "play" || game.mode === "userTurn" ? 1 : 0.85;
+    return wallPressure * waitPressure * resultPressure;
+  }
+
+  function futureWaitHint(player, concealed, open, deadIds) {
+    const total = concealed.concat(open);
+    const seen = new Set(total.map(c => c.id));
+    const currentShape = shapeScore(player, total) + gearScore(player, total);
+    const candidates = deckCards().filter(c => !seen.has(c.id) && !(deadIds && deadIds.has(c.id)));
+    const sampleSize = Math.min(attackPressure(player) > 0.7 ? 8 : 5, candidates.length);
+    const stride = sampleSize ? Math.max(1, Math.floor(candidates.length / sampleSize)) : 1;
+    const offset = candidates.length ? ((game.handNo * 7 + (player.name || "").length * 5 + open.length * 3) % candidates.length) : 0;
+    let checked = 0, sumBest = 0;
+    for (let s = 0; s < sampleSize; s++) {
+      const draw = candidates[(offset + s * stride) % candidates.length];
+      const sixConcealed = concealed.concat(draw);
+      let best = -Infinity;
+      for (let i = 0; i < sixConcealed.length; i++) {
+        const nextConcealed = sixConcealed.slice(0, i).concat(sixConcealed.slice(i + 1));
+        const sim = { ...player, concealed:nextConcealed, open };
+        const nextTotal = nextConcealed.concat(open);
+        const nextDead = new Set(deadIds || []);
+        nextDead.add(sixConcealed[i].id);
+        const waits = countWinningDraws(sim, nextTotal, 10, nextDead);
+        const shapeGain = shapeScore(sim, nextTotal) + gearScore(sim, nextTotal) - currentShape;
+        best = Math.max(best, waits * 4 + Math.max(0, shapeGain) * 0.18);
+      }
+      sumBest += Math.max(0, best);
+      checked++;
+    }
+    return checked ? sumBest / checked : 0;
+  }
+
+  function attackPressure(player) {
+    if (!player) return 0;
+    let pressure = player.ai ? 0.78 : 0.45;
+    if (game.wall && game.wall.length < 42) pressure += 0.12;
+    for (const opp of game.players) {
+      if (!opp || opp === player) continue;
+      const fullAuto = openCount(opp) === 5 && (!opp.concealed || opp.concealed.length === 0);
+      if (fullAuto) pressure += opp.ai ? 0.75 : 1.35;
+      else if (openCount(opp) === 4) pressure += opp.ai ? 0.12 : 0.28;
+    }
+    return Math.min(1.6, pressure);
+  }
+
+  function patternPathScore(player, cards) {
+    if (!cards.length) return 0;
+    const months = cards.filter(c => c.type === "month");
+    const winds = cards.filter(c => c.type === "wind");
+    const monthCounts = counts(months.map(c => c.month));
+    const windCounts = counts(winds.map(c => c.wind));
+    const colorCounts = counts(cards.map(c => c.color));
+    const groupCounts = counts(cards.map(groupKey));
+    const mVals = Object.keys(monthCounts).map(Number).sort((a,b)=>a-b);
+    const colorDiversity = Object.keys(colorCounts).length;
+    const road = longestConsecutiveRun(mVals);
+    let best = 0;
+    best = Math.max(best, Math.max(0, ...vals(groupCounts)) * 2.25);
+    best = Math.max(best, road * 1.75 + colorDiversity * (road >= 4 ? 0.75 : 0.35));
+    best = Math.max(best, Math.max(0, ...vals(colorCounts)) * 1.35 + compassSeedScore(cards));
+    best = Math.max(best, vals(monthCounts).filter(v => v >= 2).length * 2.0 + consecutivePairGroups(monthCounts) * 1.3);
+    best = Math.max(best, vals(windCounts).filter(v => v >= 2).length * 1.8);
+    if (currentRoundMonth()) best += Math.min(4, (monthCounts[currentRoundMonth()] || 0) * 1.2);
+    if (player && player.seat) best += Math.min(4, (windCounts[player.seat] || 0) * 1.2);
+    if (months.length >= 4 && colorDiversity >= 4) best += 1.2;
+    return best;
+  }
+
+  function hasConstructiveWinningPath(before, plan, beforePath, afterPath, openingToFull = false) {
+    if (plan.waits > 0) return true;
+    if (plan.future > before.future + 0.55) return true;
+    if (afterPath >= 6.2 && afterPath >= beforePath + 1.15) return true;
+    if (afterPath >= 8.4 && plan.future >= before.future - 0.1) return true;
+    return openingToFull && fullGearPressure(plan.waits) >= 0.55;
+  }
+
+  function openCardsCanStillWin(player, open) {
+    if (!open || open.length < 3) return true;
+    if (open.length > 6) return false;
+    const ids = open.map(c => c.id).sort().join("|");
+    const key = `${game.sudden ? "S" : game.round}:${player.seat}:${ids}`;
+    if (openPromiseCache.has(key)) return openPromiseCache.get(key);
+    if (quickOpenPromise(player, open)) {
+      openPromiseCache.set(key, true);
+      return true;
+    }
+    const used = new Set(open.map(c => c.id));
+    const pool = deckCards().filter(c => !used.has(c.id));
+    const need = 6 - open.length;
+    const found = openCompletionSearch(player, open, pool, need, 0, []);
+    openPromiseCache.set(key, found);
+    return found;
+  }
+
+  function quickOpenPromise(player, open) {
+    const months = open.filter(c => c.type === "month");
+    const winds = open.filter(c => c.type === "wind");
+    const allMonths = months.length === open.length;
+    const allWinds = winds.length === open.length;
+    const monthVals = months.map(c => c.month);
+    const colors = open.map(c => c.color);
+    const uniqueMonths = new Set(monthVals).size === monthVals.length;
+    const uniqueColors = new Set(colors).size === colors.length;
+    if (new Set(colors).size === 1) return true;
+    if (allMonths && uniqueMonths) {
+      if (uniqueColors && sameParity(monthVals)) return true;
+      if (uniqueColors && fitsConsecutiveWindow(monthVals, 6)) return true;
+      if (new Set(months.map(c => c.color)).size === 1 && (sameParity(monthVals) || fitsConsecutiveWindow(monthVals, 6))) return true;
+    }
+    if (allMonths && quickMonthGroups(months)) return true;
+    if (allWinds) {
+      if (uniqueColors) return true;
+      if (new Set(winds.map(c => c.wind)).size === 1) return true;
+    }
+    const round = currentRoundMonth();
+    if (round && open.every(c => c.wind === player.seat || c.month === round)) {
+      const sw = open.filter(c => c.wind === player.seat).length;
+      const rm = open.filter(c => c.month === round).length;
+      if ([[2,4], [4,2], [3,3]].some(([a,b]) => sw <= a && rm <= b)) return true;
+    }
+    return quickWindCompass(open) || quickMonthRoadCompass(open);
+  }
+
+  function quickMonthGroups(months) {
+    const monthCounts = counts(months.map(c => c.month));
+    const valsIn = Object.keys(monthCounts).map(Number);
+    const countVals = vals(monthCounts);
+    const colorCount = new Set(months.map(c => c.color)).size;
+    if (valsIn.length <= 3 && countVals.every(v => v <= 2)) {
+      if (fitsConsecutiveWindow(valsIn, 3)) return true;
+      if (sameParity(valsIn)) return true;
+      if (colorCount <= 2) return true;
+    }
+    if (valsIn.length <= 2 && countVals.every(v => v <= 3)) {
+      if (fitsConsecutiveWindow(valsIn, 2)) return true;
+      if (sameParity(valsIn)) return true;
+      if (colorCount <= 3) return true;
+    }
+    return false;
+  }
+
+  function quickWindCompass(open) {
+    const winds = open.filter(c => c.type === "wind");
+    const months = open.filter(c => c.type === "month");
+    if (winds.length > 4 || months.length > 2) return false;
+    if (winds.length && new Set(winds.map(c => c.color)).size !== 1) return false;
+    if (winds.length && new Set(winds.map(c => c.wind)).size !== winds.length) return false;
+    if (months.length === 2 && months[0].month !== months[1].month && Math.abs(months[0].month - months[1].month) !== 1) return false;
+    return true;
+  }
+
+  function quickMonthRoadCompass(open) {
+    const months = open.filter(c => c.type === "month");
+    const winds = open.filter(c => c.type === "wind");
+    if (months.length > 4 || winds.length > 2) return false;
+    if (!months.length) return true;
+    if (new Set(months.map(c => c.color)).size !== 1) return false;
+    const vals = months.map(c => c.month);
+    return new Set(vals).size === vals.length && fitsConsecutiveWindow(vals, 4);
+  }
+
+  function fitsConsecutiveWindow(valsIn, size) {
+    if (!valsIn.length) return true;
+    const vals = [...new Set(valsIn)].sort((a,b)=>a-b);
+    if (vals.length !== valsIn.length) return false;
+    for (let start = 1; start <= 13 - size; start++) {
+      const end = start + size - 1;
+      if (vals.every(v => v >= start && v <= end)) return true;
+    }
+    return false;
+  }
+
+  function openCompletionSearch(player, open, pool, need, start, pick) {
+    if (need === 0) {
+      const cards = open.concat(pick);
+      const sim = { ...player, concealed:pick, open };
+      return findPatterns(sim, cards).length > 0;
+    }
+    for (let i = start; i <= pool.length - need; i++) {
+      pick.push(pool[i]);
+      if (openCompletionSearch(player, open, pool, need - 1, i + 1, pick)) return true;
+      pick.pop();
+    }
+    return false;
+  }
+
+  function discardReleaseValue(p, card, after) {
+    const same = after.filter(c => groupKey(c) === groupKey(card)).length;
+    const sameColor = after.filter(c => c.color === card.color).length;
+    let release = same === 0 ? 2.4 : same === 1 ? 0.6 : -2.2;
+    if (sameColor >= 3) release -= 0.8;
+    if (isBonusCardFor(p, card)) release -= 1.6;
+    if (visibleGroupDeadCount(p, groupKey(card)) >= 3 && same === 0) release += 0.8;
+    return release;
+  }
+
+  function discardDanger(p, card) {
+    if (!p || !p.ai) return 0;
+    const stage = game.wall.length < 24 ? 1.35 : game.wall.length < 45 ? 1.12 : 0.92;
+    let danger = 0;
+    for (const opp of game.players) {
+      if (!opp || opp === p) continue;
+      const exposed = openCount(opp);
+      if (exposed === 5 && (!opp.concealed || opp.concealed.length === 0)) {
+        if (bestWin(opp, opp.open.concat(card), "ron")) danger += 10000;
+        continue;
+      }
+      const pressure = exposed >= 5 ? 2.1 : exposed >= 3 ? 1.45 : exposed > 0 ? 0.75 : 0.45;
+      let d = pressure;
+      const openSameGroup = (opp.open || []).filter(c => groupKey(c) === groupKey(card)).length;
+      const openSameColor = (opp.open || []).filter(c => c.color === card.color).length;
+      d += openSameGroup * 1.8;
+      if (openSameColor >= 2) d += 0.9 + openSameColor * 0.25;
+      if (card.type === "month" && card.month === currentRoundMonth()) d += 0.7;
+      if (card.type === "wind" && card.wind === opp.seat) d += 0.8;
+      if ((opp.discards || []).some(c => groupKey(c) === groupKey(card))) d *= 0.52;
+      if ((opp.discards || []).some(c => c.color === card.color)) d *= 0.88;
+      if (nextPlayer(game.players.indexOf(p)) === game.players.indexOf(opp) && openCount(opp) < 5) d += 0.25;
+      if (game.wall.length < 26 && openCount(opp) >= 4) d += openCount(opp) === 5 ? 0.8 : 1.2;
+      danger += d;
+    }
+    return danger * stage;
+  }
+
+  function dealsIntoPublicRon(discarder, card) {
+    for (const opp of game.players) {
+      if (!opp || opp === discarder) continue;
+      if (openCount(opp) !== 5 || (opp.concealed && opp.concealed.length)) continue;
+      if (bestWin(opp, opp.open.concat(card), "ron")) return true;
+    }
+    return false;
+  }
+
+  function shouldAiSelfKan(p, key) {
+    const normal = bestDiscardPlan(p, p.concealed, p.open);
+    const concealed = p.concealed.slice();
+    const open = p.open.slice();
+    for (let i = concealed.length - 1; i >= 0; i--) {
+      if (groupKey(concealed[i]) === key) open.push(concealed.splice(i, 1)[0]);
+    }
+    if (!concealed.length || open.length > 5) return false;
+    const afterDiscard = concealed.slice(1);
+    const selfKanPlan = evaluateAiState({ ...p, concealed:afterDiscard, open }, afterDiscard, open);
+    return selfKanPlan.score + aiProfile(p).gear * 6 >= normal.score - 2;
+  }
+
+  function bestDiscardPlan(p, concealed, open) {
+    let best = { index:-1, score:-Infinity, waits:0 };
+    const dead = visibleDeadIds(p);
+    for (let i = 0; i < concealed.length; i++) {
+      const keep = concealed.slice(0, i).concat(concealed.slice(i + 1));
+      const discardDead = new Set(dead);
+      discardDead.add(concealed[i].id);
+      const plan = evaluateAiState({ ...p, concealed:keep, open }, keep, open, discardDead);
+      const score = plan.score - discardDanger(p, concealed[i]) * aiProfile(p).risk;
+      if (score > best.score) best = { ...plan, index:i, score };
+    }
+    return best;
+  }
+
+  function isBonusCardFor(p, c) {
+    return !!c && ((c.type === "month" && c.month === currentRoundMonth()) || (c.type === "wind" && c.wind === p.seat));
+  }
+
+  function visibleGroupDeadCount(player, key) {
+    let n = 0;
+    const own = new Set(player ? totalCards(player).map(c => c.id) : []);
+    for (const p of game.players) {
+      for (const c of (p.discards || [])) if (groupKey(c) === key) n++;
+      for (const c of (p.open || [])) if (!own.has(c.id) && groupKey(c) === key) n++;
+    }
+    return n;
+  }
+
+  function longestConsecutiveRun(valsIn) {
+    if (!valsIn.length) return 0;
+    let best = 1, cur = 1;
+    for (let i = 1; i < valsIn.length; i++) {
+      if (valsIn[i] === valsIn[i - 1]) continue;
+      cur = valsIn[i] === valsIn[i - 1] + 1 ? cur + 1 : 1;
+      best = Math.max(best, cur);
+    }
+    return best;
+  }
+
+  function parityCount(valsIn, parity) {
+    return valsIn.filter(v => v % 2 === parity).length;
+  }
+
+  function consecutivePairGroups(monthCounts) {
+    const paired = Object.keys(monthCounts).map(Number).filter(m => monthCounts[m] >= 2).sort((a,b)=>a-b);
+    let n = 0;
+    for (let i = 1; i < paired.length; i++) if (paired[i] === paired[i - 1] + 1) n++;
+    return n;
+  }
+
+  function compassSeedScore(cards) {
+    let best = 0;
+    for (let color = 0; color < COLORS.length; color++) {
+      const winds = new Set(cards.filter(c => c.type === "wind" && c.color === color).map(c => c.wind));
+      const months = cards.filter(c => c.type === "month" && c.color === color).map(c => c.month).sort((a,b)=>a-b);
+      let score = winds.size;
+      if (months.length >= 2) {
+        score += months.some((m, i) => months.slice(i + 1).some(n => n === m || Math.abs(n - m) === 1)) ? 2 : 0.8;
+      }
+      const road = longestConsecutiveRun([...new Set(months)]);
+      if (road >= 4) score += 4;
+      else if (road >= 3) score += 2.4;
+      if (road >= 3 && cards.some(c => c.type === "wind")) score += 1.2;
+      best = Math.max(best, score);
+    }
+    return best;
+  }
+
   function discardCard(pi, index, automatic) {
     const p = game.players[pi];
     if (index < 0 || index >= p.concealed.length) return;
-    if (pi === 0) handHoverBlockedUntil = performance.now() + 650;
+    if (pi === 0) {
+      clearDiscardMatchHint();
+      handHoverBlockedUntil = performance.now() + 460;
+    }
     const card = p.concealed.splice(index, 1)[0];
     p.discards.push(card);
     game.lastDiscard = card;
     game.lastDiscarder = pi;
     game.currentDraw = null;
+    game.mode = "play";
     game.message = `${playerVerb(p, "discard", "discards")} ${cardLabel(card)}`;
     game.sub = automatic ? "Auto discard" : "Claims open";
-    ripple(discardCenterX(pi), discardCenterY(pi), COLORS[card.color].main);
     playSfx("discard");
     updateTenpai();
-    delay(() => resolveClaims(card, pi), 360);
+    delay(() => resolveClaims(card, pi), 410);
   }
 
   function resolveClaims(card, discarder) {
@@ -565,7 +1022,7 @@
         playSfx("tenpai");
         return;
       }
-      return delay(() => declareWin(ron, discarder, "RON", wins), 520);
+      return delay(() => declareWin(ron, discarder, "RON", wins), 430);
     }
 
     if (discarder === 0 && card.type === "wind" && card.wind === game.players[0].seat && game.players[0].concealed.length && openCount(game.players[0]) < 5) {
@@ -573,6 +1030,7 @@
       game.mode = "homeOpen";
       game.message = "Home wind opened";
       game.sub = "Open one concealed card or skip";
+      openChoiceHoverReady();
       return;
     }
     const discardKey = groupKey(card);
@@ -581,13 +1039,14 @@
       game.mode = "matchOpen";
       game.message = "Match open";
       game.sub = "Open another matching card or skip";
+      openChoiceHoverReady();
       return;
     }
     let aiOpenedAfterDiscard = false;
     if (card.type === "wind" && game.players[discarder].seat === card.wind && game.players[discarder].ai) {
       const p = game.players[discarder];
       const idx = chooseAiHomeOpenIndex(p);
-      if (idx >= 0 && Math.random() < 0.65) {
+      if (idx >= 0) {
         p.open.push(p.concealed.splice(idx, 1)[0]);
         sortHand(p.open);
         bigCall("HOME OPEN", discarder, "#8dfff1");
@@ -597,7 +1056,7 @@
     if (!aiOpenedAfterDiscard && game.players[discarder].ai) {
       const p = game.players[discarder];
       const idx = chooseAiMatchOpenIndex(p, discardKey);
-      if (idx >= 0 && Math.random() < 0.7) {
+      if (idx >= 0) {
         p.open.push(p.concealed.splice(idx, 1)[0]);
         sortHand(p.open);
         bigCall("MATCH OPEN", discarder, "#ffe07b");
@@ -632,41 +1091,96 @@
     }
     const claimCandidates = autoSkipsOptionalCalls() ? options.filter(o => o.player !== 0) : options;
     const ai = claimCandidates.find(o => shouldAiClaim(o, card));
-    if (ai) return delay(() => takeClaim(ai.player, ai.type, card, discarder), 460);
+    if (ai) return delay(() => takeClaim(ai.player, ai.type, card, discarder), 340);
     advanceTurn();
   }
 
   function shouldAiClaim(opt, card) {
     const p = game.players[opt.player];
     if (!canTakeClaim(p, opt.type, card)) return false;
-    const before = countWinningDraws(p, totalCards(p), 18);
     const state = simulatedClaimState(p, opt.type, card);
-    const bestAfterDiscard = bestWaitsAfterClaimDiscard(p, state);
-    if (bestAfterDiscard <= 0) return false;
-    if (opt.type === "chi") return bestAfterDiscard > before && Math.random() < 0.75;
-    if (opt.type === "pon" || opt.type === "kan") return bestAfterDiscard >= before;
+    const plan = bestPlanAfterClaimDiscard(p, state);
+    if (!plan || plan.index < 0) return false;
+    const before = evaluateAiState(p, p.concealed, p.open);
+    const profile = aiProfile(p);
+    const attack = attackPressure(p);
+    const claimCost = Math.max(0.8, (opt.type === "chi" ? 7.2 : opt.type === "pon" ? 3.4 : 1.6) - attack * (opt.type === "chi" ? 2.6 : 1.5));
+    const gearGain = Math.max(0, state.open.length - p.open.length);
+    const visibleValue = gearGain * profile.gear * 2.2 + (state.open.length >= 3 ? 5.4 : 0) + (state.open.length === 5 ? 2.2 : 0);
+    const improvement = plan.score + visibleValue - before.score - claimCost;
+    const fit = claimFitScore(p, card, state);
+    const beforePath = patternPathScore(p, totalCards(p));
+    const afterPath = patternPathScore({ ...p, concealed:state.concealed, open:state.open }, state.concealed.concat(state.open));
+    const constructive = hasConstructiveWinningPath(before, plan, beforePath, afterPath, state.open.length === 5 && p.open.length < 5);
+    const lateFullGear = state.open.length === 5 && p.open.length < 5 && fullGearPressure(plan.waits) >= 0.55;
+    if (!lateFullGear && !openCardsCanStillWin({ ...p, concealed:state.concealed, open:state.open }, state.open)) return false;
+    if (lateFullGear) return true;
+    if (!constructive && !(attack > 0.7 && fit >= 2.6 && afterPath >= beforePath + 0.5)) return false;
+    if (plan.waits > 0 && plan.score + visibleValue >= before.score - claimCost * (0.55 + attack * 0.25)) return true;
+    if (attack > 0.7 && plan.future > before.future + (opt.type === "chi" ? 1.2 : 0.45)) return true;
+    if (attack > 0.7 && state.open.length >= 3 && plan.future >= before.future && improvement > -1.2) return true;
+    if (attack > 0.7 && opt.type === "chi" && fit >= 2.6 && improvement > -20.0) return true;
+    if (attack > 0.7 && (opt.type === "pon" || opt.type === "kan") && fit >= 4.0 && improvement > -3.0) return true;
+    if (opt.type === "kan") return improvement > -1.5;
+    if (opt.type === "pon") return improvement > 1.0;
+    if (opt.type === "chi") return improvement > 3.0 && Math.random() < profile.call;
     return false;
   }
 
-  function bestWaitsAfterClaimDiscard(p, state) {
-    if (!state || state.concealed.length === 0) return 0;
+  function claimFitScore(p, card, state) {
+    const before = totalCards(p);
+    const after = state.concealed.concat(state.open);
+    let fit = 0;
+    const sameGroupBefore = before.filter(c => groupKey(c) === groupKey(card)).length;
+    const sameColorBefore = before.filter(c => c.color === card.color).length;
+    const beforeColors = new Set(before.map(c => c.color));
+    fit += sameGroupBefore * 2.3;
+    fit += Math.max(0, sameColorBefore - 1) * 1.15;
+    if (sameColorBefore >= 3) fit += 1.8;
+    if (!beforeColors.has(card.color)) fit += 1.0;
+    if (card.type === "month") {
+      const months = before.filter(c => c.type === "month").map(c => c.month);
+      const neighbors = months.filter(m => Math.abs(m - card.month) === 1).length;
+      const nearRoad = months.filter(m => Math.abs(m - card.month) <= 3).length;
+      fit += neighbors * 1.35 + nearRoad * 0.35;
+      if (neighbors && !beforeColors.has(card.color)) fit += 1.2;
+      if (card.month === currentRoundMonth()) fit += 1.4;
+    } else {
+      const sameWind = before.filter(c => c.wind === card.wind).length;
+      fit += sameWind * 1.8;
+      if (card.wind === p.seat) fit += 1.5;
+    }
+    fit += Math.max(0, compassSeedScore(after) - compassSeedScore(before)) * 1.2;
+    if (state.open.length >= 3 && p.open.length < 3) fit += 1.2;
+    if (state.open.length === 5 && p.open.length < 5 && fullGearPressure(0) > 0.55) fit += 1.2;
+    return fit;
+  }
+
+  function bestPlanAfterClaimDiscard(p, state) {
+    if (!state || state.concealed.length === 0) return null;
     const dead = visibleDeadIds(p);
     for (const c of state.open) dead.delete(c.id);
-    let best = 0;
+    let best = { index:-1, score:-Infinity, waits:0 };
+    const profile = aiProfile(p);
     for (let i = 0; i < state.concealed.length; i++) {
       const concealed = state.concealed.slice(0, i).concat(state.concealed.slice(i + 1));
-      best = Math.max(
-        best,
-        countWinningDraws({ ...p, concealed, open:state.open }, concealed.concat(state.open), 18, dead)
-      );
+      const sim = { ...p, concealed, open:state.open };
+      const discardDead = new Set(dead);
+      discardDead.add(state.concealed[i].id);
+      const plan = evaluateAiState(sim, concealed, state.open, discardDead);
+      const score = plan.score - discardDanger(p, state.concealed[i]) * profile.risk;
+      if (score > best.score) best = { ...plan, index:i, score };
     }
     return best;
   }
 
   function chooseAiHomeOpenIndex(p) {
     if (!p || !p.concealed.length || openCount(p) >= 5) return -1;
-    const before = countWinningDraws(p, totalCards(p), 18);
-    let best = -1, bestWaits = 0, bestFit = -Infinity;
+    const before = evaluateAiState(p, p.concealed, p.open);
+    let best = -1, bestScore = -Infinity;
+    const profile = aiProfile(p);
+    const attack = attackPressure(p);
+    const beforePath = patternPathScore(p, p.concealed.concat(p.open));
     for (let i = 0; i < p.concealed.length; i++) {
       const concealed = p.concealed.slice();
       const open = p.open.slice();
@@ -675,15 +1189,29 @@
       if (open.length > 5) continue;
       const dead = visibleDeadIds(p);
       for (const c of open) dead.delete(c.id);
-      const waits = countWinningDraws({ ...p, concealed, open }, concealed.concat(open), 18, dead);
-      if (waits <= 0 || waits < before) continue;
-      const fit = open.filter(c => groupKey(c) === groupKey(card)).length * 2 +
-        (card.month === currentRoundMonth() ? 1 : 0) +
-        (card.wind === p.seat ? 1 : 0);
-      if (waits > bestWaits || (waits === bestWaits && fit > bestFit)) {
+      const sim = { ...p, concealed, open };
+      const plan = evaluateAiState(sim, concealed, open, dead);
+      const openingToFull = open.length === 5 && p.open.length < 5;
+      const fullGearUrgency = fullGearPressure(plan.waits);
+      if (openingToFull && plan.waits <= 0 && fullGearUrgency < 0.55) continue;
+      if (openingToFull && plan.waits < before.waits && fullGearUrgency < 0.42) continue;
+      if (openingToFull && fullGearUrgency >= 0.75 && plan.fullGear > before.fullGear) {
         best = i;
-        bestWaits = waits;
-        bestFit = fit;
+        bestScore = Math.max(bestScore, plan.score + 100);
+        continue;
+      }
+      if (!openCardsCanStillWin(sim, open)) continue;
+      const afterPath = patternPathScore(sim, concealed.concat(open));
+      if (!hasConstructiveWinningPath(before, plan, beforePath, afterPath, openingToFull)) continue;
+      const fullGearPush = openingToFull ? 0.9 + fullGearUrgency * 8 : 0;
+      const attackPush = attack > 0.7 && plan.future > before.future ? 2.4 : 0;
+      const lateDrawPush = openingToFull && fullGearUrgency >= 0.75 && plan.fullGear > before.fullGear ? 12 : 0;
+      const openValue = (open.length >= 3 ? 5.4 : 0) + fullGearPush + lateDrawPush + attackPush + profile.gear * 1.5;
+      const score = plan.score + openValue - before.score;
+      if (score < (attack > 0.7 ? 0.2 : 1.2) && !(plan.waits > before.waits && score > -1.0)) continue;
+      if (score > bestScore) {
+        best = i;
+        bestScore = score;
       }
     }
     return best;
@@ -695,8 +1223,11 @@
 
   function chooseAiMatchOpenIndex(p, key) {
     if (!canMatchOpen(p, key)) return -1;
-    const before = countWinningDraws(p, totalCards(p), 18);
-    let best = -1, bestWaits = 0, bestFit = -Infinity;
+    const before = evaluateAiState(p, p.concealed, p.open);
+    let best = -1, bestScore = -Infinity;
+    const profile = aiProfile(p);
+    const attack = attackPressure(p);
+    const beforePath = patternPathScore(p, p.concealed.concat(p.open));
     for (let i = 0; i < p.concealed.length; i++) {
       if (groupKey(p.concealed[i]) !== key) continue;
       const concealed = p.concealed.slice();
@@ -706,15 +1237,29 @@
       if (open.length > 5) continue;
       const dead = visibleDeadIds(p);
       for (const c of open) dead.delete(c.id);
-      const waits = countWinningDraws({ ...p, concealed, open }, concealed.concat(open), 18, dead);
-      if (waits <= 0 || waits < before) continue;
-      const fit = open.filter(c => groupKey(c) === key).length * 2 +
-        (card.month === currentRoundMonth() ? 1 : 0) +
-        (card.wind === p.seat ? 1 : 0);
-      if (waits > bestWaits || (waits === bestWaits && fit > bestFit)) {
+      const sim = { ...p, concealed, open };
+      const plan = evaluateAiState(sim, concealed, open, dead);
+      const openingToFull = open.length === 5 && p.open.length < 5;
+      const fullGearUrgency = fullGearPressure(plan.waits);
+      if (openingToFull && plan.waits <= 0 && fullGearUrgency < 0.55) continue;
+      if (openingToFull && plan.waits < before.waits && fullGearUrgency < 0.42) continue;
+      if (openingToFull && fullGearUrgency >= 0.75 && plan.fullGear > before.fullGear) {
         best = i;
-        bestWaits = waits;
-        bestFit = fit;
+        bestScore = Math.max(bestScore, plan.score + 100);
+        continue;
+      }
+      if (!openCardsCanStillWin(sim, open)) continue;
+      const afterPath = patternPathScore(sim, concealed.concat(open));
+      if (!hasConstructiveWinningPath(before, plan, beforePath, afterPath, openingToFull)) continue;
+      const fullGearPush = openingToFull ? 0.9 + fullGearUrgency * 8 : 0;
+      const attackPush = attack > 0.7 && plan.future > before.future ? 2.4 : 0;
+      const lateDrawPush = openingToFull && fullGearUrgency >= 0.75 && plan.fullGear > before.fullGear ? 12 : 0;
+      const openValue = (open.length >= 3 ? 5.4 : 0) + fullGearPush + lateDrawPush + attackPush + profile.gear * 1.35;
+      const score = plan.score + openValue - before.score;
+      if (score < (attack > 0.7 ? -0.2 : 0.6) && !(plan.waits > before.waits && score > -1.4)) continue;
+      if (score > bestScore) {
+        best = i;
+        bestScore = score;
       }
     }
     return best;
@@ -754,7 +1299,7 @@
       game.claim = null;
       if (openCount(p) >= 5) {
         game.mode = "play";
-        delay(() => autoDiscardHuman(), 760);
+        delay(() => autoDiscardHuman(), 290);
       } else {
         game.mode = "userTurn";
         game.message = `${type.toUpperCase()} taken`;
@@ -763,7 +1308,7 @@
     } else {
       game.claim = null;
       game.mode = "play";
-      delay(() => aiDiscard(pi), 760);
+      delay(() => aiDiscard(pi), 420);
     }
   }
 
@@ -772,7 +1317,7 @@
     game.awaiting = null;
     game.mode = "play";
     if (game.wall.length <= 0) return endHandDraw();
-    delay(() => beginTurn(nextPlayer(game.turn)), 520);
+    delay(() => beginTurn(nextPlayer(game.turn)), 360);
   }
 
   function claimOpenAdds(p, type, card) {
@@ -899,15 +1444,26 @@
 
   function bestWin(player, cards, method) {
     if (cards.length !== 6) return null;
+    const cacheKey = `${game.sudden ? "S" : game.round}:${player.seat}:${openCount(player)}:${method}:${cardSetKey(cards)}`;
+    if (bestWinCache.has(cacheKey)) return bestWinCache.get(cacheKey);
     const open = openCount(player);
-    const patterns = findPatterns(player, cards).map(p => applyGear(p, open)).filter(Boolean);
-    if (!patterns.length) return null;
-    patterns.sort((a,b) => b.score - a.score || b.base - a.base);
-    const best = patterns[0];
+    let best = null;
+    for (const pattern of findPatterns(player, cards)) {
+      const scored = applyGear(pattern, open);
+      if (scored && (!best || scored.score > best.score || (scored.score === best.score && scored.base > best.base))) best = scored;
+    }
+    if (!best) {
+      bestWinCache.set(cacheKey, null);
+      if (bestWinCache.size > 60000) bestWinCache.clear();
+      return null;
+    }
     let bonus = 0;
     if (currentRoundMonth() && cards.some(c => c.month === currentRoundMonth())) bonus += 3;
     if (cards.some(c => c.wind === player.seat)) bonus += 3;
-    return { ...best, bonus, total:best.score + bonus, method };
+    const result = { ...best, bonus, total:best.score + bonus, method };
+    bestWinCache.set(cacheKey, result);
+    if (bestWinCache.size > 60000) bestWinCache.clear();
+    return result;
   }
 
   function applyGear(p, open) {
@@ -922,6 +1478,8 @@
   }
 
   function findPatterns(player, cards) {
+    const cacheKey = `${game.sudden ? "S" : game.round}:${player.seat}:${cardSetKey(cards)}`;
+    if (findPatternCache.has(cacheKey)) return findPatternCache.get(cacheKey);
     const out = [];
     const months = cards.filter(c => c.type === "month");
     const winds = cards.filter(c => c.type === "wind");
@@ -938,11 +1496,10 @@
     const allSameColor = colors.size === 1;
     const pairCounts = vals(monthCounts).sort((a,b)=>a-b).join(",");
     const windPairCounts = vals(windCounts).sort((a,b)=>a-b).join(",");
-    const openMonths = player.open.filter(c => cards.includes(c) && c.type === "month").map(c => c.month);
 
     if (allSameColor) out.push({ name:"Mono", base:3 });
     if (allMonths && mVals.length === 6 && allColors && sameParity(mVals)) out.push({ name:"Skip", base:3 });
-    if (allMonths && mVals.length === 6 && consecutive(mVals) && openRunOkay(openMonths)) out.push({ name:"Run", base:3 });
+    if (allMonths && mVals.length === 6 && allColors && consecutive(mVals)) out.push({ name:"Run", base:3 });
     if (allWinds && allColors) out.push({ name:"Wind", base:3 });
 
     if (allMonths && pairCounts === "2,2,2" && consecutive(mVals)) out.push({ name:"Triple Pair", base:6 });
@@ -968,14 +1525,18 @@
     if (round && allMonths && mVals.length === 1 && mVals[0] === round) out.push({ name:"Grand Crown", base:15 });
     if (allWinds && wVals.length === 1 && wVals[0] === seat) out.push({ name:"Grand Tempest", base:15 });
     if (compass(cards, true)) out.push({ name:"Mono Compass", base:15 });
+    findPatternCache.set(cacheKey, out);
+    if (findPatternCache.size > 60000) findPatternCache.clear();
     return out;
+  }
+  function cardSetKey(cards) {
+    return cards.map(c => c.id).sort().join("|");
   }
 
   function counts(arr) { const o = {}; for (const x of arr) o[x] = (o[x] || 0) + 1; return o; }
   function vals(o) { return Object.keys(o).map(k => o[k]); }
   function sameParity(a) { return a.length && a.every(x => x % 2 === a[0] % 2); }
   function consecutive(a) { if (!a.length) return false; for (let i=1;i<a.length;i++) if (a[i] !== a[i-1] + 1) return false; return true; }
-  function openRunOkay(openMonths) { return openMonths.length <= 1 || consecutive([...new Set(openMonths)].sort((a,b)=>a-b)); }
   function crownFiveOne(mc) {
     const e = Object.entries(mc).map(([m,c]) => [Number(m), c]);
     if (e.length !== 2) return false;
@@ -1003,6 +1564,11 @@
     return other === 0 && ((sw === a && rm === b) || (sw === b && rm === a));
   }
   function compass(cards, mono) {
+    if (windCompass(cards, mono)) return true;
+    return monthRoadCompass(cards, mono);
+  }
+
+  function windCompass(cards, mono) {
     for (let color = 0; color < COLORS.length; color++) {
       const windSet = new Set(cards.filter(c => c.type === "wind" && c.color === color).map(c => c.wind));
       if (!WINDS.every(w => windSet.has(w))) continue;
@@ -1010,6 +1576,21 @@
       if (rest.length !== 2 || rest.some(c => c.type !== "month")) continue;
       if (mono && rest.some(c => c.color !== color)) continue;
       if (rest[0].month === rest[1].month || Math.abs(rest[0].month - rest[1].month) === 1) return true;
+    }
+    return false;
+  }
+
+  function monthRoadCompass(cards, mono) {
+    const months = cards.filter(c => c.type === "month");
+    const winds = cards.filter(c => c.type === "wind");
+    if (months.length !== 4 || winds.length !== 2) return false;
+    for (let color = 0; color < COLORS.length; color++) {
+      const road = months.filter(c => c.color === color);
+      if (road.length !== 4) continue;
+      const mVals = [...new Set(road.map(c => c.month))].sort((a,b)=>a-b);
+      if (mVals.length !== 4 || !consecutive(mVals)) continue;
+      if (mono && cards.some(c => c.color !== color)) continue;
+      return true;
     }
     return false;
   }
@@ -1030,7 +1611,7 @@
   function countWinningDraws(player, fiveCards, max, deadIds = visibleDeadIds(player)) {
     let n = 0;
     const seen = new Set(fiveCards.map(c => c.id));
-    for (const c of buildDeck()) {
+    for (const c of deckCards()) {
       if (seen.has(c.id)) continue;
       if (deadIds && deadIds.has(c.id)) continue;
       if (bestWin(player, fiveCards.concat(c), "draw")) n++;
@@ -1042,7 +1623,7 @@
   function winningDrawCards(player, fiveCards, max = 30, deadIds = visibleDeadIds(player)) {
     const waits = [];
     const seen = new Set(fiveCards.map(c => c.id));
-    for (const c of buildDeck()) {
+    for (const c of deckCards()) {
       if (seen.has(c.id)) continue;
       if (deadIds && deadIds.has(c.id)) continue;
       if (bestWin(player, fiveCards.concat(c), "draw")) waits.push(c);
@@ -1123,7 +1704,7 @@
   function ripple(x,y,color) { ripples.push({ x,y,r:8,life:42,max:42,color }); }
   function clickSpark(x, y) {
     ripples.push({ x, y, r:4, life:24, max:24, color:"#fff1a8" });
-    burst(x, y, "#8dfff1", 14, 1.9);
+    burst(x, y, "#8dfff1", 6, 1.6);
   }
 
   function ensureAudio() {
@@ -1171,6 +1752,7 @@
   }
 
   function draw(now) {
+    frameNow = now;
     const dt = Math.min(32, now - lastTime);
     lastTime = now;
     updateFx(dt);
@@ -1186,12 +1768,27 @@
   function updateFx(dt) {
     const f = dt / 16.67;
     shake *= Math.pow(0.86, f);
-    for (const p of particles) { p.x += p.vx*f; p.y += p.vy*f; p.vx *= .985; p.vy *= .985; p.vy += .025*f; p.life -= f; }
-    particles = particles.filter(p => p.life > 0);
-    for (const fl of floats) { fl.y += fl.vy*f; fl.life -= f; }
-    floats = floats.filter(fl => fl.life > 0);
-    for (const r of ripples) { r.r += 5.2*f; r.life -= f; }
-    ripples = ripples.filter(r => r.life > 0);
+    let write = 0;
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      p.x += p.vx*f; p.y += p.vy*f; p.vx *= .985; p.vy *= .985; p.vy += .025*f; p.life -= f;
+      if (p.life > 0) particles[write++] = p;
+    }
+    particles.length = write;
+    write = 0;
+    for (let i = 0; i < floats.length; i++) {
+      const fl = floats[i];
+      fl.y += fl.vy*f; fl.life -= f;
+      if (fl.life > 0) floats[write++] = fl;
+    }
+    floats.length = write;
+    write = 0;
+    for (let i = 0; i < ripples.length; i++) {
+      const r = ripples[i];
+      r.r += 5.2*f; r.life -= f;
+      if (r.life > 0) ripples[write++] = r;
+    }
+    ripples.length = write;
   }
 
   function renderBoard(now) {
@@ -1203,11 +1800,12 @@
     table(now);
     renderCenterStatus(now);
     for (let i=0;i<4;i++) renderPlayer(i, now);
-    renderDiscards();
-    renderOpenAreas();
+    const discardMatchHint = hoveredHumanHandCard(now);
+    renderDiscards(discardMatchHint);
+    renderOpenAreas(now, discardMatchHint);
     renderWaitCards(now);
     renderHumanHand(now);
-    renderDiscardMatchHints(now);
+    renderDiscardMatchHints(now, discardMatchHint);
     renderHud(now);
     renderPrompts(now);
     drawGameUtilityButtons();
@@ -1215,51 +1813,70 @@
   }
 
   function background(now) {
-    const grd = ctx.createLinearGradient(0,0,0,DESIGN_H);
+    if (!backgroundLayer) backgroundLayer = buildBackgroundLayer();
+    ctx.drawImage(backgroundLayer, 0, 0);
+  }
+
+  function buildBackgroundLayer() {
+    const layer = document.createElement("canvas");
+    layer.width = DESIGN_W;
+    layer.height = DESIGN_H;
+    const gctx = layer.getContext("2d", { alpha:false });
+    const grd = gctx.createLinearGradient(0,0,0,DESIGN_H);
     grd.addColorStop(0,"#071015");
     grd.addColorStop(.42,"#11171b");
     grd.addColorStop(1,"#080609");
-    ctx.fillStyle = grd;
-    ctx.fillRect(0,0,DESIGN_W,DESIGN_H);
-    ctx.save();
-    ctx.globalAlpha = .22;
+    gctx.fillStyle = grd;
+    gctx.fillRect(0,0,DESIGN_W,DESIGN_H);
+    gctx.save();
+    gctx.globalAlpha = .22;
     for (let y=-80;y<DESIGN_H+100;y+=46) {
-      ctx.strokeStyle = y % 92 ? "#29343a" : "#caa84a";
-      ctx.lineWidth = y % 92 ? 1 : 1.6;
-      ctx.beginPath();
+      gctx.strokeStyle = y % 92 ? "#29343a" : "#caa84a";
+      gctx.lineWidth = y % 92 ? 1 : 1.6;
+      gctx.beginPath();
       for (let x=-20;x<DESIGN_W+30;x+=24) {
-        const yy = y + Math.sin((x + now*.025) / 42) * 7;
-        if (x === -20) ctx.moveTo(x, yy); else ctx.lineTo(x, yy);
+        const yy = y + Math.sin(x / 42) * 7;
+        if (x === -20) gctx.moveTo(x, yy); else gctx.lineTo(x, yy);
       }
-      ctx.stroke();
+      gctx.stroke();
     }
-    ctx.restore();
+    gctx.restore();
+    return layer;
   }
 
   function table(now) {
-    ctx.save();
-    ctx.translate(DESIGN_W/2, 590);
-    const pulse = Math.sin(now/850)*4;
-    const g = ctx.createRadialGradient(0,0,50,0,0,330+pulse);
+    if (!tableLayer) tableLayer = buildTableLayer();
+    ctx.drawImage(tableLayer, 0, 0);
+  }
+
+  function buildTableLayer() {
+    const layer = document.createElement("canvas");
+    layer.width = DESIGN_W;
+    layer.height = DESIGN_H;
+    const tctx = layer.getContext("2d");
+    tctx.save();
+    tctx.translate(DESIGN_W/2, 590);
+    const g = tctx.createRadialGradient(0,0,50,0,0,330);
     g.addColorStop(0,"rgba(232,190,88,.32)");
     g.addColorStop(.46,"rgba(31,95,91,.52)");
     g.addColorStop(1,"rgba(4,12,15,.2)");
-    ctx.fillStyle = g;
-    roundedRect(-315,-315,630,630,42);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(255,224,123,.48)";
-    ctx.lineWidth = 2;
-    roundedRect(-305,-305,610,610,38);
-    ctx.stroke();
-    ctx.strokeStyle = "rgba(255,255,255,.08)";
-    ctx.lineWidth = 1;
+    tctx.fillStyle = g;
+    roundedRectPath(tctx, -315,-315,630,630,42);
+    tctx.fill();
+    tctx.strokeStyle = "rgba(255,224,123,.48)";
+    tctx.lineWidth = 2;
+    roundedRectPath(tctx, -305,-305,610,610,38);
+    tctx.stroke();
+    tctx.strokeStyle = "rgba(255,255,255,.08)";
+    tctx.lineWidth = 1;
     for (let r=80;r<=280;r+=50) {
-      ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.stroke();
+      tctx.beginPath(); tctx.arc(0,0,r,0,Math.PI*2); tctx.stroke();
     }
-    ctx.rotate(Math.PI/4);
-    ctx.strokeStyle = "rgba(255,224,123,.22)";
-    ctx.strokeRect(-170,-170,340,340);
-    ctx.restore();
+    tctx.rotate(Math.PI/4);
+    tctx.strokeStyle = "rgba(255,224,123,.22)";
+    tctx.strokeRect(-170,-170,340,340);
+    tctx.restore();
+    return layer;
   }
 
   function renderTitle(now) {
@@ -1364,8 +1981,7 @@
     ctx.restore();
   }
 
-  function renderDiscards() {
-    const hintCard = hoveredHumanHandCard();
+  function renderDiscards(hintCard) {
     const hintKey = hintCard ? groupKey(hintCard) : null;
     for (let i=0;i<4;i++) {
       const p = game.players[i];
@@ -1404,10 +2020,9 @@
     }
   }
 
-  function hoveredHumanHandCard() {
-    const now = performance.now();
+  function hoveredHumanHandCard(now = frameNow || performance.now()) {
     if (game.mode !== "userTurn" || now < handHoverBlockedUntil) {
-      discardHint = { card:null, until:0, candidate:null, since:0 };
+      clearDiscardMatchHint();
       return null;
     }
     const p = game.players[0];
@@ -1434,12 +2049,11 @@
       }
     }
     if (discardHint.card && now < discardHint.until) return discardHint.card;
-    discardHint = { card:null, until:0, candidate:null, since:0 };
+    clearDiscardMatchHint();
     return null;
   }
 
-  function renderDiscardMatchHints(now) {
-    const hoverCard = hoveredHumanHandCard();
+  function renderDiscardMatchHints(now, hoverCard) {
     if (!hoverCard) return;
     const key = groupKey(hoverCard);
     const pulse = 0.58 + Math.sin(now / 180) * 0.18;
@@ -1521,23 +2135,26 @@
     ctx.restore();
   }
 
-  function renderOpenAreas() {
+  function renderOpenAreas(now, hintCard) {
+    const hintKey = hintCard ? groupKey(hintCard) : null;
     for (let i=0;i<4;i++) {
       const p = game.players[i];
       const z = openZone(i);
       ctx.save();
       for (let k=0;k<p.open.length;k++) {
+        const c = p.open[k];
         const x = z.x + k*z.step;
-        const pulse = 0.55 + Math.sin(performance.now() / 420 + k) * 0.25;
+        const dim = hintKey && groupKey(c) !== hintKey;
+        const pulse = 0.55 + Math.sin(now / 420 + k) * 0.25;
         ctx.save();
-        ctx.globalAlpha = 0.22 + pulse * 0.14;
-        ctx.shadowColor = COLORS[p.open[k].color].main;
+        ctx.globalAlpha = dim ? .05 : 0.22 + pulse * 0.14;
+        ctx.shadowColor = COLORS[c.color].main;
         ctx.shadowBlur = 10;
-        ctx.fillStyle = COLORS[p.open[k].color].main;
+        ctx.fillStyle = COLORS[c.color].main;
         roundedRect(x - 2, z.y - 2, z.cardW + 4, z.cardH + 4, 7);
         ctx.fill();
         ctx.restore();
-        drawCard(p.open[k], x, z.y, z.cardW, z.cardH, 0, true, .97);
+        drawCard(c, x, z.y, z.cardW, z.cardH, 0, true, dim ? .2 : .97);
       }
       ctx.restore();
     }
@@ -1588,7 +2205,7 @@
     const gap = count > 6 ? 5 : 8;
     const start = DESIGN_W/2 - (count*cw + (count-1)*gap)/2;
     const y = 1060;
-    const allowHover = performance.now() >= handHoverBlockedUntil;
+    const allowHover = now >= handHoverBlockedUntil;
     const allowPointerHover = pointer.kind !== "touch" || pointer.down;
     for (let i=0;i<count;i++) {
       const x = start + i*(cw+gap);
@@ -1918,13 +2535,11 @@
     else if (assets.ready) {
       const sx = SHEET.margin + card.col * (SHEET.cw + SHEET.gap);
       const sy = SHEET.margin + card.row * (SHEET.ch + SHEET.gap);
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = "high";
       ctx.drawImage(assets.sheet, sx, sy, SHEET.cw, SHEET.ch, 0, 0, w, h);
     } else {
       fallbackCard(card, 0,0,w,h);
     }
-    if (faceUp && isHumanKeyCard(card)) shineCard(0, 0, w, h, performance.now(), card.col || card.row || 0);
+    if (faceUp && isHumanKeyCard(card)) shineCard(0, 0, w, h, frameNow || performance.now(), card.col || card.row || 0);
     ctx.restore();
   }
 
@@ -2011,13 +2626,16 @@
   }
 
   function roundedRect(x,y,w,h,r) {
-    ctx.beginPath();
-    ctx.moveTo(x+r,y);
-    ctx.arcTo(x+w,y,x+w,y+h,r);
-    ctx.arcTo(x+w,y+h,x,y+h,r);
-    ctx.arcTo(x,y+h,x,y,r);
-    ctx.arcTo(x,y,x+w,y,r);
-    ctx.closePath();
+    roundedRectPath(ctx, x, y, w, h, r);
+  }
+  function roundedRectPath(target, x,y,w,h,r) {
+    target.beginPath();
+    target.moveTo(x+r,y);
+    target.arcTo(x+w,y,x+w,y+h,r);
+    target.arcTo(x+w,y+h,x,y+h,r);
+    target.arcTo(x,y+h,x,y,r);
+    target.arcTo(x,y,x+w,y,r);
+    target.closePath();
   }
 
   function playerAnchor(i) {
@@ -2220,7 +2838,8 @@
       game.awaiting = null;
       return resolveMeldClaims(game.lastDiscard, game.lastDiscarder);
     }
-    handHoverBlockedUntil = performance.now() + 650;
+    clearDiscardMatchHint();
+    handHoverBlockedUntil = pointer.kind === "touch" ? performance.now() + 90 : 0;
     p.open.push(p.concealed.splice(index, 1)[0]);
     sortHand(p.open);
     bigCall("HOME OPEN", 0, "#ffe07b");
@@ -2235,7 +2854,8 @@
     if (!p || !key || openCount(p) >= 5 || index < 0 || index >= p.concealed.length || groupKey(p.concealed[index]) !== key) {
       return;
     }
-    handHoverBlockedUntil = performance.now() + 650;
+    clearDiscardMatchHint();
+    handHoverBlockedUntil = pointer.kind === "touch" ? performance.now() + 90 : 0;
     p.open.push(p.concealed.splice(index, 1)[0]);
     sortHand(p.open);
     bigCall("MATCH OPEN", 0, "#ffe07b");
