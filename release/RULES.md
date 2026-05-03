@@ -454,7 +454,7 @@ All patterns below use exactly `6` cards.
 | Tempest | All 6 cards are the same wind, as long as it is not your seat wind | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
 | Escort | 4 of one month plus 2 matching cards from either the previous or next month, with all 6 colors present | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
 | Split Escort | 4 of one month plus 1 previous and 1 next month, with all 6 colors present | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
-| Compass | Either: four same-color N, S, E, W plus any month pair or 2-card month sequence; or four same-color consecutive months plus any 2 winds | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
+| Compass | Either: four same-color N, S, E, W plus any month pair or 2-card month sequence; or four same-color consecutive months plus 2 same-color winds | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
 
 ### 15.5 15-point patterns
 
@@ -476,7 +476,7 @@ Notes on the 15-point patterns:
 - `Grand Axis` means a `3+3` split between your seat wind and the round's target month.
 - `Tempest` means all 6 cards are the same wind, as long as it is not your seat wind.
 - `Grand Tempest` means all 6 cards are your seat wind.
-- `Compass` has two shapes. Wind Compass uses all four winds in one color plus either any month pair or any 2-month sequence. Month Compass uses four consecutive months in one color plus any 2 winds.
+- `Compass` has two shapes. Wind Compass uses all four winds in one color plus either any month pair or any 2-month sequence. Month Compass uses four consecutive months in one color plus 2 winds that share a color.
 - `Mono Compass` uses either Compass shape, but all 6 cards must share one color.
 
 ## 16. End of Hand

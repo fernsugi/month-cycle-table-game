@@ -224,7 +224,7 @@
       title:"More 12-Point Wins",
       lines:[
         "Split Escort: 4 of one month plus 1 previous, 1 next, all colors different.",
-        "Compass: same-color N, S, E, W plus any month pair or 2-month sequence, or 4 same-color consecutive months plus any 2 winds.",
+        "Compass: same-color N, S, E, W plus any month pair or 2-month sequence, or 4 same-color consecutive months plus 2 same-color winds.",
         "12-point wins score 6 with 0-3 gear.",
         "They score 9 with 4 gear, or 12 with 5 gear."
       ]
@@ -825,6 +825,7 @@
     const months = open.filter(c => c.type === "month");
     const winds = open.filter(c => c.type === "wind");
     if (months.length > 4 || winds.length > 2) return false;
+    if (winds.length && new Set(winds.map(c => c.color)).size !== 1) return false;
     if (!months.length) return true;
     if (new Set(months.map(c => c.color)).size !== 1) return false;
     const vals = months.map(c => c.month);
@@ -1584,6 +1585,7 @@
     const months = cards.filter(c => c.type === "month");
     const winds = cards.filter(c => c.type === "wind");
     if (months.length !== 4 || winds.length !== 2) return false;
+    if (new Set(winds.map(c => c.color)).size !== 1) return false;
     for (let color = 0; color < COLORS.length; color++) {
       const road = months.filter(c => c.color === color);
       if (road.length !== 4) continue;
