@@ -284,17 +284,15 @@ Wind cards have **no month**. Therefore, wind cards cannot be used in any patter
 - Skip
 - Run
 - Triple Pair
-- Twin Tone Pairs
 - Parity Pairs
 - Twin Triples
-- Tri Tone Triples
 - Parity Triples
 - Escort
 - Split Escort
 - Mono Skip
 - Mono Run
 
-Wind cards **can** be used in `Mono` (all same color), `Axis`, `Grand Axis`, `Tempest`, `Grand Tempest`, and all wind-specific patterns listed in Section 15.
+Wind cards **can** be used in `Mono` (all same color), `Twin Tone Pairs`, `Tri Tone Triples`, `Axis`, `Grand Axis`, `Tempest`, `Grand Tempest`, and all wind-specific patterns listed in Section 15.
 
 ### 10.2 Exhaustive Draw: Full Gear
 
@@ -433,7 +431,7 @@ All patterns below use exactly `6` cards.
 | Triple Pair | 3 pairs from 3 consecutive months | 3 open cards scores 3pt; 4+ open cards scores 6pt |
 | Wind Pairs | 3 pairs from 3 different winds | 3 open cards scores 3pt; 4+ open cards scores 6pt |
 | Axis | Either: 2 of your seat wind plus 4 of the current round month; or 4 of your seat wind plus 2 of the current round month | 3 open cards scores 3pt; 4+ open cards scores 6pt |
-| Twin Tone Pairs | 3 pairs from 3 different months, using at most 2 colors total | 3 open cards scores 3pt; 4+ open cards scores 6pt |
+| Twin Tone Pairs | 3 pairs from 3 different month or wind identities, using at most 2 colors total | 3 open cards scores 3pt; 4+ open cards scores 6pt |
 | Parity Pairs | 3 pairs from 3 different months, all odd or all even | 3 open cards scores 3pt; 4+ open cards scores 6pt |
 
 ### 15.3 9-point patterns
@@ -443,7 +441,7 @@ All patterns below use exactly `6` cards.
 | Twin Triples | 3 cards of one month and 3 cards of a consecutive month | 3 open cards scores 3pt; 4 open cards scores 6pt; 5 open cards scores 9pt |
 | Wind Triples | 3 cards of one wind and 3 cards of another wind | 3 open cards scores 3pt; 4 open cards scores 6pt; 5 open cards scores 9pt |
 | Grand Axis | 3 of your seat wind plus 3 of the current round month | 3 open cards scores 3pt; 4 open cards scores 6pt; 5 open cards scores 9pt |
-| Tri Tone Triples | 3 cards of one month and 3 cards of another month, using at most 3 colors total | 3 open cards scores 3pt; 4 open cards scores 6pt; 5 open cards scores 9pt |
+| Tri Tone Triples | 3 cards of one month or wind identity and 3 cards of another month or wind identity, using at most 3 colors total | 3 open cards scores 3pt; 4 open cards scores 6pt; 5 open cards scores 9pt |
 | Parity Triples | 3 cards of one month and 3 cards of another month, all odd or all even | 3 open cards scores 3pt; 4 open cards scores 6pt; 5 open cards scores 9pt |
 
 ### 15.4 12-point patterns
@@ -514,4 +512,4 @@ If round `12` ends tied for first:
 - The color labels are abbreviated: `G`, `R`, `Y`, `K`, `B`, `W`.
 - The wind labels are abbreviated: `N`, `S`, `E`, `W`.
 - Open-card count matters a lot because of gear. A beautiful hand may still be invalid if it does not meet the required visible open count for its point tier.
-- Wind cards have no month and therefore cannot satisfy any pattern requirement that references months, months being consecutive, or month parity.
+- Wind cards have no month and therefore cannot satisfy requirements for month sequence, month consecutiveness, or month parity.

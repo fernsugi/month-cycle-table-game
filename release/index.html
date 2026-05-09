@@ -187,7 +187,7 @@
     {
       title:"More 6-Point Wins",
       lines:[
-        "Twin Tone Pairs: 3 month pairs using only 2 colors.",
+        "Twin Tone Pairs: 3 month-or-wind pairs using only 2 colors.",
         "Parity Pairs: 3 month pairs that are all odd or all even.",
         "With 3 gear, a 6-point pattern scores 3.",
         "With 4 or more gear, it scores the full 6."
@@ -205,7 +205,7 @@
     {
       title:"More 9-Point Wins",
       lines:[
-        "Tri Tone Triples: two month triples using only 3 colors.",
+        "Tri Tone Triples: two month-or-wind triples using only 3 colors.",
         "Parity Triples: two month triples, all odd or all even.",
         "With 3 gear, a 9-point pattern scores 3.",
         "With 4 gear it scores 6; with 5 gear it scores 9."
@@ -1035,7 +1035,7 @@
       return;
     }
     const discardKey = groupKey(card);
-    if (discarder === 0 && !autoSkipsOptionalCalls() && canMatchOpen(game.players[0], discardKey)) {
+    if (discarder === 0 && canMatchOpen(game.players[0], discardKey)) {
       game.awaiting = { type:"matchOpen", card, discarder, key:discardKey };
       game.mode = "matchOpen";
       game.message = "Match open";
@@ -1489,6 +1489,7 @@
     const seat = player.seat;
     const monthCounts = counts(months.map(c => c.month));
     const windCounts = counts(winds.map(c => c.wind));
+    const groupCounts = counts(cards.map(groupKey));
     const mVals = Object.keys(monthCounts).map(Number).sort((a,b)=>a-b);
     const wVals = Object.keys(windCounts);
     const allMonths = months.length === 6;
@@ -1497,6 +1498,7 @@
     const allSameColor = colors.size === 1;
     const pairCounts = vals(monthCounts).sort((a,b)=>a-b).join(",");
     const windPairCounts = vals(windCounts).sort((a,b)=>a-b).join(",");
+    const groupPairCounts = vals(groupCounts).sort((a,b)=>a-b).join(",");
 
     if (allSameColor) out.push({ name:"Mono", base:3 });
     if (allMonths && mVals.length === 6 && allColors && sameParity(mVals)) out.push({ name:"Skip", base:3 });
@@ -1506,13 +1508,13 @@
     if (allMonths && pairCounts === "2,2,2" && consecutive(mVals)) out.push({ name:"Triple Pair", base:6 });
     if (allWinds && windPairCounts === "2,2,2" && wVals.length === 3) out.push({ name:"Wind Pairs", base:6 });
     if (round && axisCounts(cards, seat, round, 2, 4)) out.push({ name:"Axis", base:6 });
-    if (allMonths && pairCounts === "2,2,2" && mVals.length === 3 && colors.size <= 2) out.push({ name:"Twin Tone Pairs", base:6 });
+    if (groupPairCounts === "2,2,2" && Object.keys(groupCounts).length === 3 && colors.size <= 2) out.push({ name:"Twin Tone Pairs", base:6 });
     if (allMonths && pairCounts === "2,2,2" && sameParity(mVals)) out.push({ name:"Parity Pairs", base:6 });
 
     if (allMonths && pairCounts === "3,3" && consecutive(mVals)) out.push({ name:"Twin Triples", base:9 });
     if (allWinds && windPairCounts === "3,3" && wVals.length === 2) out.push({ name:"Wind Triples", base:9 });
     if (round && axisCounts(cards, seat, round, 3, 3)) out.push({ name:"Grand Axis", base:9 });
-    if (allMonths && pairCounts === "3,3" && colors.size <= 3) out.push({ name:"Tri Tone Triples", base:9 });
+    if (groupPairCounts === "3,3" && colors.size <= 3) out.push({ name:"Tri Tone Triples", base:9 });
     if (allMonths && pairCounts === "3,3" && sameParity(mVals)) out.push({ name:"Parity Triples", base:9 });
 
     if (allMonths && allColors && (pairCounts === "6" || crownFiveOne(monthCounts))) out.push({ name:"Crown", base:12 });
