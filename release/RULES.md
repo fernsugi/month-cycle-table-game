@@ -276,7 +276,7 @@ If a 6-card hand matches more than one pattern:
 - remove any pattern that fails the gear rule
 - each remaining valid pattern contributes its low-gear/base scoring value
 - apply the gear upgrade from the strongest remaining pattern once
-- add round month, home wind, and `tsumo` bonuses after pattern scoring
+- add round month, home wind, `Rainbow`, `Prism`, and `tsumo` bonuses after pattern scoring
 
 Low-gear/base scoring value means:
 
@@ -303,7 +303,7 @@ Wind cards have **no month**. Therefore, wind cards cannot be used in any patter
 - Mono Skip
 - Mono Run
 
-Wind cards **can** be used in `Mono` (all same color), `Twin Tone Pairs`, `Tri Tone Triples`, `Axis`, `Grand Axis`, `Tempest`, `Grand Tempest`, and all wind-specific patterns listed in Section 15.
+Wind cards **can** be used in `Mono` (all same color), `Twin Tone Pairs`, `Tri Tone Triples`, `Axis`, `Grand Axis`, `Tempest`, `Grand Tempest`, and all wind-specific patterns listed in Section 16.
 
 ### 10.2 Exhaustive Draw: Full Gear
 
@@ -390,9 +390,37 @@ Important:
 - it stacks with the round month bonus
 - a `15pt` hand with both bonuses scores `21pt`
 
-## 14. Settlement
+## 14. Rainbow and Prism Bonuses
 
-### 14.1 Tsumo
+### 14.1 Rainbow
+
+`Rainbow` is a `+3pt` winning bonus.
+
+You gain `Rainbow` when:
+
+- you win by `tsumo`
+- your final winning 6-card hand contains all `6` colors
+- all `6` final cards have different card identities
+
+### 14.2 Prism
+
+`Prism` is a `+3pt` winning bonus.
+
+You gain `Prism` when:
+
+- you have exactly `5` open cards
+- your final winning 6-card hand contains all `6` colors
+- all `6` final cards have different card identities
+
+Important:
+
+- `Rainbow` and `Prism` can stack with each other
+- both stack with `tsumo`, round month, and home wind bonuses
+- they are bonuses, not winning patterns
+
+## 15. Settlement
+
+### 15.1 Tsumo
 
 On `tsumo`:
 
@@ -409,25 +437,25 @@ Examples:
 - `18pt` hand by tsumo: total `21pt`; each opponent pays `7`
 - `21pt` hand by tsumo: total `24pt`; each opponent pays `8`
 
-### 14.2 Ron
+### 15.2 Ron
 
 On `ron`:
 
 - the discarder pays the full value
 - the winner gains the full value
 
-### 14.3 Multiple Ron
+### 15.3 Multiple Ron
 
 If multiple players `ron` the same discard:
 
 - each winner scores separately
 - the discarder pays each winner in full
 
-## 15. Winning Patterns
+## 16. Winning Patterns
 
 All patterns below use exactly `6` cards.
 
-### 15.1 3-point patterns
+### 16.1 3-point patterns
 
 | Pattern | Requirement | Gear |
 | --- | --- | --- |
@@ -436,7 +464,7 @@ All patterns below use exactly `6` cards.
 | Run | Six consecutive months, all in different colors | At least 3 open cards |
 | Wind | All 6 cards are wind cards, with all 6 colors present | At least 3 open cards |
 
-### 15.2 6-point patterns
+### 16.2 6-point patterns
 
 | Pattern | Requirement | Gear |
 | --- | --- | --- |
@@ -446,7 +474,7 @@ All patterns below use exactly `6` cards.
 | Twin Tone Pairs | 3 pairs from 3 different month or wind identities, using at most 2 colors total | 3 open cards scores 3pt; 4+ open cards scores 6pt |
 | Parity Pairs | 3 pairs from 3 different months, all odd or all even | 3 open cards scores 3pt; 4+ open cards scores 6pt |
 
-### 15.3 9-point patterns
+### 16.3 9-point patterns
 
 | Pattern | Requirement | Gear |
 | --- | --- | --- |
@@ -456,7 +484,7 @@ All patterns below use exactly `6` cards.
 | Tri Tone Triples | 3 cards of one month or wind identity and 3 cards of another month or wind identity, using at most 3 colors total | 3 open cards scores 3pt; 4 open cards scores 6pt; 5 open cards scores 9pt |
 | Parity Triples | 3 cards of one month and 3 cards of another month, all odd or all even | 3 open cards scores 3pt; 4 open cards scores 6pt; 5 open cards scores 9pt |
 
-### 15.4 12-point patterns
+### 16.4 12-point patterns
 
 | Pattern | Requirement | Gear |
 | --- | --- | --- |
@@ -466,7 +494,7 @@ All patterns below use exactly `6` cards.
 | Split Escort | 4 of one month plus 1 previous and 1 next month, with all 6 colors present | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
 | Compass | Either: four same-color N, S, E, W plus any month pair or 2-card month sequence; or four same-color consecutive months plus 2 same-color winds | 0-3 open cards scores 6pt; 4 open cards scores 9pt; 5 open cards scores 12pt |
 
-### 15.5 15-point patterns
+### 16.5 15-point patterns
 
 | Pattern | Requirement | Gear |
 | --- | --- | --- |
@@ -489,7 +517,7 @@ Notes on the 15-point patterns:
 - `Compass` has two shapes. Wind Compass uses all four winds in one color plus either any month pair or any 2-month sequence. Month Compass uses four consecutive months in one color plus 2 winds that share a color.
 - `Mono Compass` uses either Compass shape, but all 6 cards must share one color.
 
-## 16. End of Hand
+## 17. End of Hand
 
 A hand ends when:
 
@@ -503,7 +531,7 @@ If the wall is exhausted:
 - no one scores
 - dealer rotates normally unless East had won before the draw, which did not happen
 
-## 17. End of Match
+## 18. End of Match
 
 The match ends when one of these happens:
 
@@ -516,7 +544,7 @@ If round `12` ends tied for first:
 - no one wins the match yet
 - play continues in sudden death rounds until the tie breaks
 
-## 18. Practical Notes
+## 19. Practical Notes
 
 - Odd/even patterns use the visible month number parity.
 - The month labels are numeric `1` to `12`.

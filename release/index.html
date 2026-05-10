@@ -255,15 +255,16 @@
     {
       title:"Winning Bonuses",
       lines:[
-        "Round month and home wind each add +3 after gear scoring.",
-        "Multiple valid patterns add their base points together.",
-        "Tsumo adds +3, then splits payment across opponents."
+        "Tsumo, round month, and home wind each add +3.",
+        "Rainbow: tsumo, 6 colors, 6 different cards: +3.",
+        "Prism: 5 gear, 6 colors, 6 different cards: +3.",
+        "Winning bonuses stack and show in the result reveal."
       ]
     },
     {
       title:"Draw / Game Over",
       lines:[
-        "When winning, having the round target month and your own seat wind each gives +3 points.",
+        "Some wins gain +3 bonuses after pattern and gear scoring.",
         "When draw, players with 5 gears receive 1 point from each player who does not have 5 gears.",
         "If everyone has 5 gears or no one is eligible, the round is a normal draw and no one pays.",
         "The game ends after round 12 or when a player runs out of points; ties go to Sudden Death."
@@ -1492,7 +1493,9 @@
     const roundBonus = currentRoundMonth() && cards.some(c => c.month === currentRoundMonth()) ? 3 : 0;
     const homeWindBonus = cards.some(c => c.wind === player.seat) ? 3 : 0;
     const methodBonus = method === "tsumo" || method === "draw" ? 3 : 0;
-    const bonus = roundBonus + homeWindBonus;
+    const rainbowBonus = methodBonus > 0 && rainbowPrismReady(cards) ? 3 : 0;
+    const prismBonus = open === 5 && rainbowPrismReady(cards) ? 3 : 0;
+    const bonus = roundBonus + homeWindBonus + rainbowBonus + prismBonus;
     const total = patternScore + gearBonus + bonus + methodBonus;
     const result = {
       ...best,
@@ -1502,6 +1505,8 @@
       gearBonus,
       roundBonus,
       homeWindBonus,
+      rainbowBonus,
+      prismBonus,
       methodBonus,
       bonus,
       open,
@@ -1539,9 +1544,17 @@
     if (method === "TSUMO") lines.push({ label:"Tsumo", points:win.methodBonus || 3, kind:"method" });
     for (const p of win.patterns || []) lines.push({ label:p.name, points:p.lineScore, kind:"pattern" });
     if (win.gearBonus > 0) lines.push({ label:gearLineLabel(win.open), points:win.gearBonus, kind:"gear" });
+    if (win.rainbowBonus > 0) lines.push({ label:"Rainbow", points:win.rainbowBonus, kind:"bonus" });
+    if (win.prismBonus > 0) lines.push({ label:"Prism", points:win.prismBonus, kind:"bonus" });
     if (win.roundBonus > 0) lines.push({ label:"Round Month", points:win.roundBonus, kind:"bonus" });
     if (win.homeWindBonus > 0) lines.push({ label:"Home Wind", points:win.homeWindBonus, kind:"bonus" });
     return lines;
+  }
+
+  function rainbowPrismReady(cards) {
+    return cards.length === 6 &&
+      new Set(cards.map(c => c.color)).size === 6 &&
+      new Set(cards.map(c => c.id)).size === 6;
   }
 
   function gearLineLabel(open) {
