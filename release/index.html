@@ -21,6 +21,7 @@
   const RESULT_LINE_DELAY = 500;
   const RESULT_LINE_INTERVAL = 500;
   const RESULT_FINAL_DELAY = 420;
+  const RESULT_QUEUE_DELAY = 950;
   const COLORS = [
     { key:"green", code:"G", name:"Bamboo", main:"#20d56b", dim:"#0b6b36" },
     { key:"red", code:"R", name:"Phoenix", main:"#ff3b4f", dim:"#7c1420" },
@@ -327,6 +328,7 @@
     helpReturn:"title",
     seenTenpai:false,
     lastResults:[],
+    resultIndex:0,
     resultStartedAt:0,
     resultFxStep:0,
     autoPlay:false,
@@ -362,6 +364,8 @@
     game.claim = null;
     game.awaiting = null;
     game.lastResults = [];
+    game.resultIndex = 0;
+    game.resultFxStep = 0;
     game.seenTenpai = false;
     for (let i = 0; i < 4; i++) {
       const seat = SEAT_ORDER[(i - game.dealer + 4) % 4];
@@ -1357,6 +1361,7 @@
     game.autoPlay = false;
     game.mode = "result";
     game.lastResults = [];
+    game.resultIndex = 0;
     game.resultStartedAt = performance.now();
     game.resultFxStep = 0;
     for (let wi = 0; wi < winners.length; wi++) {
@@ -1397,6 +1402,7 @@
     game.autoPlay = false;
     game.mode = "result";
     game.lastResults = [];
+    game.resultIndex = 0;
     game.message = "Exhaustive Draw";
     game.resultStartedAt = performance.now();
     game.resultFxStep = 0;
@@ -2486,7 +2492,9 @@
 
   function resultPanel(now = frameNow) {
     ctx.save();
-    const result = game.lastResults[0];
+    advanceResultQueue(now);
+    const resultIndex = activeResultIndex();
+    const result = game.lastResults[resultIndex];
     const elapsed = Math.max(0, now - game.resultStartedAt);
     if (result && elapsed < RESULT_MODAL_DELAY) {
       ctx.restore();
@@ -2534,7 +2542,7 @@
     ctx.font = "800 15px Georgia,serif";
     ctx.fillText(result.player === 0 ? "Your winning hand" : `${winner.name}'s winning hand`, DESIGN_W/2, 148);
 
-    drawResultCards(result.cards || [], 176);
+    drawResultCards(result.cards || [], 176, resultIndex, result.method);
 
     const panelY = 310;
     ctx.fillStyle = "rgba(4,10,16,.78)";
@@ -2562,9 +2570,26 @@
   }
 
   function resultCanAdvance(now = frameNow) {
-    const result = game.lastResults[0];
+    const result = game.lastResults[activeResultIndex()];
     if (!result) return true;
+    if (activeResultIndex() < game.lastResults.length - 1) return false;
     return Math.max(0, now - game.resultStartedAt) >= resultFinalRevealAt(result) + 360;
+  }
+
+  function activeResultIndex() {
+    if (!game.lastResults.length) return 0;
+    return Math.max(0, Math.min(game.resultIndex || 0, game.lastResults.length - 1));
+  }
+
+  function advanceResultQueue(now = frameNow) {
+    const index = activeResultIndex();
+    const result = game.lastResults[index];
+    if (!result || index >= game.lastResults.length - 1) return;
+    const elapsed = Math.max(0, now - game.resultStartedAt);
+    if (elapsed < resultFinalRevealAt(result) + RESULT_QUEUE_DELAY) return;
+    game.resultIndex = index + 1;
+    game.resultStartedAt = now - RESULT_MODAL_DELAY;
+    game.resultFxStep = 0;
   }
 
   function drawResultBackdrop(now, hasWin) {
@@ -2599,7 +2624,7 @@
     }
   }
 
-  function drawResultCards(cards, y) {
+  function drawResultCards(cards, y, resultIndex = 0, method = "RON") {
     if (!cards.length) return;
     const cw = 66, ch = 93, gap = 8;
     const start = DESIGN_W/2 - (cards.length * cw + (cards.length - 1) * gap) / 2;
@@ -2611,7 +2636,8 @@
       ctx.fillStyle = "rgba(255,255,255,.66)";
       ctx.font = "800 13px Georgia,serif";
       ctx.textAlign = "center";
-      ctx.fillText(`+ ${game.lastResults.length - 1} more Ron winner`, DESIGN_W/2, y + ch + 26);
+      const label = method === "RON" ? "Ron winner" : "Winner";
+      ctx.fillText(`${label} ${resultIndex + 1} / ${game.lastResults.length}`, DESIGN_W/2, y + ch + 26);
     }
   }
 
