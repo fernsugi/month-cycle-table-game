@@ -10,10 +10,10 @@ Core flow:
 
 - each player normally holds `5` total cards
 - on your turn, you draw to `6`
-- if those `6` cards form a legal winning pattern, you may win
+- if those `6` cards form at least one legal winning pattern, you may win
 - otherwise you discard back to `5`
 - other players may claim that discard in priority order
-- scoring uses exactly one 6-card winning pattern
+- scoring can combine multiple valid 6-card winning patterns
 
 The game is built around:
 
@@ -274,8 +274,19 @@ A winning hand is always exactly `6` total cards.
 If a 6-card hand matches more than one pattern:
 
 - remove any pattern that fails the gear rule
-- from the remaining valid patterns, apply any gear-based point reduction
-- use the highest-point result after gear is applied
+- each remaining valid pattern contributes its low-gear/base scoring value
+- apply the gear upgrade from the strongest remaining pattern once
+- add round month, home wind, and `tsumo` bonuses after pattern scoring
+
+Low-gear/base scoring value means:
+
+- `3pt` patterns contribute `3pt`
+- `6pt` patterns contribute `3pt`
+- `9pt` patterns contribute `3pt`
+- `12pt` patterns contribute `6pt`
+- `15pt` patterns contribute `9pt`
+
+Named upgrade patterns suppress their component versions when they describe the same hand, such as `Mono Compass` suppressing `Mono` and `Compass`.
 
 ### 10.1 Wind Card Pattern Restrictions
 
@@ -385,6 +396,7 @@ Important:
 
 On `tsumo`:
 
+- the hand gains a `+3pt` `tsumo` bonus
 - the winner gains the hand's full value
 - the other `3` players each pay one third of that value
 
@@ -392,10 +404,10 @@ Because all legal totals are divisible by `3`, settlement is always clean.
 
 Examples:
 
-- `3pt` tsumo: each opponent pays `1`
-- `12pt` tsumo: each opponent pays `4`
-- `18pt` tsumo: each opponent pays `6`
-- `21pt` tsumo: each opponent pays `7`
+- `3pt` hand by tsumo: total `6pt`; each opponent pays `2`
+- `12pt` hand by tsumo: total `15pt`; each opponent pays `5`
+- `18pt` hand by tsumo: total `21pt`; each opponent pays `7`
+- `21pt` hand by tsumo: total `24pt`; each opponent pays `8`
 
 ### 14.2 Ron
 

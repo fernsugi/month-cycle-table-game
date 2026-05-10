@@ -17,6 +17,10 @@
 
   const DESIGN_W = 720;
   const DESIGN_H = 1280;
+  const RESULT_MODAL_DELAY = 1000;
+  const RESULT_LINE_DELAY = 500;
+  const RESULT_LINE_INTERVAL = 500;
+  const RESULT_FINAL_DELAY = 420;
   const COLORS = [
     { key:"green", code:"G", name:"Bamboo", main:"#20d56b", dim:"#0b6b36" },
     { key:"red", code:"R", name:"Phoenix", main:"#ff3b4f", dim:"#7c1420" },
@@ -71,7 +75,7 @@
       title:"The Big Idea",
       lines:[
         "Month Cycle Table is a 4-player draw and discard game.",
-        "You are trying to make exactly 6 cards into one winning pattern.",
+        "You are trying to make exactly 6 cards into winning patterns.",
         "You normally hold 5 cards, then draw to 6 on your turn.",
         "If your 6 cards do not win, tap one hand card to discard."
       ]
@@ -108,7 +112,7 @@
       lines:[
         "Tsumo means you win after drawing your own winning card.",
         "Ron means someone discards the card that completes your win.",
-        "Tsumo is paid by all 3 opponents.",
+        "Tsumo adds 3 points: 1 paid by each opponent.",
         "Ron is paid only by the player who discarded."
       ]
     },
@@ -266,21 +270,21 @@
       ]
     },
     {
-      title:"Exact Gear Scoring",
-      lines:[
-        "3pt: needs 3+ gear, scores 3.",
-        "6pt: needs 3+ gear. 3 gear scores 3; 4+ gear scores 6.",
-        "9pt: needs 3+ gear. 3 gear scores 3; 4 scores 6; 5 scores 9.",
-        "12pt: 0-3 gear scores 6; 4 scores 9; 5 scores 12."
-      ]
-    },
-    {
       title:"Exact Premium Scoring",
       lines:[
         "15pt: 0-3 gear scores 9; 4 gear scores 12; 5 gear scores 15.",
-        "Round month bonus adds +3 after gear scoring.",
-        "Home wind bonus adds +3 after gear scoring.",
-        "Tsumo splits payment across opponents; Ron charges the discarder."
+        "Round month and home wind each add +3 after gear scoring.",
+        "Multiple valid patterns add their base points together.",
+        "Tsumo adds +3, then splits payment across opponents."
+      ]
+    },
+    {
+      title:"Result Titles",
+      lines:[
+        "6pt is Mangan. 9pt is Haneman. 12pt is Baiman.",
+        "15pt is Sanbaiman. 18pt is Yakuman.",
+        "24pt or more is Tenka Musou.",
+        "Hands below 6pt show no result title."
       ]
     }
   ];
@@ -324,6 +328,8 @@
     helpReturn:"title",
     seenTenpai:false,
     lastResults:[],
+    resultStartedAt:0,
+    resultFxStep:0,
     autoPlay:false,
   };
 
@@ -1352,6 +1358,8 @@
     game.autoPlay = false;
     game.mode = "result";
     game.lastResults = [];
+    game.resultStartedAt = performance.now();
+    game.resultFxStep = 0;
     for (let wi = 0; wi < winners.length; wi++) {
       const idx = winners[wi];
       const p = game.players[idx];
@@ -1367,7 +1375,15 @@
       const resultCards = method === "RON" && game.lastDiscard
         ? totalCards(p).concat(game.lastDiscard)
         : totalCards(p);
-      game.lastResults.push({ player:idx, method, win, value, cards:resultCards.slice(0, 6) });
+      game.lastResults.push({
+        player:idx,
+        method,
+        win,
+        value,
+        rank:handRank(value),
+        lines:win ? resultScoreLines(win, method) : [],
+        cards:resultCards.slice(0, 6)
+      });
       bigCall(method, idx, method === "TSUMO" ? "#fff1a8" : "#ff4f73", true);
       burst(DESIGN_W/2, DESIGN_H/2, method === "TSUMO" ? "#fff1a8" : "#ff4f73", 160, 6);
     }
@@ -1383,6 +1399,8 @@
     game.mode = "result";
     game.lastResults = [];
     game.message = "Exhaustive Draw";
+    game.resultStartedAt = performance.now();
+    game.resultFxStep = 0;
     const fullGear = settleFullGear();
     game.sub = fullGear ? fullGear.summary : "No score";
     game.dealer = nextPlayer(game.dealer);
@@ -1440,7 +1458,7 @@
     const sorted = game.players.slice().sort((a,b) => b.points - a.points);
     game.message = `${playerVerb(sorted[0], "win", "wins")} the match`;
     game.sub = game.players.map(p => `${p.name} ${p.points}`).join("  ");
-    playSfx(sorted[0].ai ? "draw" : "win");
+    playSfx("win");
   }
 
   function bestWin(player, cards, method) {
@@ -1448,23 +1466,93 @@
     const cacheKey = `${game.sudden ? "S" : game.round}:${player.seat}:${openCount(player)}:${method}:${cardSetKey(cards)}`;
     if (bestWinCache.has(cacheKey)) return bestWinCache.get(cacheKey);
     const open = openCount(player);
-    let best = null;
-    for (const pattern of findPatterns(player, cards)) {
-      const scored = applyGear(pattern, open);
-      if (scored && (!best || scored.score > best.score || (scored.score === best.score && scored.base > best.base))) best = scored;
-    }
-    if (!best) {
+    const scoredPatterns = findPatterns(player, cards)
+      .map((pattern, index) => {
+        const scored = applyGear(pattern, open);
+        if (!scored) return null;
+        const lineScore = baseLineScore(scored.base);
+        return { ...scored, index, lineScore, gearBonus:Math.max(0, scored.score - lineScore) };
+      })
+      .filter(Boolean);
+    if (!scoredPatterns.length) {
       bestWinCache.set(cacheKey, null);
       if (bestWinCache.size > 60000) bestWinCache.clear();
       return null;
     }
-    let bonus = 0;
-    if (currentRoundMonth() && cards.some(c => c.month === currentRoundMonth())) bonus += 3;
-    if (cards.some(c => c.wind === player.seat)) bonus += 3;
-    const result = { ...best, bonus, total:best.score + bonus, method };
+    const patterns = resultPatterns(scoredPatterns)
+      .sort((a,b) => b.lineScore - a.lineScore || a.name.localeCompare(b.name) || a.index - b.index);
+    const best = scoredPatterns.slice().sort((a,b) => b.score - a.score || b.base - a.base || a.index - b.index)[0];
+    const patternScore = patterns.reduce((sum, p) => sum + p.lineScore, 0);
+    const gearBonus = Math.max(0, ...patterns.map(p => p.gearBonus || 0));
+    const roundBonus = currentRoundMonth() && cards.some(c => c.month === currentRoundMonth()) ? 3 : 0;
+    const homeWindBonus = cards.some(c => c.wind === player.seat) ? 3 : 0;
+    const methodBonus = method === "tsumo" || method === "draw" ? 3 : 0;
+    const bonus = roundBonus + homeWindBonus;
+    const total = patternScore + gearBonus + bonus + methodBonus;
+    const result = {
+      ...best,
+      name:best.name,
+      patterns,
+      patternScore,
+      gearBonus,
+      roundBonus,
+      homeWindBonus,
+      methodBonus,
+      bonus,
+      open,
+      score:patternScore + gearBonus,
+      total,
+      method
+    };
     bestWinCache.set(cacheKey, result);
     if (bestWinCache.size > 60000) bestWinCache.clear();
     return result;
+  }
+
+  function baseLineScore(base) {
+    if (base === 3) return 3;
+    if (base === 6) return 3;
+    if (base === 9) return 3;
+    if (base === 12) return 6;
+    if (base === 15) return 9;
+    return base;
+  }
+
+  function resultPatterns(patterns) {
+    const names = new Set(patterns.map(p => p.name));
+    return patterns.filter(p => {
+      if (names.has("Mono Compass") && (p.name === "Mono" || p.name === "Compass")) return false;
+      if (names.has("Mono Skip") && (p.name === "Mono" || p.name === "Skip")) return false;
+      if (names.has("Mono Run") && (p.name === "Mono" || p.name === "Run")) return false;
+      if (names.has("Grand Crown") && p.name === "Crown") return false;
+      return true;
+    });
+  }
+
+  function resultScoreLines(win, method) {
+    const lines = [];
+    if (method === "TSUMO") lines.push({ label:"Tsumo", points:win.methodBonus || 3, kind:"method" });
+    for (const p of win.patterns || []) lines.push({ label:p.name, points:p.lineScore, kind:"pattern" });
+    if (win.gearBonus > 0) lines.push({ label:gearLineLabel(win.open), points:win.gearBonus, kind:"gear" });
+    if (win.roundBonus > 0) lines.push({ label:"Round Month", points:win.roundBonus, kind:"bonus" });
+    if (win.homeWindBonus > 0) lines.push({ label:"Home Wind", points:win.homeWindBonus, kind:"bonus" });
+    return lines;
+  }
+
+  function gearLineLabel(open) {
+    if (open === 5) return "Full Gear";
+    if (open === 4) return "Half Gear";
+    return `${open} Gears`;
+  }
+
+  function handRank(total) {
+    if (total >= 24) return "Tenka Musou";
+    if (total >= 18) return "Yakuman";
+    if (total >= 15) return "Sanbaiman";
+    if (total >= 12) return "Baiman";
+    if (total >= 9) return "Haneman";
+    if (total >= 6) return "Mangan";
+    return "";
   }
 
   function applyGear(p, open) {
@@ -1740,7 +1828,49 @@
     osc.start(t);
     osc.stop(t + dur + 0.04);
   }
-  function playSfx(name) {
+  function tapTone(freq, dur, type, gain, at, endFreq) {
+    if (!audio || game.muted) return;
+    const t = audio.currentTime + (at || 0);
+    const osc = audio.createOscillator();
+    const g = audio.createGain();
+    osc.type = type || "sine";
+    osc.frequency.setValueAtTime(Math.max(20, freq), t);
+    if (endFreq) osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(Math.min(0.18, (gain || 0.025) * SFX_GAIN), t + 0.003);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(g).connect(audio.destination);
+    osc.start(t);
+    osc.stop(t + dur + 0.025);
+  }
+  function noiseSweep(dur, gain, at, filterType, startFreq, endFreq, q) {
+    if (!audio || game.muted) return;
+    const t = audio.currentTime + (at || 0);
+    const len = Math.max(1, Math.floor(audio.sampleRate * dur));
+    const buffer = audio.createBuffer(1, len, audio.sampleRate);
+    const data = buffer.getChannelData(0);
+    let smooth = 0;
+    for (let i = 0; i < len; i++) {
+      const tail = 1 - i / len * .5;
+      smooth = smooth * .82 + (Math.random() * 2 - 1) * .18;
+      data[i] = smooth * tail;
+    }
+    const src = audio.createBufferSource();
+    const filter = audio.createBiquadFilter();
+    const g = audio.createGain();
+    src.buffer = buffer;
+    filter.type = filterType || "bandpass";
+    filter.frequency.setValueAtTime(startFreq || 1800, t);
+    filter.frequency.exponentialRampToValueAtTime(Math.max(40, endFreq || 780), t + dur * .92);
+    filter.Q.setValueAtTime(q || .72, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(Math.min(.16, (gain || .05) * SFX_GAIN), t + .012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(filter).connect(g).connect(audio.destination);
+    src.start(t);
+    src.stop(t + dur + .02);
+  }
+  function playSfx(name, variant = 0) {
     ensureAudio();
     if (!audio || game.muted) return;
     if (name === "discard") { tone(180, .08, "triangle", .045); tone(95, .06, "sine", .04, .03); }
@@ -1750,9 +1880,36 @@
     else if (name === "tenpai") { tone(660,.12,"sine",.07); tone(990,.18,"sine",.06,.09); tone(1320,.18,"triangle",.04,.18); }
     else if (name === "win") { [392,523,659,784,1046].forEach((f,i)=>tone(f,.28,"triangle",.09,i*.075)); }
     else if (name === "start") { [196,294,392].forEach((f,i)=>tone(f,.16,"sine",.06,i*.08)); }
-    else if (name === "draw") { tone(330,.09,"triangle",.045); tone(495,.14,"sine",.035,.055); }
+    else if (name === "draw") {
+      const variants = [
+        { shift:-24, body:.040, tick:.028, hum:.014 },
+        { shift:-10, body:.037, tick:.030, hum:.015 },
+        { shift:0, body:.039, tick:.026, hum:.015 },
+        { shift:18, body:.035, tick:.028, hum:.014 },
+        { shift:32, body:.037, tick:.024, hum:.016 }
+      ];
+      const v = variants[Math.floor(Math.random() * variants.length)];
+      const drift = (Math.random() - .5) * 10;
+      const delay = Math.random() * .006;
+      tapTone(158 + v.shift * .24, .046, "triangle", v.body, delay, 108 + v.shift * .18);
+      tapTone(720 + v.shift * 1.9 + drift, .034, "sine", v.tick, .018 + delay, 480 + v.shift * 1.1);
+      tapTone(314 + v.shift * .5, .052, "triangle", .017, .038 + delay, 244 + v.shift * .35);
+      tone(196 + v.shift * .25, .085, "sine", v.hum, .064 + delay);
+    }
     else if (name === "claim") { tone(720,.08,"triangle",.05); }
     else if (name === "button") { tone(620,.045,"triangle",.04); tone(930,.065,"sine",.03,.035); }
+    else if (name === "slice") {
+      const lift = Math.min(8, variant) * 55;
+      tone(920 + lift, .045, "sawtooth", .04);
+      tone(1540 + lift * .8, .075, "triangle", .026, .018);
+      tone(260 + lift * .08, .052, "square", .018, .045);
+    }
+    else if (name === "impact") {
+      tone(48, .42, "sine", .15);
+      tone(82, .32, "sawtooth", .095, .025);
+      tone(156, .16, "square", .052, .075);
+      tone(38, .48, "triangle", .08, .045);
+    }
   }
 
   function draw(now) {
@@ -2281,12 +2438,14 @@
       drawButton(DESIGN_W/2-145, 610, 290, 70, "DEAL NEXT", "#ffe07b", "next");
     }
     if (game.mode === "gameOver") {
-      resultPanel();
-      drawButton(DESIGN_W/2-150, 890, 300, 70, "NEW MATCH", "#ffe07b", "restart");
+      matchOverPanel(now);
+      drawButton(DESIGN_W/2-150, 936, 300, 70, "NEW MATCH", "#ffe07b", "restart");
     }
     if (game.mode === "result") {
-      resultPanel();
-      drawButton(DESIGN_W/2 - 145, 872, 290, 68, matchShouldEnd() ? "NEXT" : "DEAL NEXT", "#ffe07b", "next");
+      resultPanel(now);
+      if (resultCanAdvance(now)) {
+        drawButton(DESIGN_W/2 - 145, 1134, 290, 68, matchShouldEnd() ? "NEXT" : "DEAL NEXT", "#ffe07b", "next");
+      }
     }
     if (game.mode === "userTurn") {
       const selfKan = game.awaiting && game.awaiting.type === "selfKan";
@@ -2317,53 +2476,314 @@
       }
     }
     if (game.mode === "homeOpen") {
-      modal("Home wind", "Tap a hand card to open it as gear");
-      drawButton(DESIGN_W/2 - 75, 824, 150, 62, "SKIP", "#8dfff1", "homeSkip");
+      modal("Home wind", "Tap a hand card to open it as gear", 760, 292);
+      drawButton(DESIGN_W/2 - 75, 956, 150, 62, "SKIP", "#8dfff1", "homeSkip");
     }
     if (game.mode === "matchOpen") {
-      modal("Match open", "Tap a matching hand card to open it as gear");
-      drawButton(DESIGN_W/2 - 75, 824, 150, 62, "SKIP", "#8dfff1", "matchSkip");
+      modal("Match open", "Tap a matching hand card to open it as gear", 760, 292);
+      drawButton(DESIGN_W/2 - 75, 956, 150, 62, "SKIP", "#8dfff1", "matchSkip");
     }
   }
 
-  function resultPanel() {
+  function resultPanel(now = frameNow) {
     ctx.save();
     const result = game.lastResults[0];
-    ctx.fillStyle = "rgba(0,0,0,.95)";
-    ctx.fillRect(0, 0, DESIGN_W, DESIGN_H);
-    ctx.fillStyle = "rgba(5,8,12,.82)";
-    roundedRect(36, 334, 648, 512, 28);
+    const elapsed = Math.max(0, now - game.resultStartedAt);
+    if (result && elapsed < RESULT_MODAL_DELAY) {
+      ctx.restore();
+      return;
+    }
+
+    drawResultBackdrop(now, !!result);
+    if (!result) {
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#fff1a8";
+      ctx.font = "900 42px Georgia,serif";
+      ctx.fillText(game.message, DESIGN_W/2, 410);
+      ctx.fillStyle = "rgba(255,255,255,.72)";
+      ctx.font = "800 20px Georgia,serif";
+      ctx.fillText(game.sub || "", DESIGN_W/2, 452);
+      drawStandingsCompact(570);
+      ctx.restore();
+      return;
+    }
+
+    updateResultReveal(result, now);
+    const lines = result.lines || [];
+    const lineClock = elapsed - RESULT_MODAL_DELAY - RESULT_LINE_DELAY;
+    const visibleLines = lineClock < 0 ? 0 : Math.min(lines.length, Math.floor(lineClock / RESULT_LINE_INTERVAL) + 1);
+    const finalAt = resultFinalRevealAt(result);
+    const finalVisible = elapsed >= finalAt;
+    const winner = game.players[result.player];
+    const accent = result.method === "TSUMO" ? "#fff1a8" : "#ff6680";
+
+    ctx.fillStyle = "rgba(5,8,12,.68)";
+    roundedRect(42, 72, 636, 1012, 20);
     ctx.fill();
-    ctx.strokeStyle = "rgba(255,224,123,.52)";
+    ctx.strokeStyle = "rgba(255,224,123,.36)";
     ctx.lineWidth = 2;
     ctx.stroke();
+
     ctx.textAlign = "center";
+    ctx.shadowColor = accent;
+    ctx.shadowBlur = 24;
+    ctx.fillStyle = accent;
+    ctx.font = "900 30px Georgia,serif";
+    ctx.fillText(`${winner.name} ${result.method}`, DESIGN_W/2, 120);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "rgba(255,255,255,.7)";
+    ctx.font = "800 15px Georgia,serif";
+    ctx.fillText(result.player === 0 ? "Your winning hand" : `${winner.name}'s winning hand`, DESIGN_W/2, 148);
+
+    drawResultCards(result.cards || [], 176);
+
+    const panelY = 310;
+    ctx.fillStyle = "rgba(4,10,16,.78)";
+    roundedRect(74, panelY, 572, 440, 14);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(141,255,241,.24)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    const gap = lines.length > 7 ? 42 : 50;
+    const startY = panelY + 52;
+    for (let i = 0; i < visibleLines; i++) {
+      const lineElapsed = lineClock - i * RESULT_LINE_INTERVAL;
+      drawResultLine(lines[i], i, startY + i * gap, lineElapsed, gap);
+    }
+
+    if (finalVisible) drawResultFinal(result.rank, result.value, elapsed - finalAt);
+    drawStandingsCompact(964);
+    ctx.restore();
+  }
+
+  function resultFinalRevealAt(result) {
+    const lines = result && result.lines ? result.lines.length : 0;
+    return RESULT_MODAL_DELAY + RESULT_LINE_DELAY + lines * RESULT_LINE_INTERVAL + RESULT_FINAL_DELAY;
+  }
+
+  function resultCanAdvance(now = frameNow) {
+    const result = game.lastResults[0];
+    if (!result) return true;
+    return Math.max(0, now - game.resultStartedAt) >= resultFinalRevealAt(result) + 360;
+  }
+
+  function drawResultBackdrop(now, hasWin) {
+    ctx.fillStyle = "rgba(0,0,0,.92)";
+    ctx.fillRect(0, 0, DESIGN_W, DESIGN_H);
+    const pulse = hasWin ? (Math.sin(now * 0.0028) + 1) / 2 : 0;
+    const glow = ctx.createRadialGradient(DESIGN_W/2, 310, 20, DESIGN_W/2, 330, 700);
+    glow.addColorStop(0, `rgba(255,224,123,${0.18 + pulse * 0.06})`);
+    glow.addColorStop(.42, "rgba(141,255,241,.08)");
+    glow.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, DESIGN_W, DESIGN_H);
+  }
+
+  function updateResultReveal(result, now) {
+    const lines = result.lines || [];
+    const elapsed = Math.max(0, now - game.resultStartedAt);
+    const lineClock = elapsed - RESULT_MODAL_DELAY - RESULT_LINE_DELAY;
+    let targetStep = lineClock < 0 ? 0 : Math.min(lines.length, Math.floor(lineClock / RESULT_LINE_INTERVAL) + 1);
+    if (elapsed >= resultFinalRevealAt(result)) targetStep = lines.length + 1;
+    while (game.resultFxStep < targetStep) {
+      if (game.resultFxStep < lines.length) {
+        playSfx("slice", game.resultFxStep);
+        burst(132, 360 + game.resultFxStep * 44, "#fff1a8", 18, 2.8);
+      } else {
+        playSfx("impact");
+        shake = Math.max(shake, 12);
+        ripple(DESIGN_W/2, 842, "#ffe07b");
+        burst(DESIGN_W/2, 842, "#ffe07b", 96, 5.4);
+      }
+      game.resultFxStep++;
+    }
+  }
+
+  function drawResultCards(cards, y) {
+    if (!cards.length) return;
+    const cw = 66, ch = 93, gap = 8;
+    const start = DESIGN_W/2 - (cards.length * cw + (cards.length - 1) * gap) / 2;
+    for (let i = 0; i < cards.length; i++) {
+      const lift = Math.sin(frameNow * 0.003 + i) * 2;
+      drawCard(cards[i], start + i * (cw + gap), y + lift, cw, ch, 0, true, 1);
+    }
+    if (game.lastResults.length > 1) {
+      ctx.fillStyle = "rgba(255,255,255,.66)";
+      ctx.font = "800 13px Georgia,serif";
+      ctx.textAlign = "center";
+      ctx.fillText(`+ ${game.lastResults.length - 1} more Ron winner`, DESIGN_W/2, y + ch + 26);
+    }
+  }
+
+  function drawResultLine(line, index, y, lineElapsed, gap) {
+    const t = Math.max(0, Math.min(1, lineElapsed / 260));
+    const ease = 1 - Math.pow(1 - t, 3);
+    const x = 100 + (1 - ease) * 54;
+    const w = 520;
+    const h = Math.min(40, gap - 8);
+    const colors = line.kind === "method" ? ["#fff1a8", "#ff8d4a"] :
+      line.kind === "gear" ? ["#8dfff1", "#2fd3ff"] :
+      line.kind === "bonus" ? ["#ffd66e", "#ff6680"] :
+      ["#f7f3df", "#8dfff1"];
+    ctx.save();
+    ctx.globalAlpha = ease;
+    ctx.shadowColor = colors[0];
+    ctx.shadowBlur = 16 * ease;
+    const g = ctx.createLinearGradient(x, y - h + 6, x + w, y + 8);
+    g.addColorStop(0, "rgba(255,255,255,.12)");
+    g.addColorStop(.42, "rgba(255,224,123,.08)");
+    g.addColorStop(1, "rgba(141,255,241,.08)");
+    ctx.fillStyle = g;
+    roundedRect(x, y - h + 2, w, h, 8);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = `rgba(255,255,255,${0.14 + ease * 0.18})`;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    ctx.globalAlpha = ease * .32;
+    ctx.strokeStyle = colors[0];
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x - 12 + ease * 32, y - h + 7);
+    ctx.lineTo(x + 94 + ease * 42, y + 2);
+    ctx.stroke();
+    ctx.globalAlpha = ease;
+    ctx.textAlign = "left";
+    const fontSize = gap < 46 ? 22 : 25;
+    ctx.font = `900 ${fontSize}px Georgia,serif`;
+    ctx.fillStyle = colors[0];
+    ctx.fillText(line.label, x + 24, y - 11);
+    ctx.textAlign = "right";
+    ctx.font = `900 ${fontSize + 2}px Georgia,serif`;
+    ctx.fillStyle = colors[1];
+    ctx.fillText(`${line.points}pt`, x + w - 24, y - 11);
+    ctx.restore();
+  }
+
+  function drawResultFinal(rank, total, elapsed) {
+    const t = Math.max(0, Math.min(1, elapsed / 360));
+    const ease = 1 - Math.pow(1 - t, 4);
+    const y = rank ? 852 : 838;
+    ctx.save();
+    ctx.globalAlpha = ease;
+    ctx.translate(DESIGN_W/2, y);
+    ctx.scale(.84 + ease * .16, .84 + ease * .16);
+    ctx.shadowColor = "#ffe07b";
+    ctx.shadowBlur = 34;
+    ctx.textAlign = "center";
+    if (rank) {
+      const g = ctx.createLinearGradient(-260, -42, 260, 32);
+      g.addColorStop(0, "#8dfff1");
+      g.addColorStop(.34, "#fff1a8");
+      g.addColorStop(.68, "#ff6680");
+      g.addColorStop(1, "#ffffff");
+      ctx.fillStyle = g;
+      ctx.font = "900 58px Georgia,serif";
+      ctx.fillText(rank, 0, 0);
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "rgba(255,255,255,.55)";
+      ctx.lineWidth = 1.5;
+      ctx.strokeText(rank, 0, 0);
+    }
+
+    const pointY = rank ? 42 : 0;
+    const pointGradient = ctx.createLinearGradient(-92, pointY - 28, 92, pointY + 12);
+    pointGradient.addColorStop(0, "#8dfff1");
+    pointGradient.addColorStop(.48, "#fff1a8");
+    pointGradient.addColorStop(1, "#ff6680");
+    ctx.shadowColor = "#fff1a8";
+    ctx.shadowBlur = rank ? 12 : 26;
+    ctx.fillStyle = pointGradient;
+    ctx.font = `900 ${rank ? 20 : 42}px Georgia,serif`;
+    ctx.fillText(`${total} pt`, 0, pointY);
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = "rgba(255,255,255,.36)";
+    ctx.lineWidth = rank ? 0.8 : 1.2;
+    ctx.strokeText(`${total} pt`, 0, pointY);
+    ctx.restore();
+  }
+
+  function drawStandingsCompact(y) {
+    const sorted = game.players.slice().sort((a,b)=>b.points-a.points);
+    ctx.save();
+    ctx.textAlign = "center";
+    for (let i = 0; i < sorted.length; i++) {
+      ctx.fillStyle = i === 0 ? "#ffe07b" : "rgba(220,232,239,.82)";
+      ctx.font = "800 17px Georgia,serif";
+      ctx.fillText(`${i + 1}. ${sorted[i].name}   ${formatPoints(sorted[i].points)} pt`, DESIGN_W/2, y + i * 30);
+    }
+    ctx.restore();
+  }
+
+  function formatPoints(v) {
+    return Number.isInteger(v) ? String(v) : v.toFixed(1).replace(/\.0$/, "");
+  }
+
+  function matchOverPanel(now = frameNow) {
+    const sorted = game.players.slice().sort((a,b) => b.points - a.points);
+    const champion = sorted[0];
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,0,.94)";
+    ctx.fillRect(0, 0, DESIGN_W, DESIGN_H);
+    const glow = ctx.createRadialGradient(DESIGN_W/2, 330, 20, DESIGN_W/2, 400, 560);
+    glow.addColorStop(0, "rgba(255,224,123,.22)");
+    glow.addColorStop(.45, "rgba(141,255,241,.08)");
+    glow.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, DESIGN_W, DESIGN_H);
+
+    ctx.fillStyle = "rgba(5,8,12,.94)";
+    roundedRect(54, 190, 612, 650, 22);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,224,123,.42)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.textAlign = "center";
+    ctx.shadowColor = "#ffe07b";
+    ctx.shadowBlur = 24;
     ctx.fillStyle = "#fff1a8";
     ctx.font = "900 34px Georgia,serif";
-    ctx.fillText(game.message, DESIGN_W/2, 392);
-    ctx.fillStyle = "rgba(255,255,255,.78)";
-    ctx.font = "700 18px Georgia,serif";
-    ctx.fillText(game.sub, DESIGN_W/2, 426);
-    if (result && result.cards && result.cards.length) {
-      ctx.fillStyle = "#8dfff1";
-      ctx.font = "900 17px Georgia,serif";
-      ctx.fillText(result.player === 0 ? "Your winning hand" : `${game.players[result.player].name}'s winning hand`, DESIGN_W/2, 468);
-      const cw = 74, ch = 104, gap = 8;
-      const start = DESIGN_W/2 - (result.cards.length * cw + (result.cards.length - 1) * gap) / 2;
-      for (let i = 0; i < result.cards.length; i++) {
-        drawCard(result.cards[i], start + i * (cw + gap), 498, cw, ch, 0, true, 1);
-      }
-      if (game.lastResults.length > 1) {
-        ctx.fillStyle = "rgba(255,255,255,.66)";
-        ctx.font = "800 14px Georgia,serif";
-        ctx.fillText(`+ ${game.lastResults.length - 1} more Ron winner`, DESIGN_W/2, 628);
-      }
-    }
-    const sorted = game.players.slice().sort((a,b)=>b.points-a.points);
-    for (let i=0;i<sorted.length;i++) {
-      ctx.fillStyle = i === 0 ? "#ffe07b" : "#dce8ef";
-      ctx.font = "800 20px Georgia,serif";
-      ctx.fillText(`${i+1}. ${sorted[i].name}   ${sorted[i].points} pt`, DESIGN_W/2, 682 + i*36);
+    ctx.fillText("Match Complete", DESIGN_W/2, 266);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "rgba(255,255,255,.7)";
+    ctx.font = "800 16px Georgia,serif";
+    ctx.fillText("Final Standings", DESIGN_W/2, 298);
+
+    const title = champion.name === "You" ? "You Win" : `${champion.name} Wins`;
+    const titleGradient = ctx.createLinearGradient(120, 0, 600, 0);
+    titleGradient.addColorStop(0, "#8dfff1");
+    titleGradient.addColorStop(.45, "#fff1a8");
+    titleGradient.addColorStop(1, "#ff6680");
+    ctx.shadowColor = "#fff1a8";
+    ctx.shadowBlur = 30;
+    ctx.fillStyle = titleGradient;
+    ctx.font = "900 58px Georgia,serif";
+    ctx.fillText(title, DESIGN_W/2, 390);
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = "rgba(255,255,255,.82)";
+    ctx.font = "900 20px Georgia,serif";
+    ctx.fillText(`${formatPoints(champion.points)} pt`, DESIGN_W/2, 426);
+
+    for (let i = 0; i < sorted.length; i++) {
+      const y = 518 + i * 62;
+      const isTop = i === 0;
+      ctx.fillStyle = isTop ? "rgba(255,224,123,.12)" : "rgba(255,255,255,.045)";
+      roundedRect(112, y - 34, 496, 48, 10);
+      ctx.fill();
+      ctx.strokeStyle = isTop ? "rgba(255,224,123,.34)" : "rgba(255,255,255,.12)";
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.textAlign = "left";
+      ctx.fillStyle = isTop ? "#ffe07b" : "#dce8ef";
+      ctx.font = "900 22px Georgia,serif";
+      ctx.fillText(`${i + 1}. ${sorted[i].name}`, 142, y - 3);
+      ctx.textAlign = "right";
+      ctx.fillStyle = isTop ? "#fff1a8" : "rgba(220,232,239,.86)";
+      ctx.font = "900 20px Georgia,serif";
+      ctx.fillText(`${formatPoints(sorted[i].points)} pt`, 578, y - 3);
     }
     ctx.restore();
   }
@@ -2431,6 +2851,10 @@
 
   function drawGameUtilityButtons() {
     drawSoundToggle();
+    if (game.mode === "result" || game.mode === "gameOver") {
+      drawIconButton(652, 1212, 54, "HOME", "home", "#8dfff1");
+      return;
+    }
     drawIconButton(76, 1212, 54, "?", "help", "#ffe07b");
     drawAutoButton();
     drawIconButton(652, 1212, 54, "HOME", "home", "#8dfff1");
