@@ -256,8 +256,8 @@
       title:"Winning Bonuses",
       lines:[
         "Tsumo, round month, and home wind each add +3.",
-        "Rainbow: tsumo, 6 colors, 6 different cards: +3.",
-        "Prism: 5 gear, 6 colors, 6 different cards: +3.",
+        "Rainbow: tsumo, 6 colors, 6 different month/wind identities: +3.",
+        "Prism: 5 gear, 6 colors, 6 different month/wind identities: +3.",
         "Winning bonuses stack and show in the result reveal."
       ]
     },
@@ -1554,7 +1554,7 @@
   function rainbowPrismReady(cards) {
     return cards.length === 6 &&
       new Set(cards.map(c => c.color)).size === 6 &&
-      new Set(cards.map(c => c.id)).size === 6;
+      new Set(cards.map(groupKey)).size === 6;
   }
 
   function gearLineLabel(open) {

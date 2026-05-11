@@ -400,7 +400,7 @@ You gain `Rainbow` when:
 
 - you win by `tsumo`
 - your final winning 6-card hand contains all `6` colors
-- all `6` final cards have different card identities
+- all `6` final cards have different month/wind identities
 
 ### 14.2 Prism
 
@@ -410,7 +410,7 @@ You gain `Prism` when:
 
 - you have exactly `5` open cards
 - your final winning 6-card hand contains all `6` colors
-- all `6` final cards have different card identities
+- all `6` final cards have different month/wind identities
 
 Important:
 
