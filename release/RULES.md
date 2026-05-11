@@ -276,7 +276,7 @@ If a 6-card hand matches more than one pattern:
 - remove any pattern that fails the gear rule
 - each remaining valid pattern contributes its low-gear/base scoring value
 - apply the gear upgrade from the strongest remaining pattern once
-- add round month, home wind, `Rainbow`, `Prism`, and `tsumo` bonuses after pattern scoring
+- add round month, home wind, `Rainbow`, `Prism`, `Overture`, `Finale`, and `tsumo` bonuses after pattern scoring
 
 Low-gear/base scoring value means:
 
@@ -390,7 +390,7 @@ Important:
 - it stacks with the round month bonus
 - a `15pt` hand with both bonuses scores `21pt`
 
-## 14. Rainbow and Prism Bonuses
+## 14. Additional Winning Bonuses
 
 ### 14.1 Rainbow
 
@@ -416,6 +416,34 @@ Important:
 
 - `Rainbow` and `Prism` can stack with each other
 - both stack with `tsumo`, round month, and home wind bonuses
+- they are bonuses, not winning patterns
+
+### 14.3 Overture
+
+`Overture` is a `+3pt` winning bonus.
+
+You gain `Overture` when:
+
+- you win by `tsumo`
+- the winning hand is your initial hand plus your first draw
+- you have not discarded yet this hand
+- you have no open cards
+
+Because `Overture` happens before your first discard, it is always a `tsumo` bonus.
+
+### 14.4 Finale
+
+`Finale`is a `+3pt` winning bonus.
+
+You gain `Finale` when:
+
+- the wall has exactly `0` cards at the moment of winning
+- this may be a `tsumo` on the last draw
+- or it may be a `ron` on the discard made after the last draw
+
+Important:
+
+- `Overture` and `Finale` stack with other winning bonuses
 - they are bonuses, not winning patterns
 
 ## 15. Settlement

@@ -375,6 +375,7 @@
         concealed:[],
         open:[],
         discards:[],
+        hasDiscarded:false,
         tenpai:false,
         waitCards:[],
         close:false,
@@ -477,7 +478,7 @@
     playSfx("draw");
     updateTenpai();
 
-    const win = bestWin(p, totalCards(p), "tsumo");
+    const win = bestWin(p, totalCards(p), "tsumo", winTimingContext(p, "tsumo"));
     if (win) {
       if (p.ai) return delay(() => declareWin([pi], null, "TSUMO", [win]), 580);
       game.awaiting = { type:"tsumo", win };
@@ -1004,6 +1005,7 @@
     }
     const card = p.concealed.splice(index, 1)[0];
     p.discards.push(card);
+    p.hasDiscarded = true;
     game.lastDiscard = card;
     game.lastDiscarder = pi;
     game.currentDraw = null;
@@ -1022,7 +1024,7 @@
       if (i === discarder) continue;
       const p = game.players[i];
       const hand = totalCards(p).concat(card);
-      const win = bestWin(p, hand, "ron");
+      const win = bestWin(p, hand, "ron", winTimingContext(p, "ron"));
       if (win) { ron.push(i); wins.push(win); }
     }
     if (ron.length) {
@@ -1368,7 +1370,7 @@
     for (let wi = 0; wi < winners.length; wi++) {
       const idx = winners[wi];
       const p = game.players[idx];
-      const win = wins[wi] || bestWin(p, totalCards(p), method.toLowerCase());
+      const win = wins[wi] || bestWin(p, totalCards(p), method.toLowerCase(), winTimingContext(p, method));
       let value = win ? win.total : 0;
       if (method === "TSUMO") {
         p.points += value;
@@ -1467,9 +1469,10 @@
     playSfx("win");
   }
 
-  function bestWin(player, cards, method) {
+  function bestWin(player, cards, method, timing = null) {
     if (cards.length !== 6) return null;
-    const cacheKey = `${game.sudden ? "S" : game.round}:${player.seat}:${openCount(player)}:${method}:${cardSetKey(cards)}`;
+    const timingKey = timing ? `${timing.overture ? 1 : 0}:${timing.finale ? 1 : 0}` : "0:0";
+    const cacheKey = `${game.sudden ? "S" : game.round}:${player.seat}:${openCount(player)}:${method}:${timingKey}:${cardSetKey(cards)}`;
     if (bestWinCache.has(cacheKey)) return bestWinCache.get(cacheKey);
     const open = openCount(player);
     const scoredPatterns = findPatterns(player, cards)
@@ -1495,7 +1498,9 @@
     const methodBonus = method === "tsumo" || method === "draw" ? 3 : 0;
     const rainbowBonus = methodBonus > 0 && rainbowPrismReady(cards) ? 3 : 0;
     const prismBonus = open === 5 && rainbowPrismReady(cards) ? 3 : 0;
-    const bonus = roundBonus + homeWindBonus + rainbowBonus + prismBonus;
+    const overtureBonus = timing && timing.overture ? 3 : 0;
+    const finaleBonus = timing && timing.finale ? 3 : 0;
+    const bonus = roundBonus + homeWindBonus + rainbowBonus + prismBonus + overtureBonus + finaleBonus;
     const total = patternScore + gearBonus + bonus + methodBonus;
     const result = {
       ...best,
@@ -1507,6 +1512,8 @@
       homeWindBonus,
       rainbowBonus,
       prismBonus,
+      overtureBonus,
+      finaleBonus,
       methodBonus,
       bonus,
       open,
@@ -1546,9 +1553,21 @@
     if (win.gearBonus > 0) lines.push({ label:gearLineLabel(win.open), points:win.gearBonus, kind:"gear" });
     if (win.rainbowBonus > 0) lines.push({ label:"Rainbow", points:win.rainbowBonus, kind:"bonus" });
     if (win.prismBonus > 0) lines.push({ label:"Prism", points:win.prismBonus, kind:"bonus" });
+    if (win.overtureBonus > 0) lines.push({ label:"Overture", points:win.overtureBonus, kind:"bonus" });
+    if (win.finaleBonus > 0) lines.push({ label:"Finale", points:win.finaleBonus, kind:"bonus" });
     if (win.roundBonus > 0) lines.push({ label:"Round Month", points:win.roundBonus, kind:"bonus" });
     if (win.homeWindBonus > 0) lines.push({ label:"Home Wind", points:win.homeWindBonus, kind:"bonus" });
     return lines;
+  }
+
+  function winTimingContext(player, method) {
+    const m = String(method || "").toLowerCase();
+    const actualTsumo = m === "tsumo";
+    const actualRon = m === "ron";
+    return {
+      overture:actualTsumo && !player.hasDiscarded && openCount(player) === 0,
+      finale:(actualTsumo || actualRon) && game.wall.length === 0
+    };
   }
 
   function rainbowPrismReady(cards) {
