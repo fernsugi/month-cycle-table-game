@@ -463,7 +463,7 @@ All patterns below use exactly `6` cards.
 | Skip | All 6 cards are all odd months or all even months, all 6 months are different, and all 6 colors are different | At least 3 open cards |
 | Run | Six consecutive months, all in different colors | At least 3 open cards |
 | Wind | All 6 cards are wind cards, with all 6 colors present | At least 3 open cards |
-| Cross | 3 consecutive months plus 3 different winds, with all 6 colors present, and including both the round month and your home wind | At least 3 open cards |
+| Cross | Month 1, month 12, and all four winds N, S, E, W, with all 6 colors present | At least 3 open cards |
 
 ### 16.2 6-point patterns
 
