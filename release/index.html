@@ -175,8 +175,8 @@
       title:"More 3-Point Wins",
       lines:[
         "Wind: all 6 cards are wind cards, one in each color.",
-        "Remember: wind cards have no month.",
-        "So wind cards cannot help Skip or Run.",
+        "Cross: 3 consecutive months plus 3 different winds.",
+        "Cross needs all 6 colors, the round month, and your home wind.",
         "These 3-point wins are simple, but you must build gear first."
       ]
     },
@@ -1611,6 +1611,7 @@
     if (allMonths && mVals.length === 6 && allColors && sameParity(mVals)) out.push({ name:"Skip", base:3 });
     if (allMonths && mVals.length === 6 && allColors && consecutive(mVals)) out.push({ name:"Run", base:3 });
     if (allWinds && allColors) out.push({ name:"Wind", base:3 });
+    if (cross(cards, months, winds, mVals, wVals, round, seat, allColors)) out.push({ name:"Cross", base:3 });
 
     if (allMonths && pairCounts === "2,2,2" && consecutive(mVals)) out.push({ name:"Triple Pair", base:6 });
     if (allWinds && windPairCounts === "2,2,2" && wVals.length === 3) out.push({ name:"Wind Pairs", base:6 });
@@ -1647,6 +1648,18 @@
   function vals(o) { return Object.keys(o).map(k => o[k]); }
   function sameParity(a) { return a.length && a.every(x => x % 2 === a[0] % 2); }
   function consecutive(a) { if (!a.length) return false; for (let i=1;i<a.length;i++) if (a[i] !== a[i-1] + 1) return false; return true; }
+  function cross(cards, months, winds, mVals, wVals, round, seat, allColors) {
+    return !!round &&
+      cards.length === 6 &&
+      months.length === 3 &&
+      winds.length === 3 &&
+      mVals.length === 3 &&
+      wVals.length === 3 &&
+      allColors &&
+      consecutive(mVals) &&
+      months.some(c => c.month === round) &&
+      winds.some(c => c.wind === seat);
+  }
   function crownFiveOne(mc) {
     const e = Object.entries(mc).map(([m,c]) => [Number(m), c]);
     if (e.length !== 2) return false;
