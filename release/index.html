@@ -274,9 +274,9 @@
       title:"Result Titles",
       lines:[
         "6pt is Mangan. 9pt is Haneman. 12pt is Baiman.",
-        "15pt is Sanbaiman. 18pt is Yakuman.",
-        "21pt is Double Yakuman. 24pt or more is Triple Yakuman.",
-        "Hands below 6pt show no result title."
+        "15pt is Sanbaiman. 18pt is Yakuman. 21pt is Double Yakuman.",
+        "24pt is Triple Yakuman. 27pt is Quad Yakuman.",
+        "30pt or more is Tenka Musou. Hands below 6pt show no result title."
       ]
     },
         {
@@ -1583,6 +1583,8 @@
   }
 
   function handRank(total) {
+    if (total >= 30) return "Tenka Musou";
+    if (total >= 27) return "Quad Yakuman";
     if (total >= 24) return "Triple Yakuman";
     if (total >= 21) return "Double Yakuman";
     if (total >= 18) return "Yakuman";
