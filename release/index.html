@@ -543,8 +543,14 @@
   function autoDiscardHuman() {
     const p = game.players[0];
     if (!p.concealed.length) return advanceTurn();
-    const idx = chooseDiscardIndex(p);
-    discardCard(0, idx, true);
+    const drawnIdx = currentDrawIndex(p);
+    const discardIdx = drawnIdx >= 0 ? drawnIdx : chooseDiscardIndex(p);
+    discardCard(0, discardIdx, true);
+  }
+
+  function currentDrawIndex(p) {
+    if (!game.currentDraw || !p || !p.concealed) return -1;
+    return p.concealed.findIndex(c => c.id === game.currentDraw.id);
   }
 
   function aiDiscard(pi) {
