@@ -169,6 +169,12 @@
         "Mono: all 6 cards are the same color.",
         "Skip: 6 different months, all odd or all even, all colors different.",
         "Run: 6 consecutive months, all different colors."
+      ],
+      footer:"All 3-point wins need at least 3 gear.",
+      examples:[
+        { name:"Mono", cards:["G1","G3","G5","G7","G9","G11"], note:"All 6 cards share one color." },
+        { name:"Skip", cards:["G1","R3","Y5","B7","K9","W11"], note:"6 different odd months and all 6 colors." },
+        { name:"Run", cards:["G2","R3","Y4","B5","K6","W7"], note:"6 consecutive months and all 6 colors." }
       ]
     },
     {
@@ -178,6 +184,11 @@
         "Cross: month 1, month 12, and N, S, E, W, all different colors.",
         "Rainbow and Prism apply only to Skip, Run, and Cross — see Winning Bonuses later in this guide.",
         "These 3-point wins are simple, but you must build gear first."
+      ],
+      footer:"All 3-point wins need at least 3 gear.",
+      examples:[
+        { name:"Wind", cards:["GN","RS","YE","BW","KN","WS"], note:"6 wind cards with all 6 colors." },
+        { name:"Cross", cards:["G1","R12","YN","BS","KE","WW"], note:"Months 1 + 12, then N + S + E + W; all 6 colors." }
       ]
     },
     {
@@ -187,6 +198,12 @@
         "Triple Pair: 3 month pairs, and the months are consecutive.",
         "Wind Pairs: 3 pairs, each pair from a different wind.",
         "Axis: 2 seat winds plus 4 round target months, or the reverse."
+      ],
+      footer:"3 gear scores 3; 4 or 5 gear scores the full 6.",
+      examples:[
+        { name:"Triple Pair", cards:["G4","R4","Y5","B5","K6","W6"], note:"3 month pairs across 3 consecutive months." },
+        { name:"Wind Pairs", cards:["GN","RN","YS","BS","KE","WE"], note:"3 pairs from 3 different winds." },
+        { name:"Axis", cards:["GE","RE","Y6","B6","K6","W6"], note:"East seat, round 6: 2 East winds + 4 month 6." }
       ]
     },
     {
@@ -196,6 +213,11 @@
         "Parity Pairs: 3 month pairs that are all odd or all even.",
         "With 3 gear, a 6-point pattern scores 3.",
         "With 4 or more gear, it scores the full 6."
+      ],
+      footer:"3 gear scores 3; 4 or 5 gear scores the full 6.",
+      examples:[
+        { name:"Twin Tone Pairs", cards:["G2","R2","G7","R7","GN","RN"], note:"3 identity pairs using only 2 colors." },
+        { name:"Parity Pairs", cards:["G1","R1","Y5","B5","K9","W9"], note:"3 month pairs; every month is odd (or all even)." }
       ]
     },
     {
@@ -205,6 +227,12 @@
         "Twin Triples: 3 of one month and 3 of a neighbor month.",
         "Wind Triples: 3 of one wind and 3 of another wind.",
         "Grand Axis: 3 seat winds plus 3 round target month cards."
+      ],
+      footer:"3 / 4 / 5 gear scores 3 / 6 / 9 points.",
+      examples:[
+        { name:"Twin Triples", cards:["G4","R4","Y4","B5","K5","W5"], note:"Two triples from neighboring months." },
+        { name:"Wind Triples", cards:["GN","RN","YN","BS","KS","WS"], note:"Two triples from two different winds." },
+        { name:"Grand Axis", cards:["GE","RE","YE","B6","K6","W6"], note:"East seat, round 6: 3 East winds + 3 month 6." }
       ]
     },
     {
@@ -214,6 +242,11 @@
         "Parity Triples: two month triples, all odd or all even.",
         "With 3 gear, a 9-point pattern scores 3.",
         "With 4 gear it scores 6; with 5 gear it scores 9."
+      ],
+      footer:"3 / 4 / 5 gear scores 3 / 6 / 9 points.",
+      examples:[
+        { name:"Tri Tone Triples", cards:["G2","R2","Y2","GW","RW","YW"], note:"Two identity triples using only 3 colors." },
+        { name:"Parity Triples", cards:["G3","R3","Y3","B9","K9","W9"], note:"Two month triples; both months are odd (or both even)." }
       ]
     },
     {
@@ -223,6 +256,12 @@
         "Crown: 6 of one month, or 5 plus 1 neighbor, all colors different.",
         "Tempest: all 6 cards are the same non-seat wind.",
         "Escort: 4 of one month plus 2 from a neighbor, all colors different."
+      ],
+      footer:"0-3 / 4 / 5 gear scores 6 / 9 / 12 points.",
+      examples:[
+        { name:"Crown", cards:["G7","R7","Y7","B7","K7","W7"], note:"All 6 colors of one month." },
+        { name:"Tempest", cards:["GN","RN","YN","BN","KN","WN"], note:"East seat: all 6 North winds, a non-seat wind." },
+        { name:"Escort", cards:["G6","R6","Y6","B6","K7","W7"], note:"4 of one month + 2 of a neighboring month; all 6 colors." }
       ]
     },
     {
@@ -232,6 +271,11 @@
         "Compass: same-color N, S, E, W plus any month pair or 2-month sequence, or 4 same-color consecutive months plus 2 same-color winds.",
         "12-point wins score 6 with 0-3 gear.",
         "They score 9 with 4 gear, or 12 with 5 gear."
+      ],
+      footer:"0-3 / 4 / 5 gear scores 6 / 9 / 12 points.",
+      examples:[
+        { name:"Split Escort", cards:["K5","G6","R6","Y6","B6","W7"], note:"4 of one month + 1 previous + 1 next; all 6 colors." },
+        { name:"Compass", cards:["GN","GS","GE","GW","R4","Y4"], note:"Same-color N + S + E + W, plus any month pair." }
       ]
     },
     {
@@ -241,6 +285,12 @@
         "Mono Skip: one color, and all months are odd or all even.",
         "Mono Run: one color, 6 different months in order.",
         "Grand Crown: all 6 cards are the round target month."
+      ],
+      footer:"0-3 / 4 / 5 gear scores 9 / 12 / 15 points.",
+      examples:[
+        { name:"Mono Skip", cards:["G1","G3","G5","G7","G9","G11"], note:"One color with 6 different odd months (or all even)." },
+        { name:"Mono Run", cards:["R2","R3","R4","R5","R6","R7"], note:"One color with 6 consecutive months." },
+        { name:"Grand Crown", cards:["G6","R6","Y6","B6","K6","W6"], note:"Round 6: all 6 cards are the round target month." }
       ]
     },
     {
@@ -250,6 +300,11 @@
         "Mono Compass uses either Compass shape, but every card must share one color.",
         "15-point wins score 9 with 0-3 gear.",
         "They score 12 with 4 gear, or 15 with 5 gear."
+      ],
+      footer:"0-3 / 4 / 5 gear scores 9 / 12 / 15 points.",
+      examples:[
+        { name:"Grand Tempest", cards:["GE","RE","YE","BE","KE","WE"], note:"East seat: all 6 cards are your East seat wind." },
+        { name:"Mono Compass", cards:["GN","GS","GE","GW","G4","G5"], note:"One color: N + S + E + W, plus a 2-month sequence." }
       ]
     },
     {
@@ -2146,13 +2201,17 @@
     ctx.font = "900 28px Georgia,serif";
     ctx.fillText(page.title, DESIGN_W/2, 280);
 
-    ctx.textAlign = "left";
-    ctx.fillStyle = "rgba(255,255,255,.86)";
-    ctx.font = "700 20px Georgia,serif";
-    let y = 344;
-    for (const line of page.lines) {
-      wrapText(line, 96, y, 530, 29);
-      y += 78;
+    if (page.examples) {
+      renderHelpExamples(page);
+    } else {
+      ctx.textAlign = "left";
+      ctx.fillStyle = "rgba(255,255,255,.86)";
+      ctx.font = "700 20px Georgia,serif";
+      let y = 344;
+      for (const line of page.lines) {
+        wrapText(line, 96, y, 530, 29);
+        y += 78;
+      }
     }
 
     ctx.textAlign = "center";
@@ -2165,6 +2224,57 @@
     drawButton(104, 990, 150, 58, "PREV", "#8dfff1", "helpPrev");
     drawButton(466, 990, 150, 58, "NEXT", "#ffe07b", "helpNext");
     renderFx();
+  }
+
+  function renderHelpExamples(page) {
+    const compact = page.examples.length >= 3;
+    const blockH = compact ? 182 : 235;
+    const cardW = compact ? 54 : 70;
+    const cardH = compact ? 76 : 98;
+    const gap = compact ? 8 : 10;
+    const top = compact ? 312 : 322;
+    const rowW = cardW * 6 + gap * 5;
+    const rowX = (DESIGN_W - rowW) / 2;
+
+    for (let i = 0; i < page.examples.length; i++) {
+      const example = page.examples[i];
+      const y = top + i * blockH;
+      const panelY = y - 7;
+      const panelH = compact ? 169 : 208;
+      const fill = ctx.createLinearGradient(68, panelY, 652, panelY + panelH);
+      fill.addColorStop(0, "rgba(24,76,73,.34)");
+      fill.addColorStop(1, "rgba(74,48,19,.28)");
+      ctx.fillStyle = fill;
+      roundedRect(68, panelY, 584, panelH, 18);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,224,123,.2)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#fff1a8";
+      ctx.font = `900 ${compact ? 20 : 23}px Georgia,serif`;
+      ctx.fillText(example.name.toUpperCase(), DESIGN_W / 2, y + 23);
+
+      const cardY = y + (compact ? 34 : 40);
+      for (let c = 0; c < example.cards.length; c++) {
+        const card = helpCard(example.cards[c]);
+        if (card) drawCard(card, rowX + c * (cardW + gap), cardY, cardW, cardH, 0, true, 1);
+      }
+
+      ctx.fillStyle = "rgba(255,255,255,.78)";
+      ctx.font = "700 16px Georgia,serif";
+      ctx.fillText(example.note, DESIGN_W / 2, cardY + cardH + (compact ? 23 : 29));
+    }
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(141,255,241,.8)";
+    ctx.font = "800 17px Georgia,serif";
+    ctx.fillText(page.footer, DESIGN_W / 2, 916);
+  }
+
+  function helpCard(id) {
+    return deckCards().find(card => card.id === id) || null;
   }
 
   function wrapText(text, x, y, maxWidth, lineHeight) {
